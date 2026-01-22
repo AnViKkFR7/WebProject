@@ -22,8 +22,8 @@ const App = () => {
           <Route path="/blog" element={<Blog />} />
           <Route path="/media" element={<Media />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
-        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )
