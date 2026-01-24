@@ -9,20 +9,28 @@ import Media from './pages/Media.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Settings from './pages/Settings.jsx'
 import Users from './pages/Users.jsx'
+import Login from './pages/Login.jsx'
+import Profile from './pages/Profile.jsx'
+import AuthGuard from './components/AuthGuard.jsx'
 
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AdminLayout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/items" element={<Items />} />
-          <Route path="/companies" element={<Companies />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/media" element={<Media />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
+        <Route path="/login" element={<Login />} />
+        
+        <Route element={<AuthGuard />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/items" element={<Items />} />
+            <Route path="/companies" element={<Companies />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/media" element={<Media />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
