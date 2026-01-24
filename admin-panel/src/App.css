@@ -1,38 +1,64 @@
 :root {
-  /* Color Palette - Modern SaaS (Slate & Indigo) */
+  /* --- PALETTE SYSTEM --- */
+  
+  /* Brand */
   --primary-color: #6366f1; /* Indigo 500 */
   --primary-hover: #4f46e5; /* Indigo 600 */
-  --secondary-color: #64748b; /* Slate 500 */
-  
-  --bg-body: #f8fafc; /* Slate 50 */
-  --bg-sidebar: #0f172a; /* Slate 900 */
+  --primary-light: #e0e7ff; /* Indigo 100 */
+
+  /* DEFAULT = LIGHT MODE */
+  --bg-body: #f1f5f9;         /* Slate 100 */
+  --bg-sidebar: #ffffff;      /* White sidebar for light mode */
   --bg-card: #ffffff;
+  --bg-hover: #f8fafc;
+  --bg-table-header: #f1f5f9; /* Variable for table header bg */
   
-  --text-primary: #1e293b; /* Slate 800 */
-  --text-secondary: #64748b; /* Slate 500 */
-  --text-on-dark: #f1f5f9; /* Slate 100 */
+  --text-primary: #0f172a;    /* Slate 900 */
+  --text-secondary: #475569;  /* Slate 600 - Darker for better contrast */
+  --text-tertiary: #94a3b8;
+  --sidebar-text: #334155;    /* Slate 700 - Specifically for sidebar readability */
   
-  --border-color: #e2e8f0; /* Slate 200 */
+  --border-color: #cbd5e1;    /* Slate 300 - Slightly darker for better visibility in Light Mode */
+  
+  --sidebar-active-bg: #eff6ff; /* Very clear blue for active tab */
+  --sidebar-active-text: #2563eb;
   
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   
-  /* Radius */
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
 
-  /* Transitions */
   --transition-fast: 150ms ease;
+}
+
+[data-theme='dark'] {
+  --bg-body: #0f172a;         /* Slate 900 */
+  --bg-sidebar: #1e293b;      /* Slate 800 */
+  --bg-card: #1e293b;
+  --bg-hover: #334155;
+  --bg-table-header: #334155; /* Dark table header */
+  
+  --text-primary: #f8fafc;    /* Slate 50 */
+  --text-secondary: #cbd5e1;  /* Slate 300 */
+  --text-tertiary: #64748b;
+  --sidebar-text: #cbd5e1;
+  
+  --border-color: #334155;    /* Slate 700 */
+  
+  --sidebar-active-bg: #1e293b; 
+  --sidebar-active-text: #818cf8;
 }
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'DM Sans', Inter, system-ui, sans-serif; /* Cleaner font like reference */
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg-body);
   color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* --- Layout --- */
@@ -47,24 +73,27 @@ body {
   flex-direction: column;
   flex: 1;
   background-color: var(--bg-body);
-  background-image: 
-    radial-gradient(at 100% 0%, hsla(242, 100%, 70%, 0.1) 0, transparent 50%),
-    radial-gradient(at 0% 0%, hsla(280, 100%, 70%, 0.05) 0, transparent 50%);
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  transition: background-color 0.3s;
+  overflow-x: hidden;
 }
 
 /* --- Sidebar --- */
 
 .sidebar {
-  width: 260px;
+  width: 250px;
   background-color: var(--bg-sidebar);
-  color: var(--text-on-dark);
+  color: var(--sidebar-text); /* Use new specific variable */
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
-  gap: 2rem;
-  border-right: 1px solid rgba(255,255,255,0.05);
+  gap: 1.5rem; /* Reduced gap */
+  border-right: 1px solid var(--border-color);
   flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
+  overflow-y: hidden; /* Internal scrolling handled by nav */
 }
 
 .sidebar-brand {
@@ -72,32 +101,117 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 0 0.5rem;
+  min-height: 40px; /* Layout stability */
+  flex-shrink: 0;
 }
 
 .brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--primary-color);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.25rem;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+  font-size: 1rem;
 }
 
 .brand-title {
   font-weight: 700;
-  font-size: 1.125rem;
-  letter-spacing: -0.025em;
-  color: #fff;
+  font-size: 1rem;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .brand-subtitle {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Nav Items */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1; /* Takes available space */
+  overflow-y: auto;
+  padding-right: 4px; /* Scrollbar space */
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sidebar-text); /* Use specific variable */
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  font-weight: 600;
+}
+
+/* Indicator strip (Left Border style replacement for rounded) */
+/* The reference image uses a left purple border on the item itself or full rounded bg */
+/* We are using full rounded bg (Material/Modern style) as defined above */
+
+.nav-icon {
+  font-size: 1.25rem;
+  min-width: 24px;
+  display: flex; /* Center alignment */
+  justify-content: center;
+}
+
+/* Footer Section */
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Theme Switcher */
+.theme-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  cursor: pointer;
+  color: var(--text-primary);
+  border: none;
+  width: 100%;
+}
+
+.theme-switch-icon {
+  font-size: 1.2rem;
+}
+
+.theme-switch-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: auto;
+  margin-left: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -112,10 +226,10 @@ body {
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: 1rem;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
-  color: #cbd5e1;
+  color: var(--sidebar-text); /* Use theme variable */
   text-decoration: none;
   transition: all var(--transition-fast);
   font-weight: 500;
@@ -123,16 +237,17 @@ body {
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  transform: translateX(4px);
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .nav-link.active {
-  background: linear-gradient(to right, rgba(99, 102, 241, 0.15), transparent);
-  color: #fff;
-  border-left: 3px solid var(--primary-color);
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  border-left: none; /* User image shows pill style, not left border, or maybe left border strip. Image 1 shows pill style. Image in new attachment shows white bg pill. */
+  /* Let's follow the variables derived from earlier: */
+  font-weight: 600;
 }
 
 .nav-icon {
@@ -244,7 +359,7 @@ body {
   gap: 0.75rem;
   padding: 0.35rem;
   padding-right: 1rem;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 99px;
   cursor: pointer;
@@ -416,7 +531,7 @@ button {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: #f8fafc;
+  background: var(--bg-table-header); /* Use variable */
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
@@ -451,7 +566,7 @@ button {
   padding: 0.5rem 2rem 0.5rem 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: white;
+  background-color: var(--bg-card);
   color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
@@ -607,4 +722,398 @@ button {
 
 .back-to-login {
   margin-top: 1rem;
+}
+
+/* =========================================
+   RESPONSIVE & MOBILE OVERHAUL
+   ========================================= */
+
+/* --- Utilities --- */
+.desktop-only { display: flex !important; }
+.mobile-only { display: none !important; }
+.sidebar-mobile-footer { display: none; }
+
+/* --- Burger Button (Mobile) --- */
+.burger-button {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0.5rem;
+  margin-right: 0.5rem;
+  z-index: 1200; /* Highest priority */
+  line-height: 1;
+}
+
+/* --- Tablet Toggle (The "< >" Button) --- */
+.tablet-toggle {
+  display: none;
+  position: absolute;
+  right: -12px;
+  top: 48px; /* Align near some branding or top */
+  width: 24px;
+  height: 24px;
+  background-color: var(--card-bg); /* Use card bg so it stands out from body */
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 50; /* Above sidebar content */
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.tablet-toggle:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+/* =========================================
+   MEDIA QUERIES
+   ========================================= */
+
+/* --- Tablet & Desktop (>= 768px) --- */
+@media (min-width: 768px) {
+  .sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .tablet-toggle {
+    display: flex;
+  }
+
+  /* --- COLLAPSED STATE (Icon View) --- */
+  .sidebar.collapsed {
+    width: 80px; /* Slim width */
+    padding: 1.5rem 0.5rem;
+    align-items: center; 
+  }
+
+  /* Hide Text Elements */
+  .sidebar.collapsed .brand-title,
+  .sidebar.collapsed .brand-subtitle,
+  .sidebar.collapsed .nav-label,
+  /* .sidebar.collapsed .sidebar-footer > *:not(.theme-switch), REMOVED to show Toggler */
+  .sidebar.collapsed .theme-switch-label,
+  .sidebar.collapsed .status-pill {
+    display: none;
+    opacity: 0;
+  }
+
+  /* Adjust Layout for Icons */
+  .sidebar.collapsed .sidebar-brand {
+    justify-content: center;
+    padding: 0;
+    width: 100%;
+  }
+
+  .sidebar.collapsed .sidebar-nav {
+    width: 100%;
+    align-items: center;
+  }
+
+  .sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 0.75rem 0;
+    width: 100%;
+    border-radius: var(--radius-md);
+  }
+  
+  .sidebar.collapsed .nav-icon {
+    margin-right: 0;
+    font-size: 1.4rem;
+  }
+
+  /* Theme Switcher Compact */
+  .sidebar.collapsed .theme-switch {
+    justify-content: center;
+    padding: 0.75rem;
+  }
+  
+  .sidebar.collapsed .theme-switch-label {
+    display: none;
+  }
+  
+  /* Toggle Button Position */
+  .sidebar.collapsed .tablet-toggle {
+    right: -12px;
+  }
+}
+
+/* --- Mobile (< 768px) --- */
+@media (max-width: 768px) {
+  /* Global Layout Changes */
+  .app-shell {
+    flex-direction: column;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    min-height: 100vh;
+  }
+
+  .app-main {
+    width: 100%;
+    margin-left: 0;
+    min-height: 100vh;
+  }
+
+  /* Hide Desktop specific elements */
+  .desktop-only, 
+  .desktop-tablet-only {
+    display: none !important;
+  }
+
+  .burger-button {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Topbar Adjustments */
+  .topbar {
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg-body); /* Ensure opacity */
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .topbar-right {
+    gap: 0.5rem;
+  }
+
+  /* Hide Search/Create */
+  .topbar-right .search-box,
+  .ghost-button {
+    display: none; 
+  }
+
+  .topbar-subtitle {
+     display: none;
+  }
+  
+  .topbar-title {
+    font-size: 1.1rem;
+  }
+
+  /* Mobile Sidebar (Full Screen Overlay) */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1100; /* Above everything */
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--bg-sidebar);
+    padding: 1rem;
+    padding-top: 1rem; 
+    border-right: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar.mobile-visible {
+    transform: translateX(0);
+  }
+  
+  /* Mobile Content Scroll */
+  .sidebar-nav {
+    margin-top: 1rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* Mobile Menu Footer */
+  .sidebar-mobile-footer {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+    padding: 1rem 0;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .sidebar-mobile-footer .divider {
+    display: none;
+  }
+
+  .user-chip-mobile {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-hover);
+    border-radius: var(--radius-md);
+    gap: 1rem;
+    color: var(--text-primary);
+  }
+  
+  .user-chip-mobile .user-name {
+    font-weight: 600;
+  }
+  
+  .user-chip-mobile .user-role {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  /* CARD VIEW for Tables (Mobile Transformation) */
+  /* Target both div-based and table-based structures */
+  
+  .table-container,
+  .table {
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Hide Headers */
+  .table-header,
+  thead {
+    display: none !important; 
+  }
+
+  /* Row -> Card */
+  .table-row,
+  tr {
+    display: flex !important;
+    flex-direction: column;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    align-items: flex-start !important;
+    gap: 0.75rem;
+    margin-bottom: 0; /* Handled by gap on parent */
+  }
+
+  /* Cell/Item Styling */
+  .table-row > span,
+  td {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    font-size: 0.95rem;
+    border-bottom: 1px solid var(--bg-body);
+    padding-bottom: 0.5rem;
+  }
+
+  .table-row > span:last-child,
+  td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-top: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  /* Header-like effect for the first item (Title) */
+  .table-row > span:first-child,
+  .row-title,
+  td:first-child {
+    font-weight: 600;
+    font-size: 1.1rem !important;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-color) !important;
+    margin-bottom: 0.25rem;
+    text-align: left;
+    padding-bottom: 0.5rem;
+  }
+
+  .badge {
+    align-self: flex-end;
+  }
+
+  /* Header Actions Responsive */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .header-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* --- TABS SYSTEM (Profile Style) --- */
+
+.tabs-header {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  border-bottom: none;
+  overflow-x: auto; /* Handle mobile overflow */
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.tab-button.active {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
+  padding-top: 0.85rem;
+  position: relative;
+  z-index: 2; /* Sit above content */
+}
+
+.tab-content {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border-top-left-radius: 0; /* User requirement for Folder Tab look */
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.3s ease-out;
+  position: relative;
+  z-index: 1;
+}
+
+/* Mobile Tabs adjustment */
+@media (max-width: 768px) {
+  .tabs-header {
+    margin-bottom: -1px; /* Overlap border if any */
+  }
+  .tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+  .tab-content {
+    padding: 1rem;
+  }
 }

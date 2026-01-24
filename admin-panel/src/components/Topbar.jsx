@@ -1,33 +1,29 @@
 import { useNavigate } from 'react-router-dom'
-import { authService } from '../services/authService'
-import { useEffect, useState } from 'react'
 
-const Topbar = () => {
+const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    authService.getCurrentUser().then(setUser).catch(() => setUser(null))
-  }, [])
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <h1 className="topbar-title">Panel de administración</h1>
-        <p className="topbar-subtitle">Multi-tenant · Supabase · React</p>
+        {/* Burger Button (Mobile) */}
+        <button 
+          className="burger-button" 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+
+        <div className="topbar-text">
+          <h1 className="topbar-title">Panel de administración</h1>
+          <p className="topbar-subtitle">Multi-tenant · Supabase · React</p>
+        </div>
       </div>
       <div className="topbar-right">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            className="search-input"
-            type="search"
-            placeholder="Buscar items, empresas, usuarios..."
-            aria-label="Buscar"
-          />
-        </div>
-        <button className="ghost-button">Crear</button>
-        <div className="user-chip" onClick={() => navigate('/profile')}>
+        {/* Search and Create removed as requested */}
+        
+        <div className="user-chip desktop-only" onClick={() => navigate('/profile')}>
           <div className="user-avatar">{user?.email?.[0]?.toUpperCase() || 'U'}</div>
           <div>
             <div className="user-name">{user?.email?.split('@')[0] || 'Usuario'}</div>

@@ -71,5 +71,12 @@ export const authService = {
 
     if (error) throw error
     return data
+  },
+
+  async updateCurrentUserProfile(updates) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
+    
+    return this.updateProfile(user.id, updates)
   }
 }

@@ -29,9 +29,16 @@ export const companyService = {
   },
 
   async createCompany(companyData) {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Usuario no autenticado')
+
     const { data, error } = await supabase
       .from('companies')
-      .insert(companyData)
+      .insert({
+        ...companyData,
+        created_by: user.id
+      })
       .select()
       .single()
 
@@ -79,6 +86,12 @@ export const companyService = {
     
     if (error) throw error
     return data
+  },
+
+  async getMyCompanies() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
+    return this.getUserCompanies(user.id)
   },
 
   async getUserCompanies(userId) {
