@@ -11,6 +11,8 @@ const navItems = [
 ]
 
 const Sidebar = () => {
+  const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE === 'true'
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -39,8 +41,8 @@ const Sidebar = () => {
       </nav>
       <div className="sidebar-footer">
         <div className="status-pill">
-          <span className="status-dot" />
-          Conectado a Supabase
+          <span className={`status-dot${isSupabaseEnabled ? '' : ' offline'}`} />
+          {isSupabaseEnabled ? 'Conectado a Supabase' : 'Conexión pendiente'}
         </div>
       </div>
     </aside>
