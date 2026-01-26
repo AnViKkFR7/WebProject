@@ -82,8 +82,11 @@ La idea central es:
 
 ### Usuarios
 
-* Autenticados mediante Supabase Auth
+* Autenticados mediante Supabase Auth (`auth.users`)
+* El email y credenciales viven únicamente en `auth.users`
+* Los datos de perfil (nombre, teléfono, avatar) viven en `company_members`
 * Pueden pertenecer a una o varias empresas
+* Pueden tener diferentes perfiles (nombre, etc.) en cada empresa
 
 ### Empresas
 
@@ -92,6 +95,7 @@ La idea central es:
 
   * Información básica (nombre, logo, descripción, contacto)
   * Un conjunto de elementos genéricos asociados
+  * Miembros con perfiles y roles específicos
 
 ### Elementos genéricos
 
@@ -106,6 +110,23 @@ La idea central es:
   * Pertenece a una empresa
   * Tiene atributos dinámicos (ej: precio, ubicación, tamaño, categoría)
   * Tiene atributos destacados usados para filtros y listados
+
+### Nota importante sobre el modelo de usuarios
+
+**No existe tabla `user_profiles` independiente.**
+
+Los datos de perfil del usuario (nombre completo, teléfono, avatar) están almacenados en la tabla `company_members`, lo que significa:
+
+* Un usuario solo "existe" en el contexto de una empresa
+* Un mismo usuario puede tener diferentes nombres/perfiles en diferentes empresas (útil para multi-tenant)
+* El email es único y vive solo en `auth.users` (Supabase Auth)
+* Los datos de autenticación están completamente separados de los datos de perfil
+
+Esta arquitectura:
+- Elimina duplicación de datos (especialmente email)
+- Simplifica la gestión de usuarios por parte de editores
+- Permite perfiles contextualizados por empresa
+- Mantiene la autenticación centralizada en Supabase Auth
 
 ---
 
@@ -327,6 +348,72 @@ Cuando se genere código, arquitectura o sugerencias:
 * Debe evitar decisiones que acoplen el backend a un único sector
 * Debe usar TypeScript de forma estricta
 * Debe alinearse con Supabase + Remix como stack principal
+
+---
+
+## 10. Principios de interfaz de usuario
+
+**Todo lo desarrollado en el proyecto debe cumplir con:**
+
+* **Responsive design**: La interfaz debe adaptarse correctamente a todos los tamaños de pantalla (móvil, tablet, desktop)
+* **Modo claro/oscuro**: Toda la interfaz debe soportar ambos modos de visualización sin pérdida de usabilidad o legibilidad
+* Los componentes deben diseñarse pensando en ambos requisitos desde el inicio
+
+---
+
+## 11. Panel de administración - Especificaciones por módulo
+
+### 11.1 Módulo de Items (/items)
+
+El módulo de gestión de items es el núcleo del panel de administración. Permite crear, editar, filtrar y visualizar todos los elementos genéricos de la compañía.
+
+#### Estructura de la pantalla
+
+1. **Tabla de items**
+   * Muestra todos los items de la compañía del usuario autenticado
+   * Paginación tanto en frontend como en el servicio backend
+   * Columnas visibles: Título, Tipo, Estado, Actualizado
+   * Ordenación y filtrado integrados
+
+2. **Sistema de filtros**
+   
+   **Filtros fijos (siempre visibles):**
+   * **Status (Estado)**: Multi-selección de estados (draft, published, archived)
+   * **Item Type (Tipo de ítem)**: Multi-selección de tipos de item
+   * **Created By**: Ordenación por fecha de creación (ascendente/descendente)
+   
+   **Filtros avanzados (configurables):**
+   * Basados en los `attribute_definitions` de la compañía
+   * Flujo de configuración:
+     1. Usuario activa "Filtros avanzados"
+     2. Se muestra lista de definiciones con checkboxes
+     3. Usuario selecciona las definiciones que desea usar como filtros
+     4. Se cierra/minimiza el selector y aparecen los filtros seleccionados
+     5. Todos los filtros son multi-seleccionables con búsqueda por texto
+   * **Persistencia**: La selección de filtros avanzados se guarda en base de datos por usuario
+   * Al volver a entrar, se cargan los filtros previamente configurados
+   
+   **Reseteo de filtros:**
+   * Botón "Borrar filtros" que limpia todos los filtros (fijos y avanzados)
+   * Realiza una búsqueda sin filtros (solo paginación)
+
+3. **Acciones principales**
+   
+   * **Botón "Nuevo Item"**: Abre un popup/modal con formulario de creación
+     * Incluye todos los campos de `items`: title, summary, status, item_type
+     * Incluye campos dinámicos según las `attribute_definitions` del tipo seleccionado
+     * Validación según `is_required` de cada definición
+     * Por ahora omite la gestión de media (se añadirá más adelante)
+   
+   * **Botón "Importar"**: Eliminado de la interfaz (funcionalidad futura)
+
+#### Requisitos técnicos
+
+* Servicio backend con paginación real (no solo frontend)
+* Query eficiente que combine items, attribute_definitions y attribute_values
+* Gestión de estado para filtros activos
+* Integración con Supabase para persistir preferencias de filtros
+* Formularios dinámicos basados en definiciones de atributos
 
 ---
 

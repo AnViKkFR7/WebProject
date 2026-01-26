@@ -6,20 +6,105 @@ import { supabase } from '../lib/supabaseClient'
 export const itemService = {
   // --- Items ---
 
-  async getItems(companyId, filters = {}) {
+  async getItems(companyId, filters = {}, page = 1, pageSize = 20) {
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
     let query = supabase
       .from('items')
-      .select('*')
+      .select('*, attribute_values(*, attribute_definitions(*))', { count: 'exact' })
       .eq('company_id', companyId)
 
-    if (filters.status) query = query.eq('status', filters.status)
-    if (filters.item_type) query = query.eq('item_type', filters.item_type)
-    
-    // Add more filters as needed
+    // Fixed filters
+    if (filters.status && filters.status.length > 0) {
+      query = query.in('status', filters.status)
+    }
+    if (filters.item_type && filters.item_type.length > 0) {
+      query = query.in('item_type', filters.item_type)
+    }
 
-    const { data, error } = await query.order('created_at', { ascending: false })
+    // Sorting
+    if (filters.sort_by_date) {
+      query = query.order('created_at', { ascending: filters.sort_by_date === 'asc' })
+    } else {
+      query = query.order('updated_at', { ascending: false })
+    }
+
+    // Pagination
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
     if (error) throw error
-    return data
+
+    return {
+      data,
+      count,
+      page,
+      pageSize,
+      totalPages: Math.ceil(count / pageSize)
+    }
+  },
+
+  async getItemsByAdvancedFilters(companyId, filters = {}, advancedFilters = {}, page = 1, pageSize = 20) {
+    // First get basic items
+    const result = await this.getItems(companyId, filters, page, pageSize)
+    
+    // If no advanced filters, return as is
+    if (!advancedFilters || Object.keys(advancedFilters).length === 0) {
+      return result
+    }
+
+    // Filter items based on attribute values
+    const filteredData = result.data.filter(item => {
+      if (!item.attribute_values) return false
+      
+      return Object.entries(advancedFilters).every(([attributeId, selectedValues]) => {
+        if (!selectedValues || selectedValues.length === 0) return true
+        
+        const attributeValue = item.attribute_values.find(av => av.attribute_id === attributeId)
+        if (!attributeValue) return false
+        
+        const definition = attributeValue.attribute_definitions
+        if (!definition) return false
+
+        // Get the actual value based on data type
+        let actualValue
+        switch (definition.data_type) {
+          case 'text':
+            actualValue = attributeValue.value_text
+            break
+          case 'number':
+            actualValue = attributeValue.value_number
+            break
+          case 'boolean':
+            actualValue = attributeValue.value_boolean
+            break
+          case 'date':
+            actualValue = attributeValue.value_date
+            break
+          case 'text_array':
+            actualValue = attributeValue.value_text_array
+            break
+          case 'number_array':
+            actualValue = attributeValue.value_number_array
+            break
+          default:
+            actualValue = attributeValue.value_text
+        }
+
+        // Check if the value matches any of the selected filter values
+        if (Array.isArray(actualValue)) {
+          return selectedValues.some(sv => actualValue.includes(sv))
+        }
+        return selectedValues.includes(String(actualValue))
+      })
+    })
+
+    return {
+      ...result,
+      data: filteredData,
+      count: filteredData.length
+    }
   },
 
   async getItemById(id) {

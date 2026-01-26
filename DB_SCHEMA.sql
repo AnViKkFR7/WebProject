@@ -1,15 +1,3 @@
--- Tabla de perfiles de usuario (extiende auth.users)
-
-create table public.user_profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  full_name text not null,
-  avatar_url text,
-  phone text not null,
-  email text not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 -- Tabla de empresas
 create table public.companies (
   id uuid primary key default gen_random_uuid(),
@@ -25,11 +13,16 @@ create table public.companies (
 );
 
 -- Relación usuario ↔ empresa (multi-tenant)
+-- Incluye datos de perfil del usuario específicos por empresa
 create table public.company_members (
   company_id uuid not null references public.companies(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'editor', -- admin | editor | viewer
+  full_name text not null default '',
+  phone text,
+  avatar_url text,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   primary key (company_id, user_id)
 );
 
@@ -46,8 +39,8 @@ begin
 end;
 $$;
 
-create trigger trg_user_profiles_updated
-before update on public.user_profiles
+create trigger trg_company_members_updated
+before update on public.company_members
 for each row execute function public.set_updated_at();
 
 create trigger trg_companies_updated
@@ -182,10 +175,6 @@ as $$
 $$;
 
 -- 2) Campos audit
-alter table public.user_profiles
-  add column if not exists created_by uuid references auth.users(id) on delete set null,
-  add column if not exists last_edited_by uuid references auth.users(id) on delete set null;
-
 alter table public.companies
   add column if not exists last_edited_by uuid references auth.users(id) on delete set null;
 
@@ -238,11 +227,6 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_user_profiles_audit on public.user_profiles;
-create trigger trg_user_profiles_audit
-before insert or update on public.user_profiles
-for each row execute function public.set_audit_fields();
-
 drop trigger if exists trg_companies_audit on public.companies;
 create trigger trg_companies_audit
 before insert or update on public.companies
@@ -294,7 +278,6 @@ create trigger trg_blog_posts_updated
 before update on public.blog_posts
 for each row execute function public.set_updated_at();
 
-alter table public.user_profiles enable row level security;
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
 alter table public.items enable row level security;
@@ -305,51 +288,7 @@ alter table public.blog_posts enable row level security;
 alter table public.blog_media enable row level security;
 
 
--- 7) Policies: user_profiles
-drop policy if exists "user_profiles_select" on public.user_profiles;
-create policy "user_profiles_select"
-on public.user_profiles
-for select
-to authenticated
-using (
-  public.is_platform_admin()
-  or id = auth.uid()
-  or exists (
-    select 1
-    from public.company_members cm_editor
-    join public.company_members cm_target
-      on cm_editor.company_id = cm_target.company_id
-    where cm_editor.user_id = auth.uid()
-      and cm_editor.role in ('editor')
-      and cm_target.user_id = public.user_profiles.id
-  )
-);
-
-drop policy if exists "user_profiles_insert" on public.user_profiles;
-create policy "user_profiles_insert"
-on public.user_profiles
-for insert
-to authenticated
-with check (
-  public.is_platform_admin()
-  or id = auth.uid()
-);
-
-drop policy if exists "user_profiles_update" on public.user_profiles;
-create policy "user_profiles_update"
-on public.user_profiles
-for update
-to authenticated
-using (
-  public.is_platform_admin()
-  or id = auth.uid()
-)
-with check (
-  public.is_platform_admin()
-  or id = auth.uid()
-);
-
--- 8) Policies: companies
+-- 7) Policies: companies
 drop policy if exists "companies_select" on public.companies;
 create policy "companies_select"
 on public.companies
@@ -388,7 +327,8 @@ for delete
 to authenticated
 using (public.is_platform_admin());
 
--- 9) Policies: company_members
+-- 8) Policies: company_members
+-- Los datos de perfil (full_name, phone, avatar_url) viven aquí
 drop policy if exists "company_members_select" on public.company_members;
 create policy "company_members_select"
 on public.company_members
@@ -441,7 +381,7 @@ using (
   and role = 'viewer'
 );
 
--- 10) Policies: items (public + tenant)
+-- 9) Policies: items (public + tenant)
 drop policy if exists "items_public_published" on public.items;
 create policy "items_public_published"
 on public.items
@@ -473,7 +413,7 @@ with check (
   or public.has_company_role(company_id, array['editor'])
 );
 
--- 11) Policies: attribute_definitions (public derivado + tenant)
+-- 10) Policies: attribute_definitions (public derivado + tenant)
 drop policy if exists "attribute_definitions_public" on public.attribute_definitions;
 create policy "attribute_definitions_public"
 on public.attribute_definitions
@@ -513,7 +453,7 @@ with check (
   or public.has_company_role(company_id, array['editor'])
 );
 
--- 12) Policies: attribute_values (public derivado + tenant)
+-- 11) Policies: attribute_values (public derivado + tenant)
 drop policy if exists "attribute_values_public" on public.attribute_values;
 create policy "attribute_values_public"
 on public.attribute_values
@@ -567,7 +507,7 @@ with check (
   )
 );
 
--- 13) Policies: item_media (public derivado + tenant)
+-- 12) Policies: item_media (public derivado + tenant)
 drop policy if exists "item_media_public" on public.item_media;
 create policy "item_media_public"
 on public.item_media
@@ -621,7 +561,7 @@ with check (
   )
 );
 
--- 14) Policies: blog_posts (public + tenant)
+-- 13) Policies: blog_posts (public + tenant)
 drop policy if exists "blog_posts_public" on public.blog_posts;
 create policy "blog_posts_public"
 on public.blog_posts
@@ -653,7 +593,7 @@ with check (
   or public.has_company_role(company_id, array['editor'])
 );
 
--- 15) Policies: blog_media (public derivado + tenant)
+-- 14) Policies: blog_media (public derivado + tenant)
 drop policy if exists "blog_media_public" on public.blog_media;
 create policy "blog_media_public"
 on public.blog_media
