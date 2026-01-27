@@ -1,0 +1,1104 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { itemService } from '../services/itemService'
+import { attributeDefinitionService } from '../services/attributeDefinitionService'
+import { supabase } from '../lib/supabaseClient'
+
+// Import subcomponents
+import ItemDetailHeader from '../components/itemDetails/ItemDetailHeader'
+import ItemBasicInfo from '../components/itemDetails/ItemBasicInfo'
+import AttributesList from '../components/itemDetails/AttributesList'
+import ItemDetailFooter from '../components/itemDetails/ItemDetailFooter'
+
+const ItemDetail = () => {
+  const { itemId } = useParams()
+  const navigate = useNavigate()
+  
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [accessDenied, setAccessDenied] = useState(false)
+  
+  const [item, setItem] = useState(null)
+  const [itemData, setItemData] = useState({
+    title: '',
+    summary: '',
+    status: 'draft',
+    item_type: ''
+  })
+  const [attributeValues, setAttributeValues] = useState({}) // { attributeId: { value, edited, originalValue } }
+  const [attributeDefinitions, setAttributeDefinitions] = useState([]) // All definitions for this item type
+  const [editableFields, setEditableFields] = useState({}) // { fieldId: boolean } - tracks which fields are editable
+  
+  const [user, setUser] = useState(null)
+  const [userRole, setUserRole] = useState(null)
+  const [canEdit, setCanEdit] = useState(false)
+  
+  const [saving, setSaving] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  
+  // New states for improvements
+  const [searchFilter, setSearchFilter] = useState('')
+  const [changedFieldsCount, setChangedFieldsCount] = useState(0)
+
+  useEffect(() => {
+    loadItemData()
+  }, [itemId])
+
+  const loadItemData = async () => {
+    setLoading(true)
+    setError(null)
+    setAccessDenied(false)
+
+    try {
+      if (!itemId) {
+        setError('ID de item no válido')
+        setLoading(false)
+        return
+      }
+
+      // Check authentication
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      
+      if (!currentUser) {
+        setAccessDenied(true)
+        setLoading(false)
+        return
+      }
+
+      setUser(currentUser)
+
+      // Load item first to get company_id
+      const itemData = await itemService.getItemById(itemId)
+      
+      if (!itemData) {
+        setError('Item no encontrado')
+        setLoading(false)
+        return
+      }
+
+      // Check if user belongs to the item's company
+      const { data: membership, error: membershipError } = await supabase
+        .from('company_members')
+        .select('role')
+        .eq('user_id', currentUser.id)
+        .eq('company_id', itemData.company_id)
+        .single()
+
+      if (membershipError || !membership) {
+        setAccessDenied(true)
+        setLoading(false)
+        return
+      }
+
+      setUserRole(membership.role)
+      setCanEdit(membership.role === 'admin' || membership.role === 'editor')
+
+      setItem(itemData)
+      setItemData({
+        title: itemData.title || '',
+        summary: itemData.summary || '',
+        status: itemData.status || 'draft',
+        item_type: itemData.item_type || ''
+      })
+
+      // Load attribute definitions for this item type
+      const definitions = await attributeDefinitionService.getDefinitions(itemData.company_id, itemData.item_type)
+      setAttributeDefinitions(definitions)
+
+      // Organize attribute values
+      const valuesMap = {}
+      if (itemData.attribute_values) {
+        itemData.attribute_values.forEach(av => {
+          const def = av.attribute_definitions
+          if (!def) return
+
+          let value
+          switch (def.data_type) {
+            case 'text':
+              value = av.value_text
+              break
+            case 'number':
+              value = av.value_number
+              break
+            case 'boolean':
+              value = av.value_boolean
+              break
+            case 'date':
+              value = av.value_date
+              break
+            case 'text_array':
+              value = av.value_text_array
+              break
+            case 'number_array':
+              value = av.value_number_array
+              break
+            default:
+              value = av.value_text
+          }
+          
+          valuesMap[av.attribute_id] = {
+            value,
+            originalValue: value,
+            edited: false,
+            attributeValueId: av.id
+          }
+        })
+      }
+      setAttributeValues(valuesMap)
+
+    } catch (err) {
+      console.error('Error loading item:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Count changed fields
+  useEffect(() => {
+    const count = Object.values(attributeValues).filter(v => v.edited).length
+    setChangedFieldsCount(count)
+  }, [attributeValues])
+
+  const toggleFieldEditable = (fieldId) => {
+    setEditableFields(prev => ({
+      ...prev,
+      [fieldId]: !prev[fieldId]
+    }))
+  }
+
+  const discardFieldChanges = (attributeId) => {
+    const valueData = attributeValues[attributeId]
+    if (!valueData) return
+
+    setAttributeValues(prev => ({
+      ...prev,
+      [attributeId]: {
+        ...prev[attributeId],
+        value: valueData.originalValue,
+        edited: false
+      }
+    }))
+    setEditableFields(prev => ({
+      ...prev,
+      [`attr-${attributeId}`]: false
+    }))
+  }
+
+  const updateAttributeValue = (attributeId, newValue) => {
+    setAttributeValues(prev => {
+      const current = prev[attributeId] || { originalValue: null, edited: false, attributeValueId: null }
+      return {
+        ...prev,
+        [attributeId]: {
+          ...current,
+          value: newValue,
+          edited: current.originalValue !== newValue
+        }
+      }
+    })
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSuccessMessage('')
+    setError(null)
+
+    try {
+      await itemService.updateItem(itemId, {
+        title: itemData.title,
+        summary: itemData.summary,
+        status: itemData.status
+      })
+
+      for (const [attributeId, valueData] of Object.entries(attributeValues)) {
+        if (!valueData.edited) continue
+
+        const definition = attributeDefinitions.find(d => d.id === attributeId)
+        if (!definition) continue
+
+        const attributeValueData = {
+          item_id: itemId,
+          attribute_id: attributeId
+        }
+
+        const value = valueData.value
+        switch (definition.data_type) {
+          case 'text':
+          case 'longtext':
+            attributeValueData.value_text = value
+            break
+          case 'integer':
+          case 'decimal':
+          case 'number':
+            attributeValueData.value_number = value ? parseFloat(value) : null
+            break
+          case 'boolean':
+            attributeValueData.value_boolean = value === 'true' || value === true
+            break
+          case 'date':
+            attributeValueData.value_date = value
+            break
+          case 'text_array':
+            attributeValueData.value_text_array = Array.isArray(value) ? value : [value]
+            break
+          case 'number_array':
+            attributeValueData.value_number_array = Array.isArray(value) 
+              ? value.map(v => parseFloat(v)) 
+              : [parseFloat(value)]
+            break
+          default:
+            attributeValueData.value_text = value
+        }
+
+        await itemService.upsertAttributeValue(attributeValueData)
+      }
+
+      setSuccessMessage('Item actualizado correctamente')
+      setTimeout(() => setSuccessMessage(''), 3000)
+
+      await loadItemData()
+
+    } catch (err) {
+      console.error('Error saving item:', err)
+      setError('Error al guardar: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    navigate('/items')
+  }
+
+  if (loading) {
+    return (
+      <div className="page-content">
+        <ItemDetailHeader loading={true} />
+        <div style={{ 
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          backgroundColor: 'var(--bg-primary)',
+          overflow: 'hidden'
+        }}>
+          <ItemBasicInfo loading={true} />
+          <AttributesList loading={true} />
+        </div>
+      </div>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="page-content">
+        <div style={{
+          maxWidth: '600px',
+          margin: '3rem auto',
+          padding: '2rem',
+          textAlign: 'center',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          backgroundColor: 'var(--bg-primary)'
+        }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔒</div>
+          <h2 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>Acceso Denegado</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+            El contenido al que intentas acceder no está disponible para ti.
+            Es posible que no tengas permisos o que no pertenezcas a esta organización.
+          </p>
+          <button 
+            className="btn-primary"
+            onClick={() => navigate('/login')}
+          >
+            Ir al Login
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !item) {
+    return (
+      <div className="page-content">
+        <div style={{
+          maxWidth: '600px',
+          margin: '3rem auto',
+          padding: '2rem',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          backgroundColor: 'var(--bg-primary)'
+        }}>
+          <h3 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>Error</h3>
+          <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+          <button 
+            className="btn-secondary"
+            onClick={() => navigate('/items')}
+            style={{ marginTop: '1rem' }}
+          >
+            Volver a Items
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page-content">
+      <ItemDetailHeader item={item} loading={false} />
+
+      {successMessage && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#dcfce7',
+          color: '#15803d',
+          borderRadius: '8px',
+          margin: '1rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          ✓ {successMessage}
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#fee',
+          color: '#f44336',
+          borderRadius: '8px',
+          margin: '1rem 0'
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ 
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        backgroundColor: 'var(--bg-primary)',
+        overflow: 'hidden',
+        marginBottom: '1rem'
+      }}>
+        <ItemBasicInfo
+          itemData={itemData}
+          setItemData={setItemData}
+          canEdit={canEdit}
+          loading={false}
+        />
+
+        <AttributesList
+          attributeDefinitions={attributeDefinitions}
+          attributeValues={attributeValues}
+          editableFields={editableFields}
+          canEdit={canEdit}
+          searchFilter={searchFilter}
+          onToggleEditable={toggleFieldEditable}
+          onDiscard={discardFieldChanges}
+          onUpdate={updateAttributeValue}
+          onSearchChange={setSearchFilter}
+          loading={false}
+        />
+      </div>
+
+      {canEdit && (
+        <ItemDetailFooter
+          changedFieldsCount={changedFieldsCount}
+          saving={saving}
+          onCancel={handleCancel}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  )
+}
+
+export default ItemDetail
+
+            attributeValueData.value_text = value
+            break
+          case 'number':
+            attributeValueData.value_number = parseFloat(value)
+            break
+          case 'boolean':
+            attributeValueData.value_boolean = value === 'true' || value === true
+            break
+          case 'date':
+            attributeValueData.value_date = value
+            break
+          case 'text_array':
+            attributeValueData.value_text_array = Array.isArray(value) ? value : [value]
+            break
+          case 'number_array':
+            attributeValueData.value_number_array = Array.isArray(value) 
+              ? value.map(v => parseFloat(v)) 
+              : [parseFloat(value)]
+            break
+          default:
+            attributeValueData.value_text = value
+        }
+
+        await itemService.upsertAttributeValue(attributeValueData)
+      }
+
+      setSuccessMessage('Item actualizado correctamente')
+      setTimeout(() => setSuccessMessage(''), 3000)
+
+      // Reload data
+      await loadItemData()
+
+    } catch (err) {
+      console.error('Error saving item:', err)
+      setError('Error al guardar: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleAttributeDefinitionUpdate = async (definitionId, updates) => {
+    if (!canEdit) return
+
+    try {
+      await attributeDefinitionService.updateDefinition(definitionId, updates)
+      
+      // Reload definitions
+      const definitions = await attributeDefinitionService.getDefinitions(item.company_id, item.item_type)
+      setAttributeDefinitions(definitions)
+      
+      setSuccessMessage('Atributo actualizado correctamente')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      console.error('Error updating attribute definition:', err)
+      setError('Error al actualizar atributo: ' + err.message)
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    return date.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="page-content">
+        <div style={{ padding: '3rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+          <p>Cargando item...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="page-content">
+        <div className="card" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔒</div>
+          <h2 style={{ marginBottom: '1rem' }}>Acceso Denegado</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+            El contenido al que intentas acceder no está disponible para ti.
+            Es posible que no tengas permisos o que no pertenezcas a esta organización.
+          </p>
+          <button 
+            className="primary-button"
+            onClick={() => navigate('/login')}
+          >
+            Ir al Login
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !item) {
+    return (
+      <div className="page-content">
+        <div className="card" style={{ maxWidth: '600px', margin: '3rem auto' }}>
+          <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Error</h3>
+          <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+          <button 
+            className="ghost-button"
+            onClick={() => navigate('/items')}
+            style={{ marginTop: '1rem' }}
+          >
+            Volver a Items
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page-content">
+      {/* Header */}
+      <section className="page-header">
+        <div>
+          <button 
+            className="ghost-button small"
+            onClick={() => navigate('/items')}
+            style={{ marginBottom: '1rem' }}
+          >
+            ← Volver a Items
+          </button>
+          <h2>{item?.title || 'Item'}</h2>
+          <p style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span className={`pill ${item?.status?.toLowerCase()}`}>
+              {STATUS_OPTIONS.find(s => s.value === item?.status)?.label || item?.status}
+            </span>
+            <span style={{ color: 'var(--text-secondary)' }}>
+              Tipo: {item?.item_type}
+            </span>
+            {!canEdit && (
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                🔒 Solo lectura
+              </span>
+            )}
+          </p>
+        </div>
+      </section>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#dcfce7',
+          color: '#15803d',
+          borderRadius: '8px',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          ✓ {successMessage}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#fee',
+          color: '#f44336',
+          borderRadius: '8px',
+          marginBottom: '1.5rem'
+        }}>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSave}>
+        {/* Basic Information Card */}
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>Información Básica</h3>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              Título *
+            </label>
+            <input
+              type="text"
+              className="input"
+              value={itemData.title}
+              onChange={(e) => setItemData(prev => ({ ...prev, title: e.target.value }))}
+              disabled={!canEdit}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+              Resumen
+            </label>
+            <textarea
+              className="input"
+              rows={4}
+              value={itemData.summary}
+              onChange={(e) => setItemData(prev => ({ ...prev, summary: e.target.value }))}
+              disabled={!canEdit}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                Estado *
+              </label>
+              <select
+                className="select"
+                value={itemData.status}
+                onChange={(e) => setItemData(prev => ({ ...prev, status: e.target.value }))}
+                disabled={!canEdit}
+              >
+                {STATUS_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                Tipo de Item
+              </label>
+              <input
+                type="text"
+                className="input"
+                value={itemData.item_type}
+                disabled
+                style={{ backgroundColor: 'var(--bg-hover)', cursor: 'not-allowed' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ 
+            marginTop: '1.5rem', 
+            paddingTop: '1rem', 
+            borderTop: '1px solid var(--border-color)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem',
+            fontSize: '0.875rem',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              <strong>Creado:</strong> {formatDate(item?.created_at)}
+            </div>
+            <div>
+              <strong>Actualizado:</strong> {formatDate(item?.updated_at)}
+            </div>
+          </div>
+        </div>
+
+        {/* Attributes Card */}
+        {attributeDefinitions.length > 0 && (
+          <div className="card" style={{ marginBottom: '5rem' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '1.5rem',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <h3 style={{ margin: 0 }}>Atributos</h3>
+              
+              {/* Search Filter */}
+              <div style={{ flex: '1', maxWidth: '400px', minWidth: '200px' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Buscar atributo..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  style={{ margin: 0 }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {getFilteredAndSortedDefinitions().map(def => {
+                const valueData = attributeValues[def.id] || { value: '', edited: false, originalValue: '' }
+                const value = valueData.value
+                const isEditable = editableFields[def.id] && canEdit
+
+                return (
+                  <div 
+                    key={def.id}
+                    style={{ 
+                      padding: '1rem',
+                      backgroundColor: 'var(--bg-hover)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)'
+                    }}
+                  >
+                    {/* Attribute Header */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start',
+                      marginBottom: '1rem',
+                      flexWrap: 'wrap',
+                      gap: '1rem'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <label style={{ fontWeight: 600, fontSize: '1rem' }}>
+                            {def.label}
+                            {def.is_required && <span style={{ color: '#ef4444' }}> *</span>}
+                          </label>
+                        </div>
+                        <div style={{ 
+                          fontSize: '0.75rem',
+                          display: 'flex',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span style={{ 
+                            backgroundColor: 'var(--primary-light)', 
+                            color: 'var(--primary-color)',
+                            padding: '2px 8px', 
+                            borderRadius: '12px',
+                            fontWeight: 500
+                          }}>Clave: {def.key}</span>
+                          <span style={{ 
+                            backgroundColor: 'var(--primary-light)', 
+                            color: 'var(--primary-color)',
+                            padding: '2px 8px', 
+                            borderRadius: '12px',
+                            fontWeight: 500
+                          }}>Tipo: {def.data_type}</span>
+                        </div>
+                      </div>
+
+                      {/* Attribute Settings */}
+                      {canEdit && (
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '1rem',
+                          fontSize: '0.875rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={def.is_required}
+                              onChange={(e) => handleAttributeDefinitionUpdate(def.id, { is_required: e.target.checked })}
+                            />
+                            Requerido
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={def.is_filterable}
+                              onChange={(e) => handleAttributeDefinitionUpdate(def.id, { is_filterable: e.target.checked })}
+                            />
+                            Filtrable
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Attribute Value Input */}
+                    <div style={{ position: 'relative' }}>
+                      {def.data_type === 'text' && (
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="text"
+                            className="input"
+                            value={value || ''}
+                            onChange={(e) => updateAttributeValue(def.id, e.target.value)}
+                            disabled={!isEditable}
+                            required={def.is_required}
+                            style={{ paddingRight: isEditable ? '80px' : '50px' }}
+                          />
+                          <div style={{ 
+                            position: 'absolute', 
+                            right: '8px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            display: 'flex',
+                            gap: '4px'
+                          }}>
+                            {isEditable && valueData.edited && (
+                              <button
+                                type="button"
+                                onClick={() => discardFieldChanges(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: '#ef4444'
+                                }}
+                                title="Descartar cambios"
+                              >
+                                ↺
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => toggleFieldEditable(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: isEditable ? 'var(--primary-color)' : 'var(--text-secondary)'
+                                }}
+                                title={isEditable ? 'Bloquear campo' : 'Editar campo'}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {def.data_type === 'number' && (
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="number"
+                            step="any"
+                            className="input"
+                            value={value || ''}
+                            onChange={(e) => updateAttributeValue(def.id, e.target.value)}
+                            disabled={!isEditable}
+                            required={def.is_required}
+                            style={{ paddingRight: isEditable ? '80px' : '50px' }}
+                          />
+                          <div style={{ 
+                            position: 'absolute', 
+                            right: '8px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            display: 'flex',
+                            gap: '4px'
+                          }}>
+                            {isEditable && valueData.edited && (
+                              <button
+                                type="button"
+                                onClick={() => discardFieldChanges(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: '#ef4444'
+                                }}
+                                title="Descartar cambios"
+                              >
+                                ↺
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => toggleFieldEditable(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: isEditable ? 'var(--primary-color)' : 'var(--text-secondary)'
+                                }}
+                                title={isEditable ? 'Bloquear campo' : 'Editar campo'}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {def.data_type === 'boolean' && (
+                        <div style={{ position: 'relative' }}>
+                          <select
+                            className="select"
+                            value={value === null || value === undefined ? '' : String(value)}
+                            onChange={(e) => updateAttributeValue(def.id, e.target.value)}
+                            disabled={!isEditable}
+                            required={def.is_required}
+                            style={{ paddingRight: isEditable ? '80px' : '50px' }}
+                          >
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                          </select>
+                          <div style={{ 
+                            position: 'absolute', 
+                            right: '8px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            display: 'flex',
+                            gap: '4px'
+                          }}>
+                            {isEditable && valueData.edited && (
+                              <button
+                                type="button"
+                                onClick={() => discardFieldChanges(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: '#ef4444'
+                                }}
+                                title="Descartar cambios"
+                              >
+                                ↺
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => toggleFieldEditable(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: isEditable ? 'var(--primary-color)' : 'var(--text-secondary)'
+                                }}
+                                title={isEditable ? 'Bloquear campo' : 'Editar campo'}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {def.data_type === 'date' && (
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="date"
+                            className="input"
+                            value={value || ''}
+                            onChange={(e) => updateAttributeValue(def.id, e.target.value)}
+                            disabled={!isEditable}
+                            required={def.is_required}
+                            style={{ paddingRight: isEditable ? '80px' : '50px' }}
+                          />
+                          <div style={{ 
+                            position: 'absolute', 
+                            right: '8px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            display: 'flex',
+                            gap: '4px'
+                          }}>
+                            {isEditable && valueData.edited && (
+                              <button
+                                type="button"
+                                onClick={() => discardFieldChanges(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: '#ef4444'
+                                }}
+                                title="Descartar cambios"
+                              >
+                                ↺
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => toggleFieldEditable(def.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  color: isEditable ? 'var(--primary-color)' : 'var(--text-secondary)'
+                                }}
+                                title={isEditable ? 'Bloquear campo' : 'Editar campo'}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                            ...prev,
+                            [def.id]: { ...prev[def.id], value: e.target.value }
+                          }))}
+                          disabled={!canEdit}
+                          required={def.is_required}
+                        />
+                      )}
+
+                      {(def.data_type === 'text_array' || def.data_type === 'number_array') && (
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                          <em>Edición de arrays no implementada en esta versión</em>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </form>
+
+      {/* Fixed Footer */}
+      {canEdit && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'var(--bg-card)',
+          borderTop: '1px solid var(--border-color)',
+          padding: '1rem 2.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 100,
+          boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.1)',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ 
+            fontSize: '0.875rem', 
+            color: 'var(--text-secondary)',
+            fontWeight: 500
+          }}>
+            {changedFieldsCount > 0 ? (
+              <span style={{ color: 'var(--primary-color)' }}>
+                {changedFieldsCount} atributo{changedFieldsCount !== 1 ? 's' : ''} modificado{changedFieldsCount !== 1 ? 's' : ''}
+              </span>
+            ) : (
+              'Sin cambios pendientes'
+            )}
+          </div>
+          
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => navigate('/items')}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleSave}
+              disabled={saving || changedFieldsCount === 0}
+            >
+              {saving ? 'Guardando...' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default ItemDetail

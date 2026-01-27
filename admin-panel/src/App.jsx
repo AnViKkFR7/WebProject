@@ -5,6 +5,7 @@ import Blog from './pages/Blog.jsx'
 import Companies from './pages/Companies.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Items from './pages/Items.jsx'
+import ItemDetail from './pages/ItemDetail.jsx'
 import Media from './pages/Media.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Settings from './pages/Settings.jsx'
@@ -24,6 +25,7 @@ const App = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/items" element={<Items />} />
+            <Route path="/items/:itemId" element={<ItemDetail />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/users" element={<Users />} />
             <Route path="/blog" element={<Blog />} />

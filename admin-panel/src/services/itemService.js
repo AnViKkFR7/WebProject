@@ -110,7 +110,13 @@ export const itemService = {
   async getItemById(id) {
     const { data, error } = await supabase
       .from('items')
-      .select('*')
+      .select(`
+        *,
+        attribute_values(
+          *,
+          attribute_definitions(*)
+        )
+      `)
       .eq('id', id)
       .single()
 
@@ -223,7 +229,9 @@ export const itemService = {
     // valueData should contain item_id, attribute_id, and the specific value field (e.g. value_text)
     const { data, error } = await supabase
       .from('attribute_values')
-      .upsert(valueData)
+      .upsert(valueData, {
+        onConflict: 'item_id,attribute_id'
+      })
       .select()
       .single()
 

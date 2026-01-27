@@ -31,6 +31,15 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
     <>
       <aside className={`sidebar ${isTabletCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-visible' : ''}`}>
         
+        {/* Mobile Close Button */}
+        <button 
+          className="mobile-close-btn"
+          onClick={() => setIsMobileMenuOpen(false)}
+          title="Cerrar menú"
+        >
+          <span style={{ fontSize: '1.5rem' }}>↑</span>
+        </button>
+        
         <div className="sidebar-brand">
           <span className="brand-mark">R</span>
           <div className="brand-info">
@@ -80,6 +89,31 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
 
         {/* Desktop/Tablet Footer */}
         <div className="sidebar-footer">
+          {/* Profile Button - Mobile Only */}
+          {user && (
+            <button 
+              className="theme-switch mobile-only"
+              onClick={() => {
+                navigate('/profile')
+                setIsMobileMenuOpen(false)
+              }}
+              title="Ver perfil"
+            >
+              <span className="theme-switch-icon">{user.email?.[0]?.toUpperCase() || '👤'}</span>
+              <span className="theme-switch-label">Perfil</span>
+            </button>
+          )}
+
+          {/* Menu Toggle - Mobile Only */}
+          <button 
+            className="theme-switch mobile-only"
+            onClick={() => setIsMobileMenuOpen(false)}
+            title="Cerrar menú"
+          >
+            <span className="theme-switch-icon">✕</span>
+            <span className="theme-switch-label">Cerrar Menú</span>
+          </button>
+
           {/* Collapse Toggle (Desktop Only) */}
           <button 
             className="nav-link desktop-only" 

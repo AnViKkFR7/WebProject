@@ -417,4 +417,155 @@ El módulo de gestión de items es el núcleo del panel de administración. Perm
 
 ---
 
+## 12. Definiciones de Atributos para Propiedades Inmobiliarias
+
+Esta sección documenta los atributos estándar definidos para propiedades inmobiliarias, basados en análisis de inmobiliarias reales (Premium Houses, Duran Carasso). Estos atributos sirven como referencia para implementaciones futuras.
+
+### 12.1 Clasificación de Atributos
+
+Los atributos se clasifican según dos criterios independientes:
+
+- **is_required**: El atributo debe tener valor obligatoriamente al crear/publicar un item
+- **is_filterable**: El atributo puede usarse como criterio de búsqueda/filtrado
+
+### 12.2 Atributos Básicos (Obligatorios + Filtrables)
+
+Estos atributos son fundamentales para cualquier propiedad y se usan siempre en búsquedas:
+
+| Key | Label | Data Type | Required | Filterable | Descripción |
+|-----|-------|-----------|----------|------------|-------------|
+| `price` | Precio | number | ✅ | ✅ | Precio de venta o alquiler en euros |
+| `province` | Provincia | text | ✅ | ✅ | Provincia donde se ubica (Barcelona, Madrid, etc.) |
+| `city` | Ciudad/Municipio | text | ✅ | ✅ | Ciudad o municipio |
+| `property_type` | Tipo de Propiedad | text | ✅ | ✅ | Piso, Casa, Villa, Ático, etc. |
+| `built_surface` | Superficie Construida (m²) | number | ✅ | ✅ | Superficie total construida |
+| `bedrooms` | Habitaciones | number | ✅ | ✅ | Número de dormitorios |
+| `bathrooms` | Baños | number | ✅ | ✅ | Número de baños completos |
+| `condition` | Estado | text | ✅ | ✅ | Obra Nueva, Reformado, A Reformar, etc. |
+| `operation_type` | Operación | text | ✅ | ✅ | Venta, Alquiler, Traspaso |
+
+### 12.3 Atributos de Ubicación (Opcionales + Filtrables)
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `zone` | Zona/Barrio | text | ❌ | ✅ |
+| `usable_surface` | Superficie Útil (m²) | number | ❌ | ✅ |
+
+### 12.4 Atributos de Características Principales (Filtrables)
+
+Características que los usuarios suelen buscar activamente:
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `floor` | Planta | text | ❌ | ✅ |
+| `has_elevator` | Ascensor | boolean | ❌ | ✅ |
+| `parking_type` | Tipo de Parking | text | ❌ | ✅ |
+| `parking_spaces` | Plazas de Parking | number | ❌ | ✅ |
+| `has_terrace` | Terraza | boolean | ❌ | ✅ |
+| `terrace_surface` | Superficie Terraza (m²) | number | ❌ | ✅ |
+| `has_garden` | Jardín | boolean | ❌ | ✅ |
+| `pool_type` | Piscina | text | ❌ | ✅ |
+| `orientation` | Orientación | text | ❌ | ✅ |
+
+**Valores típicos:**
+- `parking_type`: "Incluido en precio", "No incluido", "Garaje privado", "Comunitario"
+- `pool_type`: "Privada", "Comunitaria", "Privada infinity", "Sin piscina"
+- `orientation`: "Norte", "Sur", "Este", "Oeste", "Norte-Sur", "Este-Oeste", etc.
+- `floor`: "Planta baja", "1ª planta", "2ª planta", "Ático", "Sótano", etc.
+
+### 12.5 Atributos Técnicos y Legales
+
+Información importante pero menos usada en filtros de búsqueda:
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `year_built` | Año de Construcción | number | ❌ | ✅ |
+| `energy_certificate` | Certificación Energética | text | ❌ | ✅ |
+| `energy_consumption` | Consumo Energético (kWh/m²·año) | number | ❌ | ❌ |
+| `co2_emissions` | Emisiones CO₂ (kg/m²·año) | number | ❌ | ❌ |
+| `cadastral_reference` | Referencia Catastral | text | ❌ | ❌ |
+| `ibi_annual` | IBI Anual (€) | number | ❌ | ❌ |
+| `community_fees` | Gastos Comunidad (€/mes) | number | ❌ | ❌ |
+
+**Valores típicos:**
+- `energy_certificate`: "A", "B", "C", "D", "E", "F", "G"
+
+### 12.6 Atributos de Equipamiento (Filtrables)
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `heating_type` | Tipo de Calefacción | text | ❌ | ✅ |
+| `air_conditioning` | Aire Acondicionado | text | ❌ | ✅ |
+| `kitchen_type` | Tipo de Cocina | text | ❌ | ✅ |
+| `built_in_wardrobes` | Armarios Empotrados | boolean | ❌ | ✅ |
+| `has_storage_room` | Trastero | boolean | ❌ | ✅ |
+| `furnished` | Amueblado | text | ❌ | ✅ |
+
+**Valores típicos:**
+- `heating_type`: "Individual gas natural", "Central", "Radiadores gas", "Aerotermia suelo radiante", "Bomba de calor", "Eléctrica", "No"
+- `air_conditioning`: "Splits", "Conductos centralizado", "Bomba de calor", "Preinstalación", "No"
+- `kitchen_type`: "Americana equipada", "Office equipada", "Independiente equipada", "Americana abierta", "Rústica equipada"
+- `furnished`: "Totalmente", "Parcialmente", "Sin amueblar"
+
+### 12.7 Atributos Adicionales (Arrays para Múltiples Valores)
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `features` | Características | text_array | ❌ | ✅ |
+| `views` | Vistas | text_array | ❌ | ❌ |
+| `garden_surface` | Superficie Jardín (m²) | number | ❌ | ❌ |
+
+**Valores típicos para `features`:**
+- "Luminoso", "Exterior", "Piscina privada", "Piscina comunitaria", "Vistas al mar", "Primera línea playa", "Garaje incluido", "Trastero", "Zona infantil", "Gimnasio", "Portería", "Seguridad 24h", "Domótica", "Placas solares", "Aerotermia", "Obra nueva", "Reformado", "Cerca colegios", "Bien comunicado", "Céntrico", "Zona tranquila"
+
+**Valores típicos para `views`:**
+- "Mar", "Montaña", "Ciudad", "Parque", "Jardín", "Panorámicas", "Despejadas", "Playa", "Bosque", "Campo", "Patio interior", "Calle"
+
+### 12.8 Atributos Descriptivos (Textos Largos)
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `description` | Descripción Completa | text | ✅ | ❌ |
+| `additional_notes` | Notas Adicionales | text | ❌ | ❌ |
+
+**Nota:** La descripción es obligatoria y debe contener información detallada de la propiedad: distribución, características especiales, entorno, servicios cercanos, etc.
+
+### 12.9 Atributos de Disponibilidad
+
+| Key | Label | Data Type | Required | Filterable |
+|-----|-------|-----------|----------|------------|
+| `available_from` | Disponible Desde | date | ❌ | ❌ |
+| `exclusive_agent` | Agente Exclusivo | text | ❌ | ❌ |
+
+### 12.10 Resumen Estadístico
+
+**Total de atributos:** 42
+
+**Distribución:**
+- Obligatorios + Filtrables: 9 atributos
+- Opcionales + Filtrables: 19 atributos
+- Opcionales + No Filtrables: 14 atributos
+
+**Por tipo de dato:**
+- `text`: 20 atributos
+- `number`: 14 atributos
+- `boolean`: 5 atributos
+- `text_array`: 2 atributos
+- `date`: 1 atributo
+
+### 12.11 Notas de Implementación
+
+1. **Valores de texto libre vs predefinidos**: Para atributos como `property_type`, `condition`, `heating_type`, etc., se recomienda usar valores predefinidos (selects) en el frontend, pero almacenarlos como texto para flexibilidad futura.
+
+2. **Campos calculados**: Algunos campos como `usable_surface` pueden calcularse automáticamente en base a `built_surface` si se conoce el coeficiente del edificio.
+
+3. **Validaciones**: Los atributos marcados como `is_required` deben validarse antes de permitir cambiar el estado del item a "published".
+
+4. **Búsqueda**: Los atributos marcados como `is_filterable` deben estar indexados y optimizados para consultas rápidas.
+
+5. **Localización**: Todos los labels están en español. En una implementación multiidioma, estos labels deberían traducirse en el frontend.
+
+---
+
 Este documento es la referencia base del proyecto.
+

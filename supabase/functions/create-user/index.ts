@@ -15,6 +15,8 @@ serve(async (req) => {
   try {
     // 1. Obtener el usuario que hace la llamada
     const authHeader = req.headers.get('Authorization')
+    console.log('🔐 Authorization header:', authHeader ? 'Present' : 'Missing')
+    
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
@@ -23,22 +25,17 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    
-    // Cliente con anon key para verificar el usuario
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader }
-        }
-      }
-    )
+    console.log('🎫 Token extracted, length:', token.length)
     
     // Cliente con service_role para operaciones admin
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    console.log('🔧 SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing')
+    console.log('🔧 SERVICE_ROLE_KEY:', serviceRoleKey ? 'Set' : 'Missing')
+    
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl ?? '',
+      serviceRoleKey ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -47,20 +44,53 @@ serve(async (req) => {
       }
     )
     
-    // 2. Verificar que quien llama es admin usando el cliente con el token del usuario
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    // 2. Verificar que quien llama es admin validando el JWT
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
     
-    if (userError || !user) {
+    if (userError) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Invalid token', details: userError?.message }),
+        JSON.stringify({ 
+          error: 'Unauthorized: Invalid token', 
+          details: userError.message,
+          debug: {
+            tokenLength: token.length,
+            supabaseUrlSet: !!supabaseUrl,
+            serviceRoleKeySet: !!serviceRoleKey,
+            errorCode: userError.code,
+            errorName: userError.name
+          }
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    if (!user) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unauthorized: Invalid token', 
+          details: 'No user found',
+          debug: {
+            tokenLength: token.length,
+            supabaseUrlSet: !!supabaseUrl,
+            serviceRoleKeySet: !!serviceRoleKey
+          }
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
     const isAdmin = user.app_metadata?.app_role === 'admin'
+    
     if (!isAdmin) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin only' }),
+        JSON.stringify({ 
+          error: 'Forbidden: Admin only',
+          debug: {
+            userEmail: user.email,
+            appMetadata: user.app_metadata,
+            appRole: user.app_metadata?.app_role
+          }
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

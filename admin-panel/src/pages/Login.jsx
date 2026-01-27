@@ -119,7 +119,7 @@ const Login = () => {
             <div className="back-to-login">
               <button 
                 type="button" 
-                className="ghost-button full-width" 
+                className="back-to-login-button full-width"
                 onClick={() => {
                   setView('login')
                   setError('')

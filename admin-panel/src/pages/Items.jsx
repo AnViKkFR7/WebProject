@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { itemService } from '../services/itemService'
 import { attributeDefinitionService } from '../services/attributeDefinitionService'
 import { userPreferencesService } from '../services/userPreferencesService'
@@ -11,6 +12,7 @@ const STATUS_OPTIONS = [
 ]
 
 const Items = () => {
+  const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -169,9 +171,15 @@ const Items = () => {
   }
 
   // Apply advanced filter selection
-  const applyAdvancedFilterSelection = () => {
-    saveFilterPreferences(selectedAdvancedFilters)
+  const applyAdvancedFilterSelection = async () => {
+    await saveFilterPreferences(selectedAdvancedFilters)
     setShowAdvancedFilterModal(false)
+  }
+
+  // Clear advanced filters
+  const clearAdvancedFilters = async () => {
+    setSelectedAdvancedFilters([])
+    await saveFilterPreferences([])
   }
 
   // Get unique values for a specific attribute definition
@@ -326,6 +334,10 @@ const Items = () => {
     })
   }
 
+  const handleItemClick = (item) => {
+    navigate(`/items/${item.id}`)
+  }
+
   return (
     <div className="page-content">
       <section className="page-header">
@@ -415,7 +427,6 @@ const Items = () => {
               >
                 <option value="">Más recientes primero</option>
                 <option value="asc">Más antiguos primero</option>
-                <option value="desc">Más recientes primero</option>
               </select>
             </div>
 
@@ -518,7 +529,12 @@ const Items = () => {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div className="table-row" key={item.id}>
+                  <div 
+                    className="table-row" 
+                    key={item.id}
+                    onClick={() => handleItemClick(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <span className="row-title">{item.title}</span>
                     <span>{item.item_type}</span>
                     <span>
@@ -625,6 +641,13 @@ const Items = () => {
                 onClick={() => setShowAdvancedFilterModal(false)}
               >
                 Cancelar
+              </button>
+              <button 
+                className="ghost-button"
+                onClick={clearAdvancedFilters}
+                style={{ marginLeft: 'auto' }}
+              >
+                Borrar filtros
               </button>
               <button 
                 className="primary-button"

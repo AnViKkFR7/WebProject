@@ -26,6 +26,8 @@ export const userPreferencesService = {
         user_id: userId,
         page,
         filter_config: filterConfig
+      }, {
+        onConflict: 'user_id,page'
       })
       .select()
       .single()
