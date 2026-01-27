@@ -663,7 +663,7 @@ const Items = () => {
       {/* Create item modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+          <div className="modal create-item-modal" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleCreateItem}>
               <div className="modal-header">
                 <h3>Nuevo Item</h3>
@@ -676,142 +676,369 @@ const Items = () => {
                 </button>
               </div>
               <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                {/* Basic fields */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                    Título *
-                  </label>
-                  <input 
-                    type="text"
-                    className="input"
-                    value={newItem.title}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                    Resumen
-                  </label>
-                  <textarea 
-                    className="input"
-                    rows={3}
-                    value={newItem.summary}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, summary: e.target.value }))}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                    Tipo de ítem *
-                  </label>
-                  <select 
-                    className="select"
-                    value={newItem.item_type}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
-                    required
-                  >
-                    <option value="">Selecciona un tipo</option>
-                    {itemTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                    <option value="__new__">+ Crear nuevo tipo</option>
-                  </select>
-                  {newItem.item_type === '__new__' && (
+                {/* Basic fields section */}
+                <div className="modal-section">
+                  <h4 className="modal-section-title">Información Básica</h4>
+                  
+                  <div className={`attribute-field ${!newItem.title ? 'required' : ''}`} style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+                      Título <span className="required-indicator">*</span>
+                    </label>
                     <input 
                       type="text"
                       className="input"
-                      placeholder="Nombre del nuevo tipo"
-                      style={{ marginTop: '0.5rem' }}
-                      onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
+                      value={newItem.title}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
+                      required
                     />
-                  )}
-                </div>
+                  </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                    Estado *
-                  </label>
-                  <select 
-                    className="select"
-                    value={newItem.status}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, status: e.target.value }))}
-                    required
-                  >
-                    {STATUS_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+                      Resumen
+                    </label>
+                    <textarea 
+                      className="input"
+                      rows={3}
+                      value={newItem.summary}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, summary: e.target.value }))}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className={`attribute-field ${!newItem.item_type ? 'required' : ''}`}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+                        Tipo de ítem <span className="required-indicator">*</span>
+                      </label>
+                      <select 
+                        className="select"
+                        value={newItem.item_type}
+                        onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
+                        required
+                      >
+                        <option value="">Selecciona un tipo</option>
+                        {itemTypes.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                        <option value="__new__">+ Crear nuevo tipo</option>
+                      </select>
+                      {newItem.item_type === '__new__' && (
+                        <input 
+                          type="text"
+                          className="input"
+                          placeholder="Nombre del nuevo tipo"
+                          style={{ marginTop: '0.5rem' }}
+                          onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
+                        />
+                      )}
+                    </div>
+
+                    <div className={`attribute-field ${!newItem.status ? 'required' : ''}`}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+                        Estado <span className="required-indicator">*</span>
+                      </label>
+                      <select 
+                        className="select"
+                        value={newItem.status}
+                        onChange={(e) => setNewItem(prev => ({ ...prev, status: e.target.value }))}
+                        required
+                      >
+                        {STATUS_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Dynamic attribute fields */}
                 {newItem.item_type && newItem.item_type !== '__new__' && (
-                  <>
-                    <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
-                    <h4 style={{ marginBottom: '1rem' }}>Atributos</h4>
-                    {attributeDefinitions
-                      .filter(def => def.item_type === newItem.item_type)
-                      .map(def => (
-                        <div key={def.id} style={{ marginBottom: '1rem' }}>
-                          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                            {def.label} {def.is_required && '*'}
-                          </label>
-                          {def.data_type === 'text' && (
-                            <input 
-                              type="text"
-                              className="input"
-                              value={newItemAttributes[def.id] || ''}
-                              onChange={(e) => setNewItemAttributes(prev => ({ 
-                                ...prev, 
-                                [def.id]: e.target.value 
-                              }))}
-                              required={def.is_required}
-                            />
-                          )}
-                          {def.data_type === 'number' && (
-                            <input 
-                              type="number"
-                              className="input"
-                              value={newItemAttributes[def.id] || ''}
-                              onChange={(e) => setNewItemAttributes(prev => ({ 
-                                ...prev, 
-                                [def.id]: e.target.value 
-                              }))}
-                              required={def.is_required}
-                            />
-                          )}
-                          {def.data_type === 'boolean' && (
-                            <select 
-                              className="select"
-                              value={newItemAttributes[def.id] || ''}
-                              onChange={(e) => setNewItemAttributes(prev => ({ 
-                                ...prev, 
-                                [def.id]: e.target.value 
-                              }))}
-                              required={def.is_required}
-                            >
-                              <option value="">Selecciona</option>
-                              <option value="true">Sí</option>
-                              <option value="false">No</option>
-                            </select>
-                          )}
-                          {def.data_type === 'date' && (
-                            <input 
-                              type="date"
-                              className="input"
-                              value={newItemAttributes[def.id] || ''}
-                              onChange={(e) => setNewItemAttributes(prev => ({ 
-                                ...prev, 
-                                [def.id]: e.target.value 
-                              }))}
-                              required={def.is_required}
-                            />
-                          )}
-                        </div>
-                      ))
-                    }
-                  </>
+                  <div className="modal-section">
+                    <h4 className="modal-section-title">Atributos del Item</h4>
+                    <div className="attributes-grid">
+                      {attributeDefinitions
+                        .filter(def => def.item_type === newItem.item_type)
+                        .sort((a, b) => {
+                          // Required first
+                          if (a.is_required && !b.is_required) return -1
+                          if (!a.is_required && b.is_required) return 1
+                          return 0
+                        })
+                        .map(def => {
+                          const hasValue = newItemAttributes[def.id] && newItemAttributes[def.id] !== '';
+                          const shouldShowRequired = def.is_required && !hasValue;
+                          
+                          return (
+                          <div key={def.id} className={`attribute-field ${shouldShowRequired ? 'required' : ''} ${def.data_type === 'longtext' ? 'longtext-field' : ''}`}>
+                            <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500, fontSize: '0.9rem' }}>
+                              {def.label} {def.is_required && <span className="required-indicator">*</span>}
+                            </label>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.5rem', fontWeight: 400, marginTop: '0.1rem' }}>
+                              {def.data_type}
+                            </div>
+                            {(def.data_type === 'text' && !def.validation_rules?.options) && (
+                              <input 
+                                type="text"
+                                className="input"
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => setNewItemAttributes(prev => ({ 
+                                  ...prev, 
+                                  [def.id]: e.target.value 
+                                }))}
+                                required={def.is_required}
+                              />
+                            )}
+                            {def.data_type === 'longtext' && (
+                              <textarea 
+                                className="input"
+                                rows={4}
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => setNewItemAttributes(prev => ({ 
+                                  ...prev, 
+                                  [def.id]: e.target.value 
+                                }))}
+                                required={def.is_required}
+                                style={{ resize: 'vertical' }}
+                              />
+                            )}
+                            {(def.data_type === 'integer' || def.data_type === 'decimal' || def.data_type === 'number') && (
+                              <input 
+                                type="text"
+                                inputMode="numeric"
+                                className="input"
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  // Allow empty, numbers, minus sign, and decimal point
+                                  if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+                                    setNewItemAttributes(prev => ({ 
+                                      ...prev, 
+                                      [def.id]: value 
+                                    }));
+                                  }
+                                }}
+                                required={def.is_required}
+                                placeholder={def.data_type === 'decimal' ? '0.00' : '0'}
+                              />
+                            )}
+                            {def.data_type === 'boolean' && (
+                              <select 
+                                className="select"
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => setNewItemAttributes(prev => ({ 
+                                  ...prev, 
+                                  [def.id]: e.target.value 
+                                }))}
+                                required={def.is_required}
+                              >
+                                <option value="">Selecciona</option>
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                              </select>
+                            )}
+                            {def.data_type === 'date' && (
+                              <input 
+                                type="date"
+                                className="input"
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => setNewItemAttributes(prev => ({ 
+                                  ...prev, 
+                                  [def.id]: e.target.value 
+                                }))}
+                                required={def.is_required}
+                              />
+                            )}
+                            {def.validation_rules?.options && (
+                              <select 
+                                className="select"
+                                value={newItemAttributes[def.id] || ''}
+                                onChange={(e) => setNewItemAttributes(prev => ({ 
+                                  ...prev, 
+                                  [def.id]: e.target.value 
+                                }))}
+                                required={def.is_required}
+                              >
+                                <option value="">Selecciona una opción</option>
+                                {def.validation_rules.options.map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            )}
+                            {def.data_type === 'text_array' && (
+                              <div>
+                                {Array.isArray(newItemAttributes[def.id]) && newItemAttributes[def.id].length > 0 && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    {newItemAttributes[def.id].map((item, index) => (
+                                      <div key={index} className="array-item">
+                                        <span className="array-index">{index + 1}.</span>
+                                        <span style={{ flex: 1, fontSize: '0.875rem' }}>{item}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newArray = newItemAttributes[def.id].filter((_, i) => i !== index)
+                                            setNewItemAttributes(prev => ({
+                                              ...prev,
+                                              [def.id]: newArray.length > 0 ? newArray : []
+                                            }))
+                                          }}
+                                          style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--danger-color)',
+                                            cursor: 'pointer',
+                                            fontSize: '1.1rem',
+                                            padding: '0.25rem'
+                                          }}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="Nuevo elemento..."
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        const val = e.target.value.trim()
+                                        if (val) {
+                                          const current = Array.isArray(newItemAttributes[def.id]) ? newItemAttributes[def.id] : []
+                                          setNewItemAttributes(prev => ({
+                                            ...prev,
+                                            [def.id]: [...current, val]
+                                          }))
+                                          e.target.value = ''
+                                        }
+                                      }
+                                    }}
+                                    style={{ flex: 1, fontSize: '0.875rem' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      const input = e.target.parentElement.querySelector('input')
+                                      const val = input.value.trim()
+                                      if (val) {
+                                        const current = Array.isArray(newItemAttributes[def.id]) ? newItemAttributes[def.id] : []
+                                        setNewItemAttributes(prev => ({
+                                          ...prev,
+                                          [def.id]: [...current, val]
+                                        }))
+                                        input.value = ''
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: 'var(--primary-color)',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: '600',
+                                      fontSize: '0.8rem',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    + Agregar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                            {def.data_type === 'number_array' && (
+                              <div>
+                                {Array.isArray(newItemAttributes[def.id]) && newItemAttributes[def.id].length > 0 && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    {newItemAttributes[def.id].map((item, index) => (
+                                      <div key={index} className="array-item">
+                                        <span className="array-index">{index + 1}.</span>
+                                        <span style={{ flex: 1, fontSize: '0.875rem' }}>{item}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newArray = newItemAttributes[def.id].filter((_, i) => i !== index)
+                                            setNewItemAttributes(prev => ({
+                                              ...prev,
+                                              [def.id]: newArray.length > 0 ? newArray : []
+                                            }))
+                                          }}
+                                          style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--danger-color)',
+                                            cursor: 'pointer',
+                                            fontSize: '1.1rem',
+                                            padding: '0.25rem'
+                                          }}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <input
+                                    type="number"
+                                    className="input"
+                                    placeholder="Nuevo número..."
+                                    step="any"
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        const val = e.target.value.trim()
+                                        if (val) {
+                                          const current = Array.isArray(newItemAttributes[def.id]) ? newItemAttributes[def.id] : []
+                                          setNewItemAttributes(prev => ({
+                                            ...prev,
+                                            [def.id]: [...current, parseFloat(val)]
+                                          }))
+                                          e.target.value = ''
+                                        }
+                                      }
+                                    }}
+                                    style={{ flex: 1, fontSize: '0.875rem' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      const input = e.target.parentElement.querySelector('input')
+                                      const val = input.value.trim()
+                                      if (val) {
+                                        const current = Array.isArray(newItemAttributes[def.id]) ? newItemAttributes[def.id] : []
+                                        setNewItemAttributes(prev => ({
+                                          ...prev,
+                                          [def.id]: [...current, parseFloat(val)]
+                                        }))
+                                        input.value = ''
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: 'var(--primary-color)',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: '600',
+                                      fontSize: '0.8rem',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    + Agregar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          )
+                        })
+                      }
+                    </div>
+                  </div>
                 )}
               </div>
               <div className="modal-footer">

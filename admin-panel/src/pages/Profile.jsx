@@ -298,7 +298,6 @@ const Profile = () => {
                   <label className="form-group">
                     <span>Correo Electrónico</span>
                     <input type="email" className="input" defaultValue="joselyn@email.com" disabled />
-                    <span className="help-text">El email no se puede cambiar.</span>
                   </label>
 
                   <label className="form-group">
@@ -669,10 +668,10 @@ const Profile = () => {
                       </select>
                     </label>
 
-                    <label className="form-group full-width">
-                      <span>Modo de Creación *</span>
+                    <div className="form-group full-width">
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Modo de Creación *</label>
                       <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input
                             type="radio"
                             name="invitation_mode"
@@ -680,9 +679,9 @@ const Profile = () => {
                             checked={newUser.invitation_mode === 'password'}
                             onChange={(e) => setNewUser({ ...newUser, invitation_mode: e.target.value })}
                           />
-                          <span>Con contraseña</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Con contraseña</span>
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input
                             type="radio"
                             name="invitation_mode"
@@ -690,10 +689,10 @@ const Profile = () => {
                             checked={newUser.invitation_mode === 'invitation'}
                             onChange={(e) => setNewUser({ ...newUser, invitation_mode: e.target.value })}
                           />
-                          <span>Por invitación (email)</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Por invitación (email)</span>
                         </label>
                       </div>
-                    </label>
+                    </div>
 
                     {newUser.invitation_mode === 'password' && (
                       <>
