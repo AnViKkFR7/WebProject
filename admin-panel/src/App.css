@@ -1220,10 +1220,14 @@ button {
     left: 0;
     width: 100vw;
     height: 100vh;
+    max-height: 100vh;
     background-color: var(--bg-sidebar);
     z-index: 1000;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .sidebar.mobile-visible {
@@ -1249,6 +1253,7 @@ button {
     margin-top: 1rem;
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
   }
 
   /* Mobile Menu Footer */

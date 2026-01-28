@@ -8,7 +8,7 @@ import Items from './pages/Items.jsx'
 import ItemDetail from './pages/ItemDetail.jsx'
 import Media from './pages/Media.jsx'
 import NotFound from './pages/NotFound.jsx'
-import Settings from './pages/Settings.jsx'
+import MyData from './pages/MyData.jsx'
 import Users from './pages/Users.jsx'
 import Login from './pages/Login.jsx'
 import Profile from './pages/Profile.jsx'
@@ -26,11 +26,11 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/items" element={<Items />} />
             <Route path="/items/:itemId" element={<ItemDetail />} />
+            <Route path="/my-data" element={<MyData />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/users" element={<Users />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/media" element={<Media />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
