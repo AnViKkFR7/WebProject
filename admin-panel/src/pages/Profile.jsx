@@ -605,7 +605,7 @@ const Profile = () => {
                             left: 0,
                             right: 0,
                             marginTop: '0.25rem',
-                            background: 'white',
+                            background: 'var(--bg-card)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '8px',
                             maxHeight: '200px',
@@ -630,10 +630,11 @@ const Profile = () => {
                                     cursor: 'pointer',
                                     borderBottom: '1px solid var(--border-color)',
                                     transition: 'background 0.2s',
-                                    background: newUser.company_id === company.id ? '#f0f4ff' : 'white'
+                                    background: newUser.company_id === company.id ? 'var(--primary-light)' : 'var(--bg-card)',
+                                    color: 'var(--text-primary)'
                                   }}
-                                  onMouseEnter={(e) => e.target.style.background = '#f8f9fa'}
-                                  onMouseLeave={(e) => e.target.style.background = newUser.company_id === company.id ? '#f0f4ff' : 'white'}
+                                  onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                  onMouseLeave={(e) => e.target.style.background = newUser.company_id === company.id ? 'var(--primary-light)' : 'var(--bg-card)'}
                                 >
                                   {company.name}
                                 </div>

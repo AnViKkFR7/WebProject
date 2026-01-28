@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/items', label: 'Items', icon: '🧩' },
+  { to: '/my-data', label: 'Mis Datos', icon: '⚡' },
   { to: '/companies', label: 'Empresas', icon: '🏢' },
   { to: '/users', label: 'Usuarios', icon: '👥' },
   { to: '/blog', label: 'Blog', icon: '✍️' },
-  // Media removed as requested
-  { to: '/settings', label: 'Ajustes', icon: '⚙️' },
 ]
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed, user }) => {
