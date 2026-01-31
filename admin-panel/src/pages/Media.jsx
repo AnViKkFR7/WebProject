@@ -1,14 +1,18 @@
+import { useLanguage } from '../contexts/LanguageContext'
+
 const Media = () => {
+  const { t } = useLanguage()
+  
   return (
     <div className="page-content">
       <section className="page-header">
         <div>
-          <h2>Media</h2>
-          <p>Gestiona imágenes y documentos vinculados a items y blog.</p>
+          <h2>{t('media.title')}</h2>
+          <p>{t('media.description')}</p>
         </div>
         <div className="header-actions">
-          <button className="primary-button">Subir archivo</button>
-          <button className="ghost-button">Crear carpeta</button>
+          <button className="primary-button">{t('media.uploadFile')}</button>
+          <button className="ghost-button">{t('media.createFolder')}</button>
         </div>
       </section>
 

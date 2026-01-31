@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const Login = () => {
   const [view, setView] = useState('login') // 'login' | 'forgot'
@@ -10,6 +11,7 @@ const Login = () => {
   const [message, setMessage] = useState('') // Mensajes de éxito
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -20,7 +22,7 @@ const Login = () => {
       await authService.login(email, password)
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión')
+      setError(err.message || t('login.errorMessage'))
     } finally {
       setLoading(false)
     }
@@ -48,10 +50,10 @@ const Login = () => {
       <div className="login-card">
         <div className="login-header">
           <div className="logo-placeholder">🌐</div>
-          <h2>{view === 'login' ? 'Bienvenido de nuevo' : 'Recuperar Cuenta'}</h2>
+          <h2>{view === 'login' ? t('login.title') : 'Recuperar Cuenta'}</h2>
           <p>
             {view === 'login' 
-              ? 'Ingresa tus credenciales para administrar el sistema' 
+              ? t('login.errorMessage')
               : 'Ingresa tu email y te enviaremos instrucciones'}
           </p>
         </div>
@@ -62,7 +64,7 @@ const Login = () => {
         {view === 'login' ? (
           <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t('login.email')}</label>
               <input
                 type="email"
                 id="email"
@@ -74,7 +76,7 @@ const Login = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="password">Contraseña</label>
+              <label htmlFor="password">{t('login.password')}</label>
               <input
                 type="password"
                 id="password"
@@ -95,7 +97,7 @@ const Login = () => {
             </div>
 
             <button type="submit" className="primary-button full-width" disabled={loading}>
-              {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+              {loading ? t('common.loading') : t('login.signIn')}
             </button>
           </form>
         ) : (

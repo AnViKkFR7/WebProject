@@ -1,8 +1,4 @@
-const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Borrador' },
-  { value: 'published', label: 'Publicado' },
-  { value: 'archived', label: 'Archivado' }
-]
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const ItemBasicInfo = ({ 
   itemData, 
@@ -12,6 +8,13 @@ const ItemBasicInfo = ({
   editableFields,
   onToggleEditable
 }) => {
+  const { t } = useLanguage()
+
+  const STATUS_OPTIONS = [
+    { value: 'draft', label: t('items.draft') },
+    { value: 'published', label: t('items.published') },
+    { value: 'archived', label: t('items.archived') }
+  ]
   if (loading) {
     return (
       <div style={{ 
@@ -24,7 +27,7 @@ const ItemBasicInfo = ({
           marginBottom: '1rem',
           color: 'var(--text-color)'
         }}>
-          Información Básica
+          {t('itemDetail.basicInfo')}
         </h2>
         <div style={{ display: 'grid', gap: '1rem' }}>
           {[1, 2, 3, 4].map(i => (
@@ -57,7 +60,7 @@ const ItemBasicInfo = ({
         marginBottom: '1rem',
         color: 'var(--text-color)'
       }}>
-        Información Básica
+        {t('itemDetail.basicInfo')}
       </h2>
 
       <div style={{ display: 'grid', gap: '1rem' }}>
@@ -67,7 +70,7 @@ const ItemBasicInfo = ({
             htmlFor="item-key" 
             className="label"
           >
-            Título del Inmueble
+            {t('itemDetail.propertyTitle')}
           </label>
           <div style={{ position: 'relative' }}>
             <input
@@ -77,7 +80,7 @@ const ItemBasicInfo = ({
               value={itemData.title}
               onChange={(e) => setItemData({...itemData, title: e.target.value})}
               disabled={!editableFields?.['basic-title']}
-              placeholder="Clave del inmueble"
+              placeholder={t('itemDetail.titlePlaceholder')}
               style={{ paddingRight: '50px' }}
             />
             {canEdit && (
@@ -98,7 +101,7 @@ const ItemBasicInfo = ({
                   alignItems: 'center',
                   color: editableFields?.['basic-title'] ? 'var(--primary-color)' : 'var(--text-secondary)'
                 }}
-                title={editableFields?.['basic-title'] ? 'Bloquear campo' : 'Editar campo'}
+                title={editableFields?.['basic-title'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
                 ✏️
               </button>
@@ -109,7 +112,7 @@ const ItemBasicInfo = ({
         {/* Resumen */}
         <div>
           <label htmlFor="item-summary" className="label">
-            Resumen
+            {t('itemDetail.summary')}
           </label>
           <div style={{ position: 'relative' }}>
             <textarea
@@ -118,7 +121,7 @@ const ItemBasicInfo = ({
               value={itemData.summary || ''}
               onChange={(e) => setItemData({...itemData, summary: e.target.value})}
               disabled={!editableFields?.['basic-summary']}
-              placeholder="Breve descripción del inmueble"
+              placeholder={t('itemDetail.summaryPlaceholder')}
               rows={3}
               style={{ 
                 resize: 'vertical',
@@ -142,7 +145,7 @@ const ItemBasicInfo = ({
                   alignItems: 'center',
                   color: editableFields?.['basic-summary'] ? 'var(--primary-color)' : 'var(--text-secondary)'
                 }}
-                title={editableFields?.['basic-summary'] ? 'Bloquear campo' : 'Editar campo'}
+                title={editableFields?.['basic-summary'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
                 ✏️
               </button>
@@ -153,7 +156,7 @@ const ItemBasicInfo = ({
         {/* Estado */}
         <div>
           <label htmlFor="item-status" className="label">
-            Estado
+            {t('itemDetail.status')}
           </label>
           <div style={{ position: 'relative' }}>
             <select
@@ -188,7 +191,7 @@ const ItemBasicInfo = ({
                   alignItems: 'center',
                   color: editableFields?.['basic-status'] ? 'var(--primary-color)' : 'var(--text-secondary)'
                 }}
-                title={editableFields?.['basic-status'] ? 'Bloquear campo' : 'Editar campo'}
+                title={editableFields?.['basic-status'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
                 ✏️
               </button>
@@ -202,7 +205,7 @@ const ItemBasicInfo = ({
             htmlFor="item-type"
             className="label"
           >
-            Tipo
+            {t('itemDetail.type')}
           </label>
           <input
             id="item-type"

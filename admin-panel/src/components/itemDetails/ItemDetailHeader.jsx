@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import Button from '../Button'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const ItemDetailHeader = ({ item, loading }) => {
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   if (loading) {
     return (
@@ -46,7 +48,7 @@ const ItemDetailHeader = ({ item, loading }) => {
           marginBottom: '0.5rem',
           color: 'var(--text-color)'
         }}>
-          {item?.title || 'Cargando...'}
+          {item?.title || t('itemDetail.loading')}
         </h1>
       </div>
       <Button 
@@ -54,7 +56,7 @@ const ItemDetailHeader = ({ item, loading }) => {
         variant="ghost"
         size="small"
       >
-        ← Volver
+        {t('itemDetail.back')}
       </Button>
     </div>
   )

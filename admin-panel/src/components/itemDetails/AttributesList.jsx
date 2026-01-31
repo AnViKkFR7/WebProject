@@ -1,4 +1,5 @@
 import AttributeItem from './AttributeItem'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const AttributesList = ({ 
   attributeDefinitions,
@@ -13,6 +14,8 @@ const AttributesList = ({
   onSearchChange,
   loading
 }) => {
+  const { t } = useLanguage()
+
   const getFilteredAndSortedDefinitions = () => {
     let filtered = attributeDefinitions
 
@@ -37,7 +40,7 @@ const AttributesList = ({
           marginBottom: '1rem',
           color: 'var(--text-color)'
         }}>
-          Atributos del Inmueble
+          {t('itemDetail.propertyAttributes')}
         </h2>
         <div style={{ display: 'grid', gap: '1rem' }}>
           {[1, 2, 3, 4, 5].map(i => (
@@ -72,18 +75,29 @@ const AttributesList = ({
         marginBottom: '1rem',
         color: 'var(--text-color)'
       }}>
-        Atributos del Inmueble
+        {t('itemDetail.propertyAttributes')}
       </h2>
 
       {/* Search Filter */}
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '1rem', position: 'relative', maxWidth: '400px' }}>
+        <span style={{ 
+          position: 'absolute', 
+          left: '12px', 
+          top: '50%', 
+          transform: 'translateY(-50%)', 
+          fontSize: '1rem', 
+          color: 'var(--text-tertiary)',
+          pointerEvents: 'none'
+        }}>
+          🔍
+        </span>
         <input
           type="text"
           className="input"
-          placeholder="🔍 Filtrar por nombre de atributo..."
+          placeholder={t('itemDetail.filterPlaceholder')}
           value={searchFilter}
           onChange={(e) => onSearchChange(e.target.value)}
-          style={{ width: '100%', maxWidth: '400px' }}
+          style={{ width: '100%', paddingLeft: '2.5rem' }}
         />
       </div>
 
@@ -98,7 +112,7 @@ const AttributesList = ({
             textAlign: 'center', 
             color: 'var(--text-secondary)' 
           }}>
-            No se encontraron atributos que coincidan con "{searchFilter}"
+            {t('itemDetail.noAttributesFound')} "{searchFilter}"
           </div>
         ) : (
           filteredDefinitions.map((def) => (

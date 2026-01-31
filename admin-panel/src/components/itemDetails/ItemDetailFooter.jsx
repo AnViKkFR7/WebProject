@@ -1,4 +1,5 @@
 import Button from '../Button'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const ItemDetailFooter = ({ 
   changedFieldsCount, 
@@ -6,6 +7,8 @@ const ItemDetailFooter = ({
   onCancel, 
   onSave 
 }) => {
+  const { t } = useLanguage()
+
   return (
     <div style={{
       position: 'fixed',
@@ -28,7 +31,7 @@ const ItemDetailFooter = ({
         color: changedFieldsCount > 0 ? 'var(--primary-color)' : 'var(--text-secondary)',
         fontWeight: '500'
       }}>
-        {changedFieldsCount > 0 ? `${changedFieldsCount} campo(s) modificado(s)` : 'Sin cambios pendientes'}
+        {changedFieldsCount > 0 ? `${changedFieldsCount} ${t('itemDetail.fieldsModified')}` : t('itemDetail.noChanges')}
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -37,14 +40,14 @@ const ItemDetailFooter = ({
           variant="ghost"
           disabled={saving}
         >
-          Cancelar
+          {t('itemDetail.cancel')}
         </Button>
         <Button
           onClick={onSave}
           variant="primary"
           disabled={saving || changedFieldsCount === 0}
         >
-          {saving ? 'Guardando...' : 'Guardar cambios'}
+          {saving ? t('itemDetail.saving') : t('itemDetail.saveChanges')}
         </Button>
       </div>
     </div>
