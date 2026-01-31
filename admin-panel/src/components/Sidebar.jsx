@@ -1,21 +1,25 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
-  { to: '/items', label: 'Items', icon: '🧩' },
-  { to: '/my-data', label: 'Mis Datos', icon: '⚡' },
-  { to: '/companies', label: 'Empresas', icon: '🏢' },
-  { to: '/users', label: 'Usuarios', icon: '👥' },
-  { to: '/blog', label: 'Blog', icon: '✍️' },
-]
+import { useCompany } from '../contexts/CompanyContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed, user }) => {
   const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE === 'true'
   const navigate = useNavigate()
+  const { selectedCompany } = useCompany()
+  const { t } = useLanguage()
   
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+
+  const navItems = [
+    { to: '/', label: t('nav.dashboard'), icon: '📊' },
+    { to: '/items', label: t('nav.items'), icon: '🧩' },
+    { to: '/my-data', label: t('nav.myData'), icon: '⚡' },
+    { to: '/companies', label: t('nav.companies'), icon: '🏢' },
+    { to: '/users', label: t('nav.users'), icon: '👥' },
+    { to: '/blog', label: t('nav.blog'), icon: '✍️' },
+  ]
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -40,9 +44,17 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
         </button>
         
         <div className="sidebar-brand">
-          <span className="brand-mark">R</span>
+          <span 
+            className="brand-mark" 
+            style={{
+              background: selectedCompany ? 'var(--primary-color)' : '#475569',
+              color: 'white'
+            }}
+          >
+            {selectedCompany ? selectedCompany.name.charAt(0).toUpperCase() : 'X'}
+          </span>
           <div className="brand-info">
-            <div className="brand-title">Regiamare</div>
+            <div className="brand-title">{selectedCompany ? selectedCompany.name : t('nav.noCompany')}</div>
             <div className="brand-subtitle">Admin Panel</div>
           </div>
         </div>
@@ -80,7 +92,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
               <div className="user-avatar">{user.email?.[0]?.toUpperCase() || 'U'}</div>
               <div className="user-info">
                 <div className="user-name">{user.email?.split('@')[0] || 'Usuario'}</div>
-                <div className="user-role">Ver perfil</div>
+                <div className="user-role">{t('nav.profile')}</div>
               </div>
             </div>
           )}
@@ -96,10 +108,10 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
                 navigate('/profile')
                 setIsMobileMenuOpen(false)
               }}
-              title="Ver perfil"
+              title={t('nav.profile')}
             >
               <span className="theme-switch-icon">{user.email?.[0]?.toUpperCase() || '👤'}</span>
-              <span className="theme-switch-label">Perfil</span>
+              <span className="theme-switch-label">{t('nav.profile')}</span>
             </button>
           )}
 

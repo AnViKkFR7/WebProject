@@ -4,6 +4,7 @@ import { itemService } from '../services/itemService'
 import { attributeDefinitionService } from '../services/attributeDefinitionService'
 import { userPreferencesService } from '../services/userPreferencesService'
 import { supabase } from '../lib/supabaseClient'
+import { useCompany } from '../contexts/CompanyContext'
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Borrador' },
@@ -13,6 +14,7 @@ const STATUS_OPTIONS = [
 
 const Items = () => {
   const navigate = useNavigate()
+  const { selectedCompany } = useCompany()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -25,7 +27,6 @@ const Items = () => {
 
   // User and company
   const [userId, setUserId] = useState(null)
-  const [companyId, setCompanyId] = useState(null)
 
   // Fixed filters
   const [statusFilter, setStatusFilter] = useState([])
@@ -51,24 +52,12 @@ const Items = () => {
   })
   const [newItemAttributes, setNewItemAttributes] = useState({})
 
-  // Load user and company
+  // Load user
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setUserId(user.id)
-        
-        // Get user's company
-        const { data: membership } = await supabase
-          .from('company_members')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single()
-        
-        if (membership) {
-          setCompanyId(membership.company_id)
-        }
       }
     }
     loadUser()
@@ -76,13 +65,13 @@ const Items = () => {
 
   // Load attribute definitions and item types
   useEffect(() => {
-    if (!companyId) return
+    if (!selectedCompany?.id) return
 
     const loadMetadata = async () => {
       try {
         const [definitions, types] = await Promise.all([
-          attributeDefinitionService.getDefinitions(companyId),
-          attributeDefinitionService.getUniqueItemTypes(companyId)
+          attributeDefinitionService.getDefinitions(selectedCompany.id),
+          attributeDefinitionService.getUniqueItemTypes(selectedCompany.id)
         ])
         setAttributeDefinitions(definitions)
         setItemTypes(types)
@@ -92,7 +81,7 @@ const Items = () => {
     }
 
     loadMetadata()
-  }, [companyId])
+  }, [selectedCompany?.id])
 
   // Load user preferences
   useEffect(() => {
@@ -114,7 +103,7 @@ const Items = () => {
 
   // Load items
   useEffect(() => {
-    if (!companyId) return
+    if (!selectedCompany?.id) return
 
     const loadItems = async () => {
       setLoading(true)
@@ -127,7 +116,7 @@ const Items = () => {
         }
 
         const result = await itemService.getItemsByAdvancedFilters(
-          companyId,
+          selectedCompany.id,
           filters,
           advancedFilterValues,
           page,
@@ -146,7 +135,7 @@ const Items = () => {
     }
 
     loadItems()
-  }, [companyId, statusFilter, itemTypeFilter, sortByDate, advancedFilterValues, page])
+  }, [selectedCompany?.id, statusFilter, itemTypeFilter, sortByDate, advancedFilterValues, page])
 
   // Save advanced filter preferences
   const saveFilterPreferences = async (filterIds) => {
@@ -242,15 +231,15 @@ const Items = () => {
   const handleCreateItem = async (e) => {
     e.preventDefault()
     
-    if (!companyId) {
-      alert('No se ha encontrado la compañía')
+    if (!selectedCompany?.id) {
+      alert('No se ha seleccionado una empresa')
       return
     }
 
     try {
       const itemData = {
         ...newItem,
-        company_id: companyId
+        company_id: selectedCompany.id
       }
 
       const createdItem = await itemService.createItem(itemData)

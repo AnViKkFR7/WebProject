@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { authService } from '../services/authService'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
   const navigate = useNavigate()
   const [isScrolled, setIsScrolled] = useState(false)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+  const { language, toggleLanguage } = useLanguage()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,7 +51,6 @@ const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
 
         <div className="topbar-text">
           <h1 className="topbar-title">Panel de administración</h1>
-          <p className="topbar-subtitle">Multi-tenant · Supabase · React</p>
         </div>
       </div>
       <div className="topbar-right">
@@ -63,6 +64,17 @@ const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
           aria-label="Ver perfil"
         >
           <div className="user-avatar-small">{user?.email?.[0]?.toUpperCase() || 'U'}</div>
+        </button>
+        
+        {/* Language toggle button for mobile */}
+        <button 
+          className="language-button-mobile mobile-only" 
+          onClick={toggleLanguage}
+          title={language === 'es' ? 'Cambiar a English' : 'Switch to Español'}
+          aria-label="Change language"
+          style={{ fontWeight: 700, fontSize: '0.875rem' }}
+        >
+          {language === 'es' ? 'ES' : 'EN'}
         </button>
         
         {/* Logout button for mobile */}
@@ -84,6 +96,16 @@ const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
             <div className="user-role">Conectado</div>
           </div>
         </div>
+        
+        {/* Language toggle button for desktop */}
+        <button 
+          className="language-button desktop-only" 
+          onClick={toggleLanguage}
+          title={language === 'es' ? 'Cambiar a English' : 'Switch to Español'}
+          style={{ fontWeight: 700, fontSize: '0.875rem' }}
+        >
+          {language === 'es' ? 'ES' : 'EN'}
+        </button>
         
         <button 
           className="logout-button desktop-only" 

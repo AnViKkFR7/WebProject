@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar.jsx'
 import Topbar from '../components/Topbar.jsx'
 import { authService } from '../services/authService'
+import { CompanyProvider } from '../contexts/CompanyContext'
 
 const AdminLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -14,34 +15,36 @@ const AdminLayout = () => {
   }, [])
 
   return (
-    <div className={`app-shell ${isTabletCollapsed ? 'tablet-collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-      <Sidebar 
-        isMobileMenuOpen={isMobileMenuOpen} 
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-        isTabletCollapsed={isTabletCollapsed}
-        setIsTabletCollapsed={setIsTabletCollapsed}
-        user={user}
-      />
-      
-      {/* Overlay para cerrar menú móvil al hacer click fuera */}
-      {isMobileMenuOpen && (
-        <div 
-          className="mobile-overlay-backdrop" 
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <div className="app-main">
-        <Topbar 
-          isMobileMenuOpen={isMobileMenuOpen}
+    <CompanyProvider>
+      <div className={`app-shell ${isTabletCollapsed ? 'tablet-collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+        <Sidebar 
+          isMobileMenuOpen={isMobileMenuOpen} 
           setIsMobileMenuOpen={setIsMobileMenuOpen}
+          isTabletCollapsed={isTabletCollapsed}
+          setIsTabletCollapsed={setIsTabletCollapsed}
           user={user}
         />
-        <main className="page">
-          <Outlet />
-        </main>
+        
+        {/* Overlay para cerrar menú móvil al hacer click fuera */}
+        {isMobileMenuOpen && (
+          <div 
+            className="mobile-overlay-backdrop" 
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        <div className="app-main">
+          <Topbar 
+            isMobileMenuOpen={isMobileMenuOpen}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+            user={user}
+          />
+          <main className="page">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </CompanyProvider>
   )
 }
 

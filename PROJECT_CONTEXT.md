@@ -357,7 +357,13 @@ Cuando se genere código, arquitectura o sugerencias:
 
 * **Responsive design**: La interfaz debe adaptarse correctamente a todos los tamaños de pantalla (móvil, tablet, desktop)
 * **Modo claro/oscuro**: Toda la interfaz debe soportar ambos modos de visualización sin pérdida de usabilidad o legibilidad
-* Los componentes deben diseñarse pensando en ambos requisitos desde el inicio
+* **Internacionalización (i18n)**: Todos los textos fijos de la interfaz deben estar traducidos al español e inglés
+  * Los textos se gestionan a través del sistema de traducciones en `/src/locales/`
+  * Se utiliza el contexto `LanguageContext` para cambiar entre idiomas
+  * Los usuarios pueden cambiar el idioma desde el botón en la barra superior (entre el perfil y cerrar sesión)
+  * La preferencia de idioma se guarda en localStorage
+  * Todos los componentes nuevos deben usar el hook `useLanguage()` y la función `t()` para mostrar textos traducidos
+* Los componentes deben diseñarse pensando en estos requisitos desde el inicio
 
 ---
 

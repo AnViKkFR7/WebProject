@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { itemService } from '../services/itemService'
 import { attributeDefinitionService } from '../services/attributeDefinitionService'
 import { supabase } from '../lib/supabaseClient'
+import { useLanguage } from '../contexts/LanguageContext'
 
 // Import subcomponents
 import ItemDetailHeader from '../components/itemDetails/ItemDetailHeader'
@@ -13,6 +14,7 @@ import ItemDetailFooter from '../components/itemDetails/ItemDetailFooter'
 const ItemDetail = () => {
   const { itemId } = useParams()
   const navigate = useNavigate()
+  const { t } = useLanguage()
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -58,7 +60,7 @@ const ItemDetail = () => {
 
     try {
       if (!itemId) {
-        setError('ID de item no válido')
+        setError(t('itemDetail.error'))
         setLoading(false)
         return
       }
@@ -76,7 +78,7 @@ const ItemDetail = () => {
       const itemData = await itemService.getItemById(itemId)
       
       if (!itemData) {
-        setError('Item no encontrado')
+        setError(t('itemDetail.error'))
         setLoading(false)
         return
       }
@@ -257,7 +259,7 @@ const ItemDetail = () => {
         await itemService.upsertAttributeValue(attributeValueData)
       }
 
-      setSuccessMessage('Item actualizado correctamente')
+      setSuccessMessage(t('itemDetail.itemUpdated'))
       setTimeout(() => setSuccessMessage(''), 3000)
 
       // Clear local changes and reset editable fields
@@ -267,7 +269,7 @@ const ItemDetail = () => {
 
     } catch (err) {
       console.error('Error saving item:', err)
-      setError('Error al guardar: ' + err.message)
+      setError(t('itemDetail.errorSaving') + ': ' + err.message)
     } finally {
       setSaving(false)
     }
@@ -325,16 +327,15 @@ const ItemDetail = () => {
           backgroundColor: 'var(--bg-primary)'
         }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔒</div>
-          <h2 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>Acceso Denegado</h2>
+          <h2 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>{t('itemDetail.accessDenied')}</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-            El contenido al que intentas acceder no está disponible para ti.
-            Es posible que no tengas permisos o que no pertenezcas a esta organización.
+            {t('itemDetail.accessDeniedMessage')}
           </p>
           <button 
             className="btn-primary"
             onClick={() => navigate('/login')}
           >
-            Ir al Login
+            {t('itemDetail.goToLogin')}
           </button>
         </div>
       </div>
@@ -352,14 +353,14 @@ const ItemDetail = () => {
           borderRadius: '8px',
           backgroundColor: 'var(--bg-primary)'
         }}>
-          <h3 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>Error</h3>
+          <h3 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>{t('itemDetail.error')}</h3>
           <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
           <button 
             className="btn-secondary"
             onClick={() => navigate('/items')}
             style={{ marginTop: '1rem' }}
           >
-            Volver a Items
+            {t('itemDetail.backToItems')}
           </button>
         </div>
       </div>
