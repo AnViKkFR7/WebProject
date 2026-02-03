@@ -11,17 +11,20 @@ import NotFound from './pages/NotFound.jsx'
 import MyData from './pages/MyData.jsx'
 import Users from './pages/Users.jsx'
 import Login from './pages/Login.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import Profile from './pages/Profile.jsx'
 import AuthGuard from './components/AuthGuard.jsx'
+import { CompanyProvider } from './contexts/CompanyContext.jsx'
 
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         <Route element={<AuthGuard />}>
-          <Route element={<AdminLayout />}>
+          <Route element={<CompanyProvider><AdminLayout /></CompanyProvider>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/items" element={<Items />} />

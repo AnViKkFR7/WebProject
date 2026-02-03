@@ -142,5 +142,36 @@ export const companyService = {
       .match({ company_id: companyId, user_id: userId })
 
     if (error) throw error
+  },
+
+  // --- Current User Member Profile ---
+
+  async getCurrentUserMemberProfile(companyId) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
+
+    const { data, error } = await supabase
+      .from('company_members')
+      .select('*')
+      .match({ company_id: companyId, user_id: user.id })
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async updateCurrentUserMemberProfile(companyId, updates) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
+
+    const { data, error } = await supabase
+      .from('company_members')
+      .update(updates)
+      .match({ company_id: companyId, user_id: user.id })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 }

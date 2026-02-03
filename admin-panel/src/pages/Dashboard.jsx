@@ -43,7 +43,7 @@ const Dashboard = () => {
               {t('dashboard.noCompanies')}
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-              {t('dashboard.noCompanies')}
+              {t('dashboard.noCompaniesDescription')}
             </p>
           </div>
         </div>
@@ -205,11 +205,10 @@ const Dashboard = () => {
         {selectedCompany && (
           <div className="card">
             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-primary)' }}>
-              Trabajando en: {selectedCompany.name}
+              {t('dashboard.workingOn')} {selectedCompany.name}
             </h3>
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-              Todos los datos que veas en las demás secciones pertenecen a <strong>{selectedCompany.name}</strong>.
-              Puedes cambiar de empresa en cualquier momento volviendo a este dashboard.
+              {t('dashboard.selectedCompanyDescriptionPrefix')} <strong>{selectedCompany.name}</strong>{t('dashboard.selectedCompanyDescriptionSuffix')} {t('dashboard.selectedCompanyDescriptionHint')}
             </p>
           </div>
         )}

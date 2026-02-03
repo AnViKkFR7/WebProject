@@ -10,8 +10,10 @@
   --bg-body: #f1f5f9;         /* Slate 100 */
   --bg-sidebar: #ffffff;      /* White sidebar for light mode */
   --bg-card: #ffffff;
+  --bg-page: #ffffff;         /* For containers like createdUserInfo */
   --bg-hover: #f8fafc;
   --bg-table-header: #f1f5f9; /* Variable for table header bg */
+  --bg-info: #e0f2fe;         /* Sky 100 - Info background */
   
   --text-primary: #0f172a;    /* Slate 900 */
   --text-secondary: #475569;  /* Slate 600 - Darker for better contrast */
@@ -19,6 +21,7 @@
   --sidebar-text: #334155;    /* Slate 700 - Specifically for sidebar readability */
   
   --border-color: #cbd5e1;    /* Slate 300 - Slightly darker for better visibility in Light Mode */
+  --border-info: #7dd3fc;     /* Sky 300 - Info border */
   
   --sidebar-active-bg: #eff6ff; /* Very clear blue for active tab */
   --sidebar-active-text: #2563eb;
@@ -38,8 +41,10 @@
   --bg-body: #0f172a;         /* Slate 900 */
   --bg-sidebar: #1e293b;      /* Slate 800 */
   --bg-card: #1e293b;
+  --bg-page: #1e293b;         /* For containers in dark mode */
   --bg-hover: #334155;
   --bg-table-header: #334155; /* Dark table header */
+  --bg-info: #0c4a6e;         /* Sky 900 - Info background dark */
   
   --text-primary: #f8fafc;    /* Slate 50 */
   --text-secondary: #cbd5e1;  /* Slate 300 */
@@ -47,6 +52,7 @@
   --sidebar-text: #cbd5e1;
   
   --border-color: #334155;    /* Slate 700 */
+  --border-info: #075985;     /* Sky 800 - Info border dark */
   
   --sidebar-active-bg: #1e293b; 
   --sidebar-active-text: #818cf8;
