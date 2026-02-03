@@ -93,7 +93,7 @@ const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen, user }) => {
           <div className="user-avatar">{user?.email?.[0]?.toUpperCase() || 'U'}</div>
           <div>
             <div className="user-name">{user?.email?.split('@')[0] || 'Usuario'}</div>
-            <div className="user-role">Conectado</div>
+            <div className="user-role">{language === 'es' ? 'Conectado' : 'Connected'}</div>
           </div>
         </div>
         

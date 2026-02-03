@@ -13,11 +13,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[INVITE-USER] Request received')
+    
     // 1. Obtener el usuario que hace la llamada
     const authHeader = req.headers.get('Authorization')
-    console.log('🔐 Authorization header:', authHeader ? 'Present' : 'Missing')
-    
     if (!authHeader) {
+      console.error('[INVITE-USER] Missing Authorization header')
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -25,13 +26,27 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('🎫 Token extracted, length:', token.length)
+    console.log('[INVITE-USER] Token length:', token.length)
     
     // Cliente con service_role para operaciones admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    console.log('🔧 SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing')
-    console.log('🔧 SERVICE_ROLE_KEY:', serviceRoleKey ? 'Set' : 'Missing')
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[INVITE-USER] Missing environment variables', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!serviceRoleKey
+      })
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error',
+          details: 'Missing required environment variables'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log('[INVITE-USER] Environment OK')
     
     const supabaseAdmin = createClient(
       supabaseUrl ?? '',
@@ -121,7 +136,7 @@ serve(async (req) => {
         full_name
       },
       app_metadata: {
-        app_role: 'user' // No es platform admin
+        app_role: role // No es platform admin
       }
     })
     

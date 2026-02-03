@@ -1,11 +1,33 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { userService } from '../services/userService'
 import { companyService } from '../services/companyService'
+import { authService } from '../services/authService'
+import { useLanguage } from '../contexts/LanguageContext'
+import { useCompany } from '../contexts/CompanyContext'
 
 const Profile = () => {
+  const { t } = useLanguage()
+  const { selectedCompany } = useCompany()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('personal') // personal | security | company | create-company | create-user
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  // Estado para Personal Information
+  const [currentUser, setCurrentUser] = useState(null)
+  const [memberProfile, setMemberProfile] = useState(null)
+  const [personalFormData, setPersonalFormData] = useState({
+    full_name: '',
+    phone: ''
+  })
+
+  // Estado para Security
+  const [passwordFormData, setPasswordFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  })
 
   // Estado para formulario de nueva compañía
   const [newCompany, setNewCompany] = useState({
@@ -35,6 +57,8 @@ const Profile = () => {
 
   // Estado para mostrar/ocultar contraseña
   const [showPassword, setShowPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Estado para almacenar info del usuario creado
   const [createdUserInfo, setCreatedUserInfo] = useState(null)
@@ -70,11 +94,11 @@ const Profile = () => {
 
   // Función para validar contraseña segura
   const validatePassword = (password) => {
-    if (password.length < 10) return 'La contraseña debe tener al menos 10 caracteres'
-    if (!/[A-Z]/.test(password)) return 'La contraseña debe contener al menos una mayúscula'
-    if (!/[a-z]/.test(password)) return 'La contraseña debe contener al menos una minúscula'
-    if (!/[0-9]/.test(password)) return 'La contraseña debe contener al menos un número'
-    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) return 'La contraseña debe contener al menos un símbolo especial'
+    if (password.length < 10) return t('profile.messages.passwordMinLength')
+    if (!/[A-Z]/.test(password)) return t('profile.messages.passwordUppercase')
+    if (!/[a-z]/.test(password)) return t('profile.messages.passwordLowercase')
+    if (!/[0-9]/.test(password)) return t('profile.messages.passwordNumber')
+    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) return t('profile.messages.passwordSpecial')
     return null
   }
 
@@ -82,7 +106,7 @@ const Profile = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
       .then(() => {
-        alert('Información copiada al portapapeles')
+        alert(t('profile.messages.clipboardCopied'))
       })
       .catch(err => {
         console.error('Error al copiar:', err)
@@ -92,7 +116,14 @@ const Profile = () => {
   useEffect(() => {
     checkAdminStatus()
     loadCompanies()
+    loadUserData()
   }, [])
+
+  useEffect(() => {
+    if (selectedCompany) {
+      loadMemberProfile()
+    }
+  }, [selectedCompany])
 
   // Limpiar mensajes al cambiar de pestaña
   useEffect(() => {
@@ -132,6 +163,87 @@ const Profile = () => {
     }
   }
 
+  const loadUserData = async () => {
+    try {
+      const user = await authService.getCurrentUser()
+      setCurrentUser(user)
+    } catch (error) {
+      console.error('Error cargando usuario:', error)
+    }
+  }
+
+  const loadMemberProfile = async () => {
+    if (!selectedCompany?.id) return
+    try {
+      const profile = await companyService.getCurrentUserMemberProfile(selectedCompany.id)
+      setMemberProfile(profile)
+      setPersonalFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || ''
+      })
+    } catch (error) {
+      console.error('Error cargando perfil del miembro:', error)
+    }
+  }
+
+  const handleSavePersonalInfo = async (e) => {
+    e.preventDefault()
+    if (!selectedCompany?.id) {
+      setErrorMessage(t('profile.messages.noCompanySelected'))
+      return
+    }
+
+    setFormLoading(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      await companyService.updateCurrentUserMemberProfile(selectedCompany.id, personalFormData)
+      setSuccessMessage(t('profile.messages.profileUpdated'))
+      await loadMemberProfile()
+    } catch (error) {
+      setErrorMessage(error.message || t('profile.messages.profileUpdateError'))
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setFormLoading(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      // Validar que las contraseñas coincidan
+      if (passwordFormData.newPassword !== passwordFormData.confirmNewPassword) {
+        setErrorMessage(t('profile.messages.passwordsDoNotMatch'))
+        setFormLoading(false)
+        return
+      }
+
+      // Validar contraseña segura
+      const passwordError = validatePassword(passwordFormData.newPassword)
+      if (passwordError) {
+        setErrorMessage(passwordError)
+        setFormLoading(false)
+        return
+      }
+
+      await authService.updatePassword(passwordFormData.newPassword)
+      setSuccessMessage(t('profile.messages.passwordUpdated'))
+      setPasswordFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: ''
+      })
+    } catch (error) {
+      setErrorMessage(error.message || t('profile.messages.passwordUpdateError'))
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
   const handleCreateCompany = async (e) => {
     e.preventDefault()
     setFormLoading(true)
@@ -140,7 +252,7 @@ const Profile = () => {
 
     try {
       const result = await companyService.createCompany(newCompany)
-      setSuccessMessage(`Compañía "${newCompany.name}" creada exitosamente`)
+      setSuccessMessage(`${t('profile.messages.companyCreatedPrefix')}${newCompany.name}${t('profile.messages.companyCreatedSuffix')}`)
       setNewCompany({
         name: '',
         contact_email: '',
@@ -151,7 +263,7 @@ const Profile = () => {
       })
       await loadCompanies()
     } catch (error) {
-      setErrorMessage(error.message || 'Error al crear la compañía')
+      setErrorMessage(error.message || t('profile.messages.companyCreateError'))
     } finally {
       setFormLoading(false)
     }
@@ -191,10 +303,10 @@ const Profile = () => {
           password: newUser.password,
           full_name: newUser.full_name,
           company_name: company?.name || 'N/A',
-          role: newUser.role === 'editor' ? 'Editor' : 'Viewer'
+          role: newUser.role === 'editor' ? t('dashboard.editor') : t('dashboard.viewer')
         })
 
-        setSuccessMessage('Usuario creado exitosamente con contraseña')
+        setSuccessMessage(t('profile.messages.userCreatedWithPassword'))
       } else {
         await userService.inviteUser({
           email: newUser.email,
@@ -202,7 +314,7 @@ const Profile = () => {
           company_id: newUser.company_id,
           role: newUser.role
         })
-        setSuccessMessage('Usuario invitado exitosamente. Se ha enviado un email de invitación.')
+        setSuccessMessage(t('profile.messages.userInvited'))
       }
 
       // Limpiar formulario
@@ -215,7 +327,7 @@ const Profile = () => {
         invitation_mode: 'password'
       })
     } catch (error) {
-      setErrorMessage(error.message || 'Error al crear el usuario')
+      setErrorMessage(error.message || t('profile.messages.userCreateError'))
     } finally {
       setFormLoading(false)
     }
@@ -225,13 +337,13 @@ const Profile = () => {
     <div className="page-content">
       <section className="page-header">
         <div>
-          <h2>Mi Perfil</h2>
-          <p>Gestiona tu información personal y preferencias.</p>
+          <h2>{t('profile.title')}</h2>
+          <p>{t('profile.description')}</p>
         </div>
       </section>
 
       {loading ? (
-        <div className="loading-state">Cargando...</div>
+        <div className="loading-state">{t('profile.loading')}</div>
       ) : (
         <div>
           {/* Pestañas (Tabs) */}
@@ -240,19 +352,19 @@ const Profile = () => {
               className={`tab-button ${activeTab === 'personal' ? 'active' : ''}`}
               onClick={() => setActiveTab('personal')}
             >
-              👤 Información Personal
+              {t('profile.tabs.personal')}
             </button>
             <button
               className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
               onClick={() => setActiveTab('security')}
             >
-              🔒 Seguridad
+              {t('profile.tabs.security')}
             </button>
             <button
               className={`tab-button ${activeTab === 'company' ? 'active' : ''}`}
               onClick={() => setActiveTab('company')}
             >
-              🏢 Mi Organización
+              {t('profile.tabs.company')}
             </button>
 
             {/* Pestañas solo para Admin */}
@@ -262,13 +374,13 @@ const Profile = () => {
                   className={`tab-button ${activeTab === 'create-company' ? 'active' : ''}`}
                   onClick={() => setActiveTab('create-company')}
                 >
-                  ➕ Crear Compañía
+                  {t('profile.tabs.createCompany')}
                 </button>
                 <button
                   className={`tab-button ${activeTab === 'create-user' ? 'active' : ''}`}
                   onClick={() => setActiveTab('create-user')}
                 >
-                  👥 Crear Usuario
+                  {t('profile.tabs.createUser')}
                 </button>
               </>
             )}
@@ -280,125 +392,308 @@ const Profile = () => {
             {activeTab === 'personal' && (
               <div className="tab-content animated-card">
                 <div className="card-header">
-                  <h3>Información Básica</h3>
-                  <p>Esta información será visible para otros miembros de tu empresa.</p>
+                  <h3>{t('profile.personal.title')}</h3>
+                  <p>{t('profile.personal.description')}</p>
                 </div>
 
-                <div className="form-grid">
-                  <div className="avatar-section">
-                    <div className="avatar-large">JM</div>
-                    <button className="ghost-button small">Cambiar foto</button>
+                {!selectedCompany && (
+                  <div className="info-banner" style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
+                      <div style={{ display: 'flex' }}>
+                        <span className="icon">⚠️</span>
+                      </div>
+                      <div style={{ display: 'flex', paddingLeft: '1rem', height: 'fit-content' }}>
+                        <p style={{margin: '0'}}>{t('profile.messages.noCompanySelected')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div style={{
+                    background: '#d1f4e0',
+                    border: '1px solid #4caf50',
+                    borderRadius: '8px',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    color: '#1b5e20',
+                    fontSize: '0.95rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {successMessage}
+                  </div>
+                )}
+
+                {errorMessage && (
+                  <div style={{
+                    background: '#ffeaea',
+                    border: '1px solid #f44336',
+                    borderRadius: '8px',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    color: '#b71c1c',
+                    fontSize: '0.95rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {errorMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleSavePersonalInfo}>
+                  <div className="form-grid">
+                    <label className="form-group full-width">
+                      <span>{t('profile.personal.fullName')}</span>
+                      <input 
+                        type="text" 
+                        className="input" 
+                        value={personalFormData.full_name}
+                        onChange={(e) => setPersonalFormData({ ...personalFormData, full_name: e.target.value })}
+                        required
+                      />
+                    </label>
+                    <br/>
+                    <br/>
+                    <label className="form-group">
+                      <span>{t('profile.personal.email')}</span>
+                      <input 
+                        type="email" 
+                        className="input" 
+                        value={currentUser?.email || ''}
+                        disabled 
+                      />
+                      <small style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                        {t('profile.personal.emailReadOnly')}
+                      </small>
+                    </label>
+                    <br/>
+                    <br/>
+                    <label className="form-group">
+                      <span>{t('profile.personal.phone')}</span>
+                      <input 
+                        type="tel" 
+                        className="input" 
+                        value={personalFormData.phone}
+                        onChange={(e) => setPersonalFormData({ ...personalFormData, phone: e.target.value })}
+                      />
+                    </label>
                   </div>
 
-                  <label className="form-group">
-                    <span>Nombre Completo</span>
-                    <input type="text" className="input" defaultValue="Joselyn Mejía" />
-                  </label>
-
-                  <label className="form-group">
-                    <span>Correo Electrónico</span>
-                    <input type="email" className="input" defaultValue="joselyn@email.com" disabled />
-                  </label>
-
-                  <label className="form-group">
-                    <span>Teléfono</span>
-                    <input type="tel" className="input" defaultValue="+34 600 000 000" />
-                  </label>
-                </div>
-
-                <div className="card-footer" style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
-                  <button className="primary-button">Guardar cambios</button>
-                </div>
+                  <div className="card-footer" style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                    <button 
+                      type="submit" 
+                      className="primary-button"
+                      disabled={formLoading || !selectedCompany}
+                    >
+                      {formLoading ? t('profile.personal.saving') : t('profile.personal.saveChanges')}
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
 
             {activeTab === 'security' && (
               <div className="tab-content animated-card">
                 <div className="card-header">
-                  <h3>Cambiar Contraseña</h3>
-                  <p>Asegúrate de usar una contraseña segura.</p>
-                </div>
-                <div className="form-grid">
-                  <label className="form-group full-width">
-                    <span>Contraseña Actual</span>
-                    <input type="password" className="input" />
-                  </label>
-                  <label className="form-group">
-                    <span>Nueva Contraseña</span>
-                    <input type="password" className="input" />
-                  </label>
-                  <label className="form-group">
-                    <span>Confirmar Nueva</span>
-                    <input type="password" className="input" />
-                  </label>
-                </div>
-                <div className="card-footer" style={{ borderBottom: '1px solid var(--border-color)', marginBottom: '2rem', paddingTop: '1rem', paddingBottom: '1rem' }}>
-                  <button className="primary-button">Actualizar contraseña</button>
+                  <h3>{t('profile.security.title')}</h3>
+                  <p>{t('profile.security.description')}</p>
                 </div>
 
-                <div className="card-header">
-                  <h3>Sesiones Activas</h3>
-                </div>
-                <div className="table">
-                  <div className="table-row">
-                    <span className="row-title">Windows PC - Chrome</span>
-                    <span className="pill published">Actual</span>
+                {successMessage && (
+                  <div style={{
+                    background: '#d1f4e0',
+                    border: '1px solid #4caf50',
+                    borderRadius: '8px',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    color: '#1b5e20',
+                    fontSize: '0.95rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {successMessage}
                   </div>
-                  <div className="table-row">
-                    <span className="row-title">iPhone 13 - Safari</span>
-                    <span className="text-secondary">Hace 2 días</span>
+                )}
+
+                {errorMessage && (
+                  <div style={{
+                    background: '#ffeaea',
+                    border: '1px solid #f44336',
+                    borderRadius: '8px',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    color: '#b71c1c',
+                    fontSize: '0.95rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {errorMessage}
                   </div>
+                )}
+
+                <div style={{
+                  background: 'var(--bg-info)',
+                  border: '1px solid var(--border-info)',
+                  borderRadius: '8px',
+                  padding: '1rem 1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{t('profile.security.requirements.title')}</h4>
+                  <ul style={{ margin: 0, paddingLeft: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.8' }}>
+                    <li>{t('profile.security.requirements.minLength')}</li>
+                    <li>{t('profile.security.requirements.uppercase')}</li>
+                    <li>{t('profile.security.requirements.lowercase')}</li>
+                    <li>{t('profile.security.requirements.number')}</li>
+                    <li>{t('profile.security.requirements.special')}</li>
+                  </ul>
                 </div>
+
+                <form onSubmit={handleChangePassword}>
+                  <div className="form-grid">
+                    <label className="form-group">
+                      <span>{t('profile.security.newPassword')}</span>
+                      <div style={{ position: 'relative' }}>
+                        <input 
+                          type={showNewPassword ? "text" : "password"}
+                          className="input"
+                          value={passwordFormData.newPassword}
+                          onChange={(e) => setPasswordFormData({ ...passwordFormData, newPassword: e.target.value })}
+                          required
+                          style={{ paddingRight: '3rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '0.75rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            color: 'var(--text-secondary)',
+                            padding: '0.25rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                        </button>
+                      </div>
+                    </label>
+                    <label className="form-group">
+                      <span>{t('profile.security.confirmNewPassword')}</span>
+                      <div style={{ position: 'relative' }}>
+                        <input 
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="input"
+                          value={passwordFormData.confirmNewPassword}
+                          onChange={(e) => setPasswordFormData({ ...passwordFormData, confirmNewPassword: e.target.value })}
+                          required
+                          style={{ paddingRight: '3rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '0.75rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            color: 'var(--text-secondary)',
+                            padding: '0.25rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+                  <div className="card-footer" style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                    <button 
+                      type="submit" 
+                      className="primary-button"
+                      disabled={formLoading}
+                    >
+                      {formLoading ? t('profile.security.updating') : t('profile.security.updatePassword')}
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
 
             {activeTab === 'company' && (
               <div className="tab-content animated-card">
                 <div className="card-header">
-                  <h3>Mi Organización</h3>
-                  <p>Configuración rápida para editores.</p>
+                  <h3>{t('profile.company.title')}</h3>
+                  <p>{t('profile.company.description')}</p>
                 </div>
 
-                <div className="info-banner">
-                  <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
-                    <div style={{ display: 'flex' }}>
-                      <span className="icon">ℹ️</span>
-                    </div>
-                    <div style={{ display: 'flex', paddingLeft: '1rem', height: 'fit-content' }}>
-                      <p style={{margin: '0'}}>Eres <strong>Editor</strong> en <em>Regiamare</em>. Tienes permisos para gestionar items y usuarios.</p>
+                {!selectedCompany && (
+                  <div className="info-banner">
+                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
+                      <div style={{ display: 'flex' }}>
+                        <span className="icon">⚠️</span>
+                      </div>
+                      <div style={{ display: 'flex', paddingLeft: '1rem', height: 'fit-content' }}>
+                        <p style={{margin: '0'}}>{t('profile.messages.noCompanySelected')}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div className="settings-list">
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <h4>Logotipo de la empresa</h4>
-                      <p>Visible en facturas y cabecera pública.</p>
-                    </div>
-                    <button className="ghost-button">Subir logo</button>
-                  </div>
-
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <h4>Notificaciones de equipo</h4>
-                      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
-                        <div style={{ display: 'flex' }}>
-                          <label className="switch">
-                            <input type="checkbox" defaultChecked />
-                            <span className="slider"></span>
-                          </label>
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', paddingLeft: '1rem', height: 'fit-content' }}>
-                          <p style={{ margin: '0' }}>Recibir aviso cuando un miembro publique un item.</p>
+                {selectedCompany && (
+                  <>
+                    <div className="info-banner">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem' }}>
+                          <span className="icon">🏢</span>
+                          <div>
+                            <h4 style={{ margin: 0 }}>{selectedCompany.name}</h4>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                              {t('profile.company.yourRole')}: <strong>{memberProfile?.role === 'admin' ? t('dashboard.admin') : memberProfile?.role === 'editor' ? t('dashboard.editor') : t('dashboard.viewer')}</strong>
+                            </p>
+                          </div>
                         </div>
                       </div>
-
                     </div>
 
-                  </div>
-                </div>
+                    <div className="settings-list">
+                      <div className="setting-item">
+                        <div className="setting-info">
+                          <h4>{t('profile.company.manageCompanyTitle')}</h4>
+                          <p>{t('profile.company.manageCompanyDescription')}</p>
+                        </div>
+                        <button 
+                          className="primary-button"
+                          onClick={() => navigate('/companies')}
+                        >
+                          {t('profile.company.goToCompanies')}
+                        </button>
+                      </div>
+
+                      <div className="setting-item">
+                        <div className="setting-info">
+                          <h4>{t('profile.company.manageUsersTitle')}</h4>
+                          <p>{t('profile.company.manageUsersDescription')}</p>
+                        </div>
+                        <button 
+                          className="primary-button"
+                          onClick={() => navigate('/users')}
+                        >
+                          {t('profile.company.goToUsers')}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -406,8 +701,8 @@ const Profile = () => {
             {isAdmin && activeTab === 'create-company' && (
               <div className="tab-content animated-card">
                 <div className="card-header">
-                  <h3>Crear Nueva Compañía</h3>
-                  <p>Solo los administradores pueden crear nuevas compañías en el sistema.</p>
+                  <h3>{t('profile.createCompany.title')}</h3>
+                  <p>{t('profile.createCompany.description')}</p>
                 </div>
 
                 {successMessage && (
@@ -443,7 +738,7 @@ const Profile = () => {
                 <form onSubmit={handleCreateCompany}>
                   <div className="form-grid">
                     <label className="form-group full-width">
-                      <span>Nombre de la Compañía *</span>
+                      <span>{t('profile.createCompany.companyName')}</span>
                       <input
                         type="text"
                         className="input"
@@ -454,7 +749,7 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group">
-                      <span>Email de Contacto *</span>
+                      <span>{t('profile.createCompany.contactEmail')}</span>
                       <input
                         type="email"
                         className="input"
@@ -465,7 +760,7 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group">
-                      <span>Teléfono de Contacto *</span>
+                      <span>{t('profile.createCompany.contactPhone')}</span>
                       <input
                         type="tel"
                         className="input"
@@ -476,7 +771,7 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group full-width">
-                      <span>Descripción</span>
+                      <span>{t('profile.createCompany.descriptionLabel')}</span>
                       <textarea
                         className="input"
                         rows="4"
@@ -486,22 +781,22 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group">
-                      <span>Sitio Web</span>
+                      <span>{t('profile.createCompany.website')}</span>
                       <input
                         type="url"
                         className="input"
-                        placeholder="https://ejemplo.com"
+                        placeholder={t('profile.createCompany.websitePlaceholder')}
                         value={newCompany.website_url}
                         onChange={(e) => setNewCompany({ ...newCompany, website_url: e.target.value })}
                       />
                     </label>
 
                     <label className="form-group">
-                      <span>Logo URL</span>
+                      <span>{t('profile.createCompany.logoUrl')}</span>
                       <input
                         type="url"
                         className="input"
-                        placeholder="https://..."
+                        placeholder={t('profile.createCompany.logoUrlPlaceholder')}
                         value={newCompany.logo_url}
                         onChange={(e) => setNewCompany({ ...newCompany, logo_url: e.target.value })}
                       />
@@ -514,7 +809,7 @@ const Profile = () => {
                       className="primary-button"
                       disabled={formLoading}
                     >
-                      {formLoading ? 'Creando...' : 'Crear Compañía'}
+                      {formLoading ? t('profile.createCompany.creating') : t('profile.createCompany.create')}
                     </button>
                   </div>
                 </form>
@@ -525,8 +820,8 @@ const Profile = () => {
             {isAdmin && activeTab === 'create-user' && (
               <div className="tab-content animated-card">
                 <div className="card-header">
-                  <h3>Crear Nuevo Usuario</h3>
-                  <p>Solo los administradores pueden crear nuevos usuarios en el sistema.</p>
+                  <h3>{t('profile.createUser.title')}</h3>
+                  <p>{t('profile.createUser.description')}</p>
                 </div>
 
                 {successMessage && (
@@ -562,7 +857,7 @@ const Profile = () => {
                 <form onSubmit={handleCreateUser}>
                   <div className="form-grid">
                     <label className="form-group full-width">
-                      <span>Email del Usuario *</span>
+                      <span>{t('profile.createUser.email')}</span>
                       <input
                         type="email"
                         className="input"
@@ -573,7 +868,7 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group full-width">
-                      <span>Nombre Completo *</span>
+                      <span>{t('profile.createUser.fullName')}</span>
                       <input
                         type="text"
                         className="input"
@@ -584,12 +879,12 @@ const Profile = () => {
                     </label>
 
                     <label className="form-group">
-                      <span>Compañía *</span>
+                      <span>{t('profile.createUser.company')}</span>
                       <div style={{ position: 'relative' }}>
                         <input
                           type="text"
                           className="input"
-                          placeholder="Buscar compañía..."
+                          placeholder={t('profile.createUser.companySearchPlaceholder')}
                           value={companySearch}
                           onChange={(e) => {
                             setCompanySearch(e.target.value)
@@ -643,7 +938,7 @@ const Profile = () => {
                               company.name.toLowerCase().includes(companySearch.toLowerCase())
                             ).length === 0 && (
                                 <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                  No se encontraron compañías
+                                  {t('profile.createUser.noCompaniesFound')}
                                 </div>
                               )}
                           </div>
@@ -651,26 +946,26 @@ const Profile = () => {
                       </div>
                       {newUser.company_id && (
                         <span className="help-text">
-                          Seleccionada: {companies.find(c => c.id === newUser.company_id)?.name}
+                          {t('profile.createUser.selectedCompany')} {companies.find(c => c.id === newUser.company_id)?.name}
                         </span>
                       )}
                     </label>
 
                     <label className="form-group">
-                      <span>Rol *</span>
+                      <span>{t('profile.createUser.role')}</span>
                       <select
                         className="input"
                         value={newUser.role}
                         onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                         required
                       >
-                        <option value="viewer">Viewer (Solo lectura)</option>
-                        <option value="editor">Editor (Lectura/Escritura)</option>
+                        <option value="viewer">{t('profile.createUser.roleViewer')}</option>
+                        <option value="editor">{t('profile.createUser.roleEditor')}</option>
                       </select>
                     </label>
 
                     <div className="form-group full-width">
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Modo de Creación *</label>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{t('profile.createUser.creationMode')}</label>
                       <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input
@@ -680,7 +975,7 @@ const Profile = () => {
                             checked={newUser.invitation_mode === 'password'}
                             onChange={(e) => setNewUser({ ...newUser, invitation_mode: e.target.value })}
                           />
-                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Con contraseña</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{t('profile.createUser.modePassword')}</span>
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input
@@ -690,7 +985,7 @@ const Profile = () => {
                             checked={newUser.invitation_mode === 'invitation'}
                             onChange={(e) => setNewUser({ ...newUser, invitation_mode: e.target.value })}
                           />
-                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Por invitación (email)</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{t('profile.createUser.modeInvitation')}</span>
                         </label>
                       </div>
                     </div>
@@ -698,7 +993,7 @@ const Profile = () => {
                     {newUser.invitation_mode === 'password' && (
                       <>
                         <label className="form-group full-width">
-                          <span>Contraseña *</span>
+                          <span>{t('profile.createUser.password')}</span>
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                             <div style={{ flex: 1, position: 'relative' }}>
                               <input
@@ -713,7 +1008,7 @@ const Profile = () => {
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                tooltip={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                tooltip={showPassword ? t('profile.createUser.hidePassword') : t('profile.createUser.showPassword')}
                                 style={{
                                   position: 'absolute',
                                   right: '0.5rem',
@@ -737,11 +1032,11 @@ const Profile = () => {
                               onClick={() => setNewUser({ ...newUser, password: generateSecurePassword() })}
                               style={{ whiteSpace: 'nowrap', marginTop: '0' }}
                             >
-                              Generar
+                              {t('profile.createUser.generatePassword')}
                             </button>
                           </div>
                           <span className="help-text">
-                            Mínimo 10 caracteres, incluir mayúsculas, números y símbolos especiales
+                            {t('profile.createUser.passwordHelp')}
                           </span>
                         </label>
                       </>
@@ -758,7 +1053,7 @@ const Profile = () => {
                           fontSize: '0.9rem',
                           lineHeight: '1.5'
                         }}>
-                          Se enviará un email de invitación al usuario para que establezca su propia contraseña.
+                          {t('profile.createUser.invitationInfo')}
                         </div>
                       </div>
                     )}
@@ -770,7 +1065,7 @@ const Profile = () => {
                       className="primary-button"
                       disabled={formLoading}
                     >
-                      {formLoading ? 'Creando...' : 'Crear Usuario'}
+                      {formLoading ? t('profile.createUser.creating') : t('profile.createUser.create')}
                     </button>
                   </div>
                 </form>
@@ -779,47 +1074,50 @@ const Profile = () => {
                 {createdUserInfo && (
                   <div style={{
                     marginTop: '2rem',
-                    background: '#f5f5f5',
-                    border: '2px solid #2196f3',
+                    background: 'var(--bg-card)',
+                    border: '2px solid var(--primary-color)',
                     borderRadius: '8px',
-                    padding: '1.5rem'
+                    padding: '1.5rem',
+                    color: 'var(--text-primary)'
                   }}>
-                    <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#1976d2' }}>
-                      ✅ Usuario Creado Exitosamente
+                    <h4 style={{ marginTop: 0, marginBottom: '1rem', color: 'var(--primary-color)' }}>
+                      {t('profile.createUser.successTitle')}
                     </h4>
                     <div style={{
-                      background: 'white',
+                      background: 'var(--bg-page)',
                       padding: '1rem',
                       borderRadius: '4px',
                       marginBottom: '1rem',
                       fontFamily: 'monospace',
                       fontSize: '0.9rem',
-                      lineHeight: '1.8'
+                      lineHeight: '1.8',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-color)'
                     }}>
-                      <div><strong>Nombre:</strong> {createdUserInfo.full_name}</div>
-                      <div><strong>Email:</strong> {createdUserInfo.email}</div>
-                      <div><strong>Contraseña:</strong> {createdUserInfo.password}</div>
-                      <div><strong>Compañía:</strong> {createdUserInfo.company_name}</div>
-                      <div><strong>Rol:</strong> {createdUserInfo.role}</div>
+                      <div><strong>{t('profile.createUser.infoName')}:</strong> {createdUserInfo.full_name}</div>
+                      <div><strong>{t('profile.createUser.infoEmail')}:</strong> {createdUserInfo.email}</div>
+                      <div><strong>{t('profile.createUser.infoPassword')}:</strong> {createdUserInfo.password}</div>
+                      <div><strong>{t('profile.createUser.infoCompany')}:</strong> {createdUserInfo.company_name}</div>
+                      <div><strong>{t('profile.createUser.infoRole')}:</strong> {createdUserInfo.role === 'editor' ? t('dashboard.editor') : t('dashboard.viewer')}</div>
                     </div>
                     <button
                       type="button"
                       className="primary-button"
                       onClick={() => {
                         const info = `
-Nuevo Usuario Creado
+${t('profile.createUser.successTitle')}
 ━━━━━━━━━━━━━━━━━━━━━━━
-Nombre: ${createdUserInfo.full_name}
-Email: ${createdUserInfo.email}
-Contraseña: ${createdUserInfo.password}
-Compañía: ${createdUserInfo.company_name}
-Rol: ${createdUserInfo.role}
+${t('profile.createUser.infoName')}: ${createdUserInfo.full_name}
+${t('profile.createUser.infoEmail')}: ${createdUserInfo.email}
+${t('profile.createUser.infoPassword')}: ${createdUserInfo.password}
+${t('profile.createUser.infoCompany')}: ${createdUserInfo.company_name}
+${t('profile.createUser.infoRole')}: ${createdUserInfo.role === 'editor' ? t('dashboard.editor') : t('dashboard.viewer')}
 ━━━━━━━━━━━━━━━━━━━━━━━
 `.trim()
                         copyToClipboard(info)
                       }}
                     >
-                      📋 Copiar Información
+                      {t('profile.createUser.copyInfo')}
                     </button>
                   </div>
                 )}

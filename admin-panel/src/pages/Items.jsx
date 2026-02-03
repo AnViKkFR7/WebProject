@@ -5,16 +5,12 @@ import { attributeDefinitionService } from '../services/attributeDefinitionServi
 import { userPreferencesService } from '../services/userPreferencesService'
 import { supabase } from '../lib/supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-
-const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Borrador' },
-  { value: 'published', label: 'Publicado' },
-  { value: 'archived', label: 'Archivado' }
-]
+import { useLanguage } from '../contexts/LanguageContext'
 
 const Items = () => {
   const navigate = useNavigate()
   const { selectedCompany } = useCompany()
+  const { t, language } = useLanguage()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -51,6 +47,12 @@ const Items = () => {
     item_type: ''
   })
   const [newItemAttributes, setNewItemAttributes] = useState({})
+
+  const STATUS_OPTIONS = [
+    { value: 'draft', label: t('items.draft') },
+    { value: 'published', label: t('items.published') },
+    { value: 'archived', label: t('items.archived') }
+  ]
 
   // Load user
   useEffect(() => {
@@ -298,7 +300,7 @@ const Items = () => {
       setPage(1)
     } catch (err) {
       console.error('Error creating item:', err)
-      alert('Error al crear el item: ' + err.message)
+      alert(`${t('items.creatingItemError')}: ${err.message}`)
     }
   }
 
@@ -311,12 +313,12 @@ const Items = () => {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Ahora'
-    if (diffMins < 60) return `Hace ${diffMins}m`
-    if (diffHours < 24) return `Hace ${diffHours}h`
-    if (diffDays < 7) return `Hace ${diffDays}d`
+    if (diffMins < 1) return t('items.relativeNow')
+    if (diffMins < 60) return `${t('items.relativeMinutesPrefix')}${diffMins}${t('items.relativeMinutesSuffix')}`
+    if (diffHours < 24) return `${t('items.relativeHoursPrefix')}${diffHours}${t('items.relativeHoursSuffix')}`
+    if (diffDays < 7) return `${t('items.relativeDaysPrefix')}${diffDays}${t('items.relativeDaysSuffix')}`
     
-    return date.toLocaleDateString('es-ES', { 
+    return date.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
@@ -331,15 +333,15 @@ const Items = () => {
     <div className="page-content">
       <section className="page-header">
         <div>
-          <h2>Items</h2>
-          <p>Gestiona los elementos genéricos por empresa y tipo.</p>
+          <h2>{t('items.title')}</h2>
+          <p>{t('items.description')}</p>
         </div>
         <div className="header-actions">
           <button 
             className="primary-button"
             onClick={() => setShowCreateModal(true)}
           >
-            Nuevo item
+            {t('items.newItem')}
           </button>
         </div>
       </section>
@@ -358,7 +360,7 @@ const Items = () => {
             {/* Status filter */}
             <div style={{ minWidth: '200px', flex: 1 }}>
               <label style={{ fontSize: '0.875rem', marginBottom: '0.25rem', display: 'block' }}>
-                Estado
+                {t('items.statusFilterLabel')}
               </label>
               <select 
                 className="select"
@@ -381,7 +383,7 @@ const Items = () => {
             {/* Item type filter */}
             <div style={{ minWidth: '200px', flex: 1 }}>
               <label style={{ fontSize: '0.875rem', marginBottom: '0.25rem', display: 'block' }}>
-                Tipo de ítem
+                {t('items.itemTypeFilterLabel')}
               </label>
               <select 
                 className="select"
@@ -404,7 +406,7 @@ const Items = () => {
             {/* Sort by date */}
             <div style={{ minWidth: '200px', flex: 1 }}>
               <label style={{ fontSize: '0.875rem', marginBottom: '0.25rem', display: 'block' }}>
-                Ordenar por fecha
+                {t('items.sortByDate')}
               </label>
               <select 
                 className="select"
@@ -414,8 +416,8 @@ const Items = () => {
                   setPage(1)
                 }}
               >
-                <option value="">Más recientes primero</option>
-                <option value="asc">Más antiguos primero</option>
+                <option value="">{t('items.sortNewest')}</option>
+                <option value="asc">{t('items.sortOldest')}</option>
               </select>
             </div>
 
@@ -424,13 +426,13 @@ const Items = () => {
                 className="ghost-button small"
                 onClick={() => setShowAdvancedFilterModal(true)}
               >
-                Filtros avanzados ({selectedAdvancedFilters.length})
+                {t('items.advancedFilters')} ({selectedAdvancedFilters.length})
               </button>
               <button 
                 className="ghost-button small"
                 onClick={clearAllFilters}
               >
-                Borrar filtros
+                {t('items.clearFilters')}
               </button>
             </div>
           </div>
@@ -485,7 +487,7 @@ const Items = () => {
         {/* Loading state */}
         {loading && (
           <div style={{ padding: '2rem', textAlign: 'center' }}>
-            Cargando items...
+            {t('items.loadingItems')}
           </div>
         )}
 
@@ -498,7 +500,7 @@ const Items = () => {
             borderRadius: '4px',
             margin: '1rem'
           }}>
-            Error: {error}
+            {t('items.errorLabel')}: {error}
           </div>
         )}
 
@@ -507,14 +509,14 @@ const Items = () => {
           <>
             <div className="table">
               <div className="table-row table-header">
-                <span>Título</span>
-                <span>Tipo</span>
-                <span>Estado</span>
-                <span>Actualizado</span>
+                <span>{t('items.titleColumn')}</span>
+                <span>{t('items.typeColumn')}</span>
+                <span>{t('items.statusColumn')}</span>
+                <span>{t('items.updatedColumn')}</span>
               </div>
               {items.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                  No se encontraron items
+                  {t('items.noItemsFound')}
                 </div>
               ) : (
                 items.map((item) => (
@@ -547,7 +549,7 @@ const Items = () => {
                 borderTop: '1px solid var(--border-color)'
               }}>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                  Mostrando {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalCount)} de {totalCount}
+                  {t('items.showing')} {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalCount)} {t('items.of')} {totalCount}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button 
@@ -555,17 +557,17 @@ const Items = () => {
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                   >
-                    Anterior
+                    {t('items.prevPage')}
                   </button>
                   <span style={{ padding: '0 1rem', display: 'flex', alignItems: 'center' }}>
-                    Página {page} de {totalPages}
+                    {t('items.pageLabel')} {page} {t('items.of')} {totalPages}
                   </span>
                   <button 
                     className="ghost-button small"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                   >
-                    Siguiente
+                    {t('items.nextPage')}
                   </button>
                 </div>
               </div>
@@ -579,7 +581,7 @@ const Items = () => {
         <div className="modal-overlay" onClick={() => setShowAdvancedFilterModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Configurar filtros avanzados</h3>
+              <h3>{t('items.advancedFiltersTitle')}</h3>
               <button 
                 className="modal-close"
                 onClick={() => setShowAdvancedFilterModal(false)}
@@ -589,7 +591,7 @@ const Items = () => {
             </div>
             <div className="modal-body">
               <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
-                Selecciona los atributos que deseas usar como filtros. Tu selección se guardará automáticamente.
+                {t('items.advancedFiltersDescription')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {attributeDefinitions.map(def => (
@@ -629,20 +631,20 @@ const Items = () => {
                 className="ghost-button"
                 onClick={() => setShowAdvancedFilterModal(false)}
               >
-                Cancelar
+                {t('items.cancel')}
               </button>
               <button 
                 className="ghost-button"
                 onClick={clearAdvancedFilters}
                 style={{ marginLeft: 'auto' }}
               >
-                Borrar filtros
+                {t('items.clearFilters')}
               </button>
               <button 
                 className="primary-button"
                 onClick={applyAdvancedFilterSelection}
               >
-                Aplicar
+                {t('items.apply')}
               </button>
             </div>
           </div>
@@ -655,7 +657,7 @@ const Items = () => {
           <div className="modal create-item-modal" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleCreateItem}>
               <div className="modal-header">
-                <h3>Nuevo Item</h3>
+                <h3>{t('items.newItemModalTitle')}</h3>
                 <button 
                   type="button"
                   className="modal-close"
@@ -667,11 +669,11 @@ const Items = () => {
               <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 {/* Basic fields section */}
                 <div className="modal-section">
-                  <h4 className="modal-section-title">Información Básica</h4>
+                  <h4 className="modal-section-title">{t('items.basicInfoTitle')}</h4>
                   
                   <div className={`attribute-field ${!newItem.title ? 'required' : ''}`} style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                      Título <span className="required-indicator">*</span>
+                      {t('items.titleLabel')} <span className="required-indicator">*</span>
                     </label>
                     <input 
                       type="text"
@@ -684,7 +686,7 @@ const Items = () => {
 
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                      Resumen
+                      {t('items.summaryLabel')}
                     </label>
                     <textarea 
                       className="input"
@@ -697,7 +699,7 @@ const Items = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className={`attribute-field ${!newItem.item_type ? 'required' : ''}`}>
                       <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                        Tipo de ítem <span className="required-indicator">*</span>
+                        {t('items.itemType')} <span className="required-indicator">*</span>
                       </label>
                       <select 
                         className="select"
@@ -705,17 +707,17 @@ const Items = () => {
                         onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
                         required
                       >
-                        <option value="">Selecciona un tipo</option>
+                        <option value="">{t('items.selectItemType')}</option>
                         {itemTypes.map(type => (
                           <option key={type} value={type}>{type}</option>
                         ))}
-                        <option value="__new__">+ Crear nuevo tipo</option>
+                        <option value="__new__">{t('items.createNewItemType')}</option>
                       </select>
                       {newItem.item_type === '__new__' && (
                         <input 
                           type="text"
                           className="input"
-                          placeholder="Nombre del nuevo tipo"
+                          placeholder={t('items.newItemTypeNamePlaceholder')}
                           style={{ marginTop: '0.5rem' }}
                           onChange={(e) => setNewItem(prev => ({ ...prev, item_type: e.target.value }))}
                         />
@@ -724,7 +726,7 @@ const Items = () => {
 
                     <div className={`attribute-field ${!newItem.status ? 'required' : ''}`}>
                       <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-                        Estado <span className="required-indicator">*</span>
+                        {t('items.statusLabel')} <span className="required-indicator">*</span>
                       </label>
                       <select 
                         className="select"
@@ -743,7 +745,7 @@ const Items = () => {
                 {/* Dynamic attribute fields */}
                 {newItem.item_type && newItem.item_type !== '__new__' && (
                   <div className="modal-section">
-                    <h4 className="modal-section-title">Atributos del Item</h4>
+                    <h4 className="modal-section-title">{t('items.attributesTitle')}</h4>
                     <div className="attributes-grid">
                       {attributeDefinitions
                         .filter(def => def.item_type === newItem.item_type)
@@ -820,9 +822,9 @@ const Items = () => {
                                 }))}
                                 required={def.is_required}
                               >
-                                <option value="">Selecciona</option>
-                                <option value="true">Sí</option>
-                                <option value="false">No</option>
+                                <option value="">{t('items.selectOption')}</option>
+                                <option value="true">{t('common.yes')}</option>
+                                <option value="false">{t('common.no')}</option>
                               </select>
                             )}
                             {def.data_type === 'date' && (
@@ -847,7 +849,7 @@ const Items = () => {
                                 }))}
                                 required={def.is_required}
                               >
-                                <option value="">Selecciona una opción</option>
+                                <option value="">{t('items.selectOptionGeneric')}</option>
                                 {def.validation_rules.options.map(opt => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
@@ -889,7 +891,7 @@ const Items = () => {
                                   <input
                                     type="text"
                                     className="input"
-                                    placeholder="Nuevo elemento..."
+                                    placeholder={t('items.newArrayItemPlaceholder')}
                                     onKeyPress={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault()
@@ -932,7 +934,7 @@ const Items = () => {
                                       whiteSpace: 'nowrap'
                                     }}
                                   >
-                                    + Agregar
+                                    + {t('items.addItem')}
                                   </button>
                                 </div>
                               </div>
@@ -973,7 +975,7 @@ const Items = () => {
                                   <input
                                     type="number"
                                     className="input"
-                                    placeholder="Nuevo número..."
+                                    placeholder={t('items.newArrayNumberPlaceholder')}
                                     step="any"
                                     onKeyPress={(e) => {
                                       if (e.key === 'Enter') {
@@ -1017,7 +1019,7 @@ const Items = () => {
                                       whiteSpace: 'nowrap'
                                     }}
                                   >
-                                    + Agregar
+                                    + {t('items.addItem')}
                                   </button>
                                 </div>
                               </div>
@@ -1036,13 +1038,13 @@ const Items = () => {
                   className="ghost-button"
                   onClick={() => setShowCreateModal(false)}
                 >
-                  Cancelar
+                  {t('items.cancel')}
                 </button>
                 <button 
                   type="submit"
                   className="primary-button"
                 >
-                  Crear Item
+                  {t('items.createItemButton')}
                 </button>
               </div>
             </form>

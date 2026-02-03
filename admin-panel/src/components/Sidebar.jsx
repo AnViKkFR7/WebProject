@@ -38,7 +38,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
         <button 
           className="mobile-close-btn"
           onClick={() => setIsMobileMenuOpen(false)}
-          title="Cerrar menú"
+          title={t('sidebar.closeMenuTitle')}
         >
           <span style={{ fontSize: '1.5rem' }}>↑</span>
         </button>
@@ -55,7 +55,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
           </span>
           <div className="brand-info">
             <div className="brand-title">{selectedCompany ? selectedCompany.name : t('nav.noCompany')}</div>
-            <div className="brand-subtitle">Admin Panel</div>
+            <div className="brand-subtitle">{t('sidebar.adminPanel')}</div>
           </div>
         </div>
         
@@ -91,7 +91,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
             }}>
               <div className="user-avatar">{user.email?.[0]?.toUpperCase() || 'U'}</div>
               <div className="user-info">
-                <div className="user-name">{user.email?.split('@')[0] || 'Usuario'}</div>
+                <div className="user-name">{user.email?.split('@')[0] || t('sidebar.userFallbackName')}</div>
                 <div className="user-role">{t('nav.profile')}</div>
               </div>
             </div>
@@ -119,10 +119,10 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
           <button 
             className="theme-switch mobile-only"
             onClick={() => setIsMobileMenuOpen(false)}
-            title="Cerrar menú"
+            title={t('sidebar.closeMenuTitle')}
           >
             <span className="theme-switch-icon">✕</span>
-            <span className="theme-switch-label">Cerrar Menú</span>
+            <span className="theme-switch-label">{t('sidebar.closeMenuLabel')}</span>
           </button>
 
           {/* Collapse Toggle (Desktop Only) */}
@@ -134,13 +134,13 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
              <span className="nav-icon" style={{color: 'var(--primary-color)', filter: 'none'}}>
                {isTabletCollapsed ? '▶' : '◀'}
              </span>
-             <span className="nav-label">{isTabletCollapsed ? '' : 'Contraer menú'}</span>
+             <span className="nav-label">{isTabletCollapsed ? '' : t('sidebar.collapseMenu')}</span>
           </button>
 
           {/* Theme Switcher */}
-          <button className="theme-switch" onClick={toggleTheme} title="Cambiar tema">
+          <button className="theme-switch" onClick={toggleTheme} title={t('sidebar.changeTheme')}>
             <span className="theme-switch-icon">{theme === 'light' ? '🌙' : '☀️'}</span>
-            <span className="theme-switch-label">{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+            <span className="theme-switch-label">{theme === 'light' ? t('sidebar.darkMode') : t('sidebar.lightMode')}</span>
           </button>
         </div>
       </aside>

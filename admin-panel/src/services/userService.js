@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabaseClient'
 
+const parseFunctionsErrorBody = (body) => {
+  if (!body) return null
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body)
+    } catch {
+      return { message: body }
+    }
+  }
+  return body
+}
+
+const getFunctionsErrorMessage = (error) => {
+  const body = parseFunctionsErrorBody(error?.context?.body)
+  if (body) return body.error || body.message || JSON.stringify(body)
+  return error?.message || 'Error desconocido'
+}
+
 /**
  * Service to handle User Management operations (Admin only).
  */
@@ -9,38 +27,39 @@ export const userService = {
    */
   async createUserWithPassword({ email, password, full_name, company_id, role }) {
     const { data: { session } } = await supabase.auth.getSession()
-    
+
     if (!session) {
       throw new Error('No hay sesión activa')
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/create-user`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          email, 
-          password, 
-          full_name, 
-          company_id, 
-          role 
-        })
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      body: {
+        email,
+        password,
+        full_name,
+        company_id,
+        role
       }
-    )
-    
-    const result = await response.json()
-    
-    if (!response.ok) {
-      throw new Error(result.error || 'Error al crear usuario')
+    })
+
+    if (error) {
+      let errorBodyText = null
+      if (error?.context?.text) {
+        try {
+          errorBodyText = await error.context.text()
+        } catch {
+          errorBodyText = null
+        }
+      }
+      const parsedBody = parseFunctionsErrorBody(errorBodyText)
+      console.error('Error detallado:', error)
+      console.error('Functions error context:', error?.context)
+      console.error('Functions error body:', parsedBody || errorBodyText)
+      const message = parsedBody?.error || parsedBody?.message || errorBodyText || error.message || 'Error al crear usuario'
+      throw new Error(message)
     }
-    
-    return result
+
+    return data
   },
 
   /**
@@ -53,32 +72,33 @@ export const userService = {
       throw new Error('No hay sesión activa')
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/invite-user`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          email, 
-          full_name, 
-          company_id, 
-          role 
-        })
+    const { data, error } = await supabase.functions.invoke('invite-user', {
+      body: {
+        email,
+        full_name,
+        company_id,
+        role
       }
-    )
-    
-    const result = await response.json()
-    
-    if (!response.ok) {
-      throw new Error(result.error || 'Error al invitar usuario')
+    })
+
+    if (error) {
+      let errorBodyText = null
+      if (error?.context?.text) {
+        try {
+          errorBodyText = await error.context.text()
+        } catch {
+          errorBodyText = null
+        }
+      }
+      const parsedBody = parseFunctionsErrorBody(errorBodyText)
+      console.error('Error detallado:', error)
+      console.error('Functions error context:', error?.context)
+      console.error('Functions error body:', parsedBody || errorBodyText)
+      const message = parsedBody?.error || parsedBody?.message || errorBodyText || error.message || 'Error al invitar usuario'
+      throw new Error(message)
     }
-    
-    return result
+
+    return data
   },
 
   /**
