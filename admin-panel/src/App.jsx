@@ -13,6 +13,9 @@ import Users from './pages/Users.jsx'
 import Login from './pages/Login.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
 import Profile from './pages/Profile.jsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
+import LegalNotice from './pages/LegalNotice.jsx'
+import CookiesPolicy from './pages/CookiesPolicy.jsx'
 import AuthGuard from './components/AuthGuard.jsx'
 import { CompanyProvider } from './contexts/CompanyContext.jsx'
 
@@ -27,6 +30,9 @@ const App = () => {
           <Route element={<CompanyProvider><AdminLayout /></CompanyProvider>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/legal-notice" element={<LegalNotice />} />
+            <Route path="/cookies-policy" element={<CookiesPolicy />} />
             <Route path="/items" element={<Items />} />
             <Route path="/items/:itemId" element={<ItemDetail />} />
             <Route path="/my-data" element={<MyData />} />
