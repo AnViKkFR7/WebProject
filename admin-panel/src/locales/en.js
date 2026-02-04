@@ -18,6 +18,7 @@ export const en = {
     actions: 'Actions',
     savingChanges: 'Saving...',
     saveChanges: 'Save Changes',
+    back: 'Back',
   },
 
   // Navigation
@@ -294,6 +295,11 @@ export const en = {
         number: 'At least one number',
         special: 'At least one special character (!@#$%^&*...)',
       },
+      legalTitle: 'Legal Information',
+      legalDescription: 'Review the legal terms, privacy policy, and cookies policy regulating this platform.',
+      legalNotice: 'Legal Notice',
+      privacyPolicy: 'Privacy Policy',
+      cookiesPolicy: 'Cookies Policy',
     },
     company: {
       title: 'My Organization',

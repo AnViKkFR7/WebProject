@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { authService } from '../../services/authService'
 import { useLanguage } from '../../contexts/LanguageContext'
 
@@ -198,6 +199,27 @@ const SecurityTab = () => {
           </button>
         </div>
       </form>
+
+      {/* Legal Section */}
+      <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>{t('profile.security.legalTitle')}</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          {t('profile.security.legalDescription')}
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link to="/legal-notice" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontSize: '0.9rem' }}>
+            {t('profile.security.legalNotice')}
+          </Link>
+          <span style={{ color: 'var(--border-color)' }}>|</span>
+          <Link to="/privacy-policy" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontSize: '0.9rem' }}>
+            {t('profile.security.privacyPolicy')}
+          </Link>
+          <span style={{ color: 'var(--border-color)' }}>|</span>
+          <Link to="/cookies-policy" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontSize: '0.9rem' }}>
+            {t('profile.security.cookiesPolicy')}
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

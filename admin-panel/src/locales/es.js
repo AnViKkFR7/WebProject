@@ -18,6 +18,7 @@ export const es = {
     actions: 'Acciones',
     savingChanges: 'Guardando...',
     saveChanges: 'Guardar Cambios',
+    back: 'Volver',
   },
 
   // Navigation
@@ -295,6 +296,11 @@ export const es = {
         number: 'Al menos un número',
         special: 'Al menos un carácter especial (!@#$%^&*...)',
       },
+      legalTitle: 'Información Legal',
+      legalDescription: 'Consulta los términos legales, política de privacidad y cookies que regulan el uso de esta plataforma.',
+      legalNotice: 'Aviso Legal',
+      privacyPolicy: 'Política de Privacidad',
+      cookiesPolicy: 'Política de Cookies',
     },
     company: {
       title: 'Mi Organización',
