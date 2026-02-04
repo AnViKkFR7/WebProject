@@ -147,8 +147,9 @@ Solo existen **tres roles** en todo el sistema:
   - Acceder y modificar datos de cualquier empresa.
   - Asignar y modificar roles de cualquier usuario.
 - Es el **único rol** que puede:
-  - Cambiar el rol de un usuario.
-  - Elevar o degradar permisos.
+  - Degradar permisos (Editor a Viewer).
+  - Gestionar roles de Admin.
+  - Asignar usuarios a empresas.
 
 ---
 
@@ -184,7 +185,12 @@ Solo existen **tres roles** en todo el sistema:
   - El **Admin** puede crear usuarios de cualquier rol.
   - Un **Editor** solo puede crear usuarios **Viewer** y únicamente para su propia empresa.
 - **Cambios de rol**
-  - Cualquier cambio de rol de un usuario **solo puede ser realizado por un Admin**.
+  - El **Admin** puede cambiar libremente el rol de cualquier usuario.
+  - El **Editor** puede cambiar el rol de un usuario de **Viewer** a **Editor** dentro de su empresa.
+  - El **Editor** **NO** puede:
+    - Degradar a un usuario de Editor a Viewer.
+    - Cambiar el rol de un Admin.
+    - Asignar el rol de Admin.
 
 Este modelo garantiza:
 - Control centralizado de permisos.

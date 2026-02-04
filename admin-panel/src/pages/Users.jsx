@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { companyService } from '../services/companyService'
 import { useCompany } from '../contexts/CompanyContext'
 import { formatPhoneNumber } from '../lib/phoneUtils'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -104,8 +105,17 @@ const Users = () => {
     return currentUserRole === 'admin' || currentUserRole === 'editor'
   }
 
-  const canEditRole = () => {
-    return currentUserRole === 'admin'
+  const canEditRole = (targetRole) => {
+    if (currentUserRole === 'admin') return true
+    // Editors can only promote viewers to editors
+    if (currentUserRole === 'editor' && targetRole === 'viewer') return true
+    return false
+  }
+
+  const getAvailableRoles = (targetRole) => {
+    if (currentUserRole === 'admin') return ['admin', 'editor', 'viewer']
+    if (currentUserRole === 'editor' && targetRole === 'viewer') return ['viewer', 'editor']
+    return []
   }
 
   const startEdit = (userId) => {
@@ -141,16 +151,14 @@ const Users = () => {
     try {
       setSavingUser(userId)
       const user = users.find(u => u.userId === userId)
+      const originalRole = originalValues[userId]?.role
+
+      const roleChanged = canEditRole(originalRole) && originalRole !== user.role
 
       // Build update object
       const updateData = {
         full_name: user.fullName,
         phone: user.phone
-      }
-
-      // Add role if user has permission to edit it and it changed
-      if (canEditRole() && originalValues[userId].role !== user.role) {
-        updateData.role = user.role
       }
 
       // Update company_members (includes full_name, phone, and optionally role)
@@ -162,8 +170,11 @@ const Users = () => {
 
       if (updateError) throw updateError
 
+      if (roleChanged) {
+        await companyService.updateMemberRole(selectedCompany.id, userId, user.role)
+      }
+
       setEditingUsers(prev => ({ ...prev, [userId]: false }))
-      const roleChanged = originalValues[userId]?.role !== user.role
       delete originalValues[userId]
       
       // Reload to refresh counts if role changed
@@ -390,16 +401,18 @@ const Users = () => {
 
                 {/* Role Badge */}
                 <div style={{ marginBottom: '1rem' }}>
-                  {editingUsers[user.userId] && canEditRole() ? (
+                  {editingUsers[user.userId] && canEditRole(originalValues[user.userId].role) ? (
                     <select
                       className="select"
                       value={user.role}
                       onChange={(e) => handleFieldChange(user.userId, 'role', e.target.value)}
                       style={{ fontSize: '0.875rem' }}
                     >
-                      <option value="admin">{t('dashboard.admin')}</option>
-                      <option value="editor">{t('dashboard.editor')}</option>
-                      <option value="viewer">{t('dashboard.viewer')}</option>
+                      {getAvailableRoles(originalValues[user.userId].role).map(roleOption => (
+                        <option key={roleOption} value={roleOption}>
+                          {roleOption === 'admin' ? t('dashboard.admin') : roleOption === 'editor' ? t('dashboard.editor') : t('dashboard.viewer')}
+                        </option>
+                      ))}
                     </select>
                   ) : (
                     <span style={{

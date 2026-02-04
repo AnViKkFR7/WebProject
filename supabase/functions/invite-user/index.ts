@@ -31,6 +31,7 @@ serve(async (req) => {
     // Cliente con service_role para operaciones admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const siteUrl = Deno.env.get('SITE_URL') ?? 'https://moira-ordo.vercel.app'
     
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('[INVITE-USER] Missing environment variables', {
@@ -171,7 +172,7 @@ serve(async (req) => {
     
     // 6. Enviar invitación por email para que el usuario establezca su contraseña
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${req.headers.get('origin') || ''}/set-password`
+      redirectTo: `${siteUrl}/reset-password`
     })
     
     if (inviteError) {

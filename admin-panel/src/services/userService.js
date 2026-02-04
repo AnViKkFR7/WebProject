@@ -102,6 +102,23 @@ export const userService = {
   },
 
   /**
+   * Obtener todos los usuarios del sistema (vía Edge Function)
+   */
+  async getAllUsers() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('No hay sesión activa')
+
+    const { data, error } = await supabase.functions.invoke('listar-usuarios')
+
+    if (error) {
+       console.error('Error fetching users:', error)
+       throw new Error('Error al obtener lista de usuarios')
+    }
+
+    return data.users || []
+  },
+
+  /**
    * Verificar si el usuario actual es admin del sistema
    */
   async isCurrentUserAdmin() {
