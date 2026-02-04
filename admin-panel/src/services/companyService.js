@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabaseClient'
 
+const parseFunctionsErrorBody = (body) => {
+  if (!body) return null
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body)
+    } catch {
+      return { message: body }
+    }
+  }
+  return body
+}
+
+const getFunctionsErrorMessage = (error, fallbackMessage) => {
+  const body = parseFunctionsErrorBody(error?.context?.body)
+  if (body) return body.error || body.message || JSON.stringify(body)
+  return error?.message || fallbackMessage
+}
+
 /**
  * Service to handle Company and Company Members operations.
  */
@@ -29,21 +47,31 @@ export const companyService = {
   },
 
   async createCompany(companyData) {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
 
-    if (!user) throw new Error('Usuario no autenticado')
+    if (!session) {
+      throw new Error('No hay sesión activa')
+    }
 
-    const { data, error } = await supabase
-      .from('companies')
-      .insert({
-        ...companyData,
-        created_by: user.id
-      })
-      .select()
-      .single()
+    const { data, error } = await supabase.functions.invoke('crear-empresa', {
+      body: companyData
+    })
 
-    if (error) throw error
-    return data
+    if (error) {
+      let errorBodyText = null
+      if (error?.context?.text) {
+        try {
+          errorBodyText = await error.context.text()
+        } catch {
+          errorBodyText = null
+        }
+      }
+      const parsedBody = parseFunctionsErrorBody(errorBodyText)
+      const message = parsedBody?.error || parsedBody?.message || errorBodyText || getFunctionsErrorMessage(error, 'Error al crear empresa')
+      throw new Error(message)
+    }
+
+    return data?.company || data
   },
 
   async updateCompany(id, updates) {
@@ -109,29 +137,66 @@ export const companyService = {
   },
 
   async addMember(companyId, userId, role = 'viewer') {
-    const { data, error } = await supabase
-      .from('company_members')
-      .insert({
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      throw new Error('No hay sesión activa')
+    }
+
+    const { data, error } = await supabase.functions.invoke('crear-nuevo-trabajador', {
+      body: {
         company_id: companyId,
         user_id: userId,
         role
-      })
-      .select()
-      .single()
+      }
+    })
 
-    if (error) throw error
-    return data
+    if (error) {
+      let errorBodyText = null
+      if (error?.context?.text) {
+        try {
+          errorBodyText = await error.context.text()
+        } catch {
+          errorBodyText = null
+        }
+      }
+      const parsedBody = parseFunctionsErrorBody(errorBodyText)
+      const message = parsedBody?.error || parsedBody?.message || errorBodyText || getFunctionsErrorMessage(error, 'Error al crear miembro')
+      throw new Error(message)
+    }
+
+    return data?.member || data
   },
 
   async updateMemberRole(companyId, userId, newRole) {
-    const { data, error } = await supabase
-      .from('company_members')
-      .update({ role: newRole })
-      .match({ company_id: companyId, user_id: userId })
-      .select()
-      .single()
+    const { data: { session } } = await supabase.auth.getSession()
 
-    if (error) throw error
+    if (!session) {
+      throw new Error('No hay sesión activa')
+    }
+
+    const { data, error } = await supabase.functions.invoke('cambiar-rol-usuario', {
+      body: {
+        company_id: companyId,
+        user_id: userId,
+        role: newRole
+      }
+    })
+
+    if (error) {
+      let errorBodyText = null
+      if (error?.context?.text) {
+        try {
+          errorBodyText = await error.context.text()
+        } catch {
+          errorBodyText = null
+        }
+      }
+      const parsedBody = parseFunctionsErrorBody(errorBodyText)
+      const message = parsedBody?.error || parsedBody?.message || errorBodyText || getFunctionsErrorMessage(error, 'Error al actualizar rol')
+      throw new Error(message)
+    }
+
     return data
   },
 

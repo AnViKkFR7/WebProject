@@ -883,10 +883,12 @@ button {
   margin-bottom: 1.5rem;
 }
 
-.form-group label {
+.form-group label,
+.form-group span {
   display: block;
   margin-bottom: 0.5rem;
-  color: #334155;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -911,7 +913,6 @@ button {
 
 .full-width {
   width: 100%;
-  padding: 0.875rem;
   font-size: 1rem;
   font-weight: 600;
 }
