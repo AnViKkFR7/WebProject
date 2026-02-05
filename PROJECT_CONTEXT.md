@@ -579,5 +579,146 @@ Información importante pero menos usada en filtros de búsqueda:
 
 ---
 
+## 13. Cumplimiento Legal y Privacidad (RGPD)
+
+El proyecto incluye una estructura legal adaptada a un modelo **SaaS B2B privado (acceso por invitación)**.
+
+### 13.1 Estructura de Roles RGPD
+*   **Responsable del Tratamiento**: La organización/empresa que contrata la plataforma e invita a sus empleados. Es quien legitima el uso de los datos.
+*   **Encargado del Tratamiento**: Nosotros (la plataforma/administradores), que proveemos la infraestructura.
+
+### 13.2 Documentación Implementada
+1.  **Política de Privacidad (`/privacy-policy`)**:
+    *   Especifica que los datos (email, nombre) no son recolectados directamente del usuario público, sino facilitados por su empleador autorizador.
+    *   La base legal es la **Ejecución de Contrato** laboral/mercantil.
+    *   Periodo de retención vinculado a la vigencia del usuario en la organización.
+2.  **Política de Cookies (`/cookies-policy`)**:
+    *   Declaración de uso de **cookies exclusivamente técnicas** (Sesión de Supabase, Preferencias de idioma).
+    *   **Exención de banner de consentimiento** bajo el artículo 22.2 de la LSSI (necesarias para el funcionamiento).
+3.  **Aviso Legal (`/legal-notice`)**:
+    *   Foco en la seguridad de credenciales y prohibición de uso ilícito en un entorno multi-tenant.
+
+### 13.3 Subprocesadores
+Se identifican explícitamente los proveedores de infraestructura crítica:
+*   **Supabase**: Base de datos, Auth y Storage.
+*   **Vercel**: Hosting y CDN.
+Ambos con adhesión a marcos de seguridad internacionales compatibles con RGPD.
+
+---
+
+## 14. Gestión de Media (Imágenes y PDFs) en Items
+
+Cada item genérico puede tener archivos multimedia asociados (imágenes y documentos PDF) almacenados en Supabase Storage.
+
+### 14.1 Estructura de Almacenamiento
+
+**Tabla:** `public.item_media`
+
+**Bucket de Storage:** `items-media`
+*   **Región:** eu-west-3
+*   **Público:** Sí (lectura pública para items publicados)
+*   **Límite de tamaño:** 50MB por archivo
+*   **Tipos MIME permitidos:** image/jpeg, image/png, image/webp, application/pdf
+
+**Path recomendado:** `{company_id}/{item_id}/{timestamp}_{filename}`
+
+### 14.2 Reglas de Negocio
+
+#### Límites por Item
+*   **Imágenes:** Entre 0 y 10 por item
+*   **PDFs:** Entre 0 y 2 por item
+
+#### Imagen de Portada
+*   Si un item tiene al menos una imagen, **exactamente una** debe estar marcada como portada (`is_cover = true`)
+*   Solo las imágenes pueden ser portada (no PDFs)
+*   No puede haber más de una portada por item
+
+#### Descripción de Archivos
+*   **Imágenes:** Texto descriptivo opcional (`alt_text`)
+*   **PDFs:** Texto descriptivo **obligatorio** (`alt_text`) - para indicar qué contiene el documento
+
+#### Ordenación
+*   Campo `sort_order` permite ordenar las imágenes para su visualización en galerías
+*   Se recomienda usar valores secuenciales (0, 1, 2, ...) por tipo de archivo
+
+### 14.3 Operaciones Permitidas
+
+#### Crear
+*   Subir archivo al Storage bucket
+*   Crear registro en `item_media` con la URL del Storage
+*   Validar límites (10 imágenes / 2 PDFs)
+*   Si es la primera imagen, marcarla automáticamente como portada
+
+#### Editar
+*   Cambiar `alt_text` (descripción)
+*   Cambiar `sort_order` (reordenar)
+*   Cambiar `is_cover` (designar nueva portada) - solo una imagen puede ser portada
+
+#### Eliminar
+*   Borrar registro de `item_media`
+*   **Importante:** Borrar también el archivo físico del Storage
+*   Si se borra la imagen de portada y quedan otras imágenes, se debe marcar otra como portada antes de eliminar
+
+### 14.4 Validaciones Técnicas
+
+Implementadas mediante triggers y constraints en PostgreSQL:
+
+1.  **Validación de tipo:** Solo "image" o "pdf"
+2.  **Validación de límites:** Max 10 imágenes, max 2 PDFs por item
+3.  **Validación de portada única:** Solo una imagen puede tener `is_cover = true`
+4.  **Validación de portada obligatoria:** Si hay imágenes, debe haber exactamente una portada
+5.  **Validación de descripción:** PDFs requieren `alt_text` no vacío
+6.  **Validación de tamaño:** Frontend debe validar 50MB antes de subir
+
+### 14.5 Seguridad y Acceso
+
+#### Lectura (SELECT)
+*   **Público:** Usuarios anónimos pueden ver media de items con `status = 'published'`
+*   **Tenant:** Usuarios autenticados pueden ver media de items de su empresa (cualquier status)
+
+#### Escritura (INSERT/UPDATE/DELETE)
+*   **Admin:** Acceso completo a todo
+*   **Editor:** Solo puede gestionar media de items de su empresa
+*   **Viewer:** Sin permisos de escritura
+
+#### Storage Bucket Policies
+Las políticas del bucket `items-media` permiten:
+*   **Read:** Público (URLs accesibles sin autenticación para items publicados)
+*   **Write/Delete:** Solo usuarios autenticados (validación adicional por empresa se recomienda en backend)
+
+### 14.6 Implementación en Frontend
+
+#### Subida de Archivos
+```javascript
+// 1. Validar tamaño (50MB)
+// 2. Subir a Storage: supabase.storage.from('items-media').upload(path, file)
+// 3. Obtener URL pública: getPublicUrl(path)
+// 4. Insertar en item_media con la URL
+```
+
+#### Borrado de Archivos
+```javascript
+// 1. Extraer path desde url_externa
+// 2. Borrar registro de item_media (esto dispara el trigger de limpieza)
+// 3. Borrar archivo de Storage: supabase.storage.from('items-media').remove([path])
+```
+
+#### Cambio de Portada
+```javascript
+// 1. UPDATE item_media SET is_cover = false WHERE item_id = X AND is_cover = true
+// 2. UPDATE item_media SET is_cover = true WHERE id = Y
+// El trigger valida que solo haya una portada
+```
+
+### 14.7 Vista Auxiliar: Resumen de Media
+
+La vista `item_media_summary` proporciona estadísticas rápidas:
+*   Conteo de imágenes por item
+*   Conteo de PDFs por item
+*   URL de la imagen de portada
+*   Útil para listados y validaciones
+
+---
+
 Este documento es la referencia base del proyecto.
 

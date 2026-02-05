@@ -87,7 +87,8 @@ const AttributesList = ({
           transform: 'translateY(-50%)', 
           fontSize: '1rem', 
           color: 'var(--text-tertiary)',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          zIndex: 9
         }}>
           🔍
         </span>

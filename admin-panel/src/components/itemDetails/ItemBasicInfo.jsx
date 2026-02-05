@@ -17,10 +17,7 @@ const ItemBasicInfo = ({
   ]
   if (loading) {
     return (
-      <div style={{ 
-        padding: '1.5rem',
-        borderBottom: '1px solid var(--border-color)'
-      }}>
+      <div className="section-card">
         <h2 style={{ 
           fontSize: '1.125rem', 
           fontWeight: '600', 
@@ -217,7 +214,7 @@ const ItemBasicInfo = ({
               backgroundColor: 'var(--bg-secondary)',
               cursor: 'not-allowed'
             }}
-          />
+          />      
         </div>
       </div>
     </div>
