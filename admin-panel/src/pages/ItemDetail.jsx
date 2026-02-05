@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 // Import subcomponents
 import ItemDetailHeader from '../components/itemDetails/ItemDetailHeader'
 import ItemBasicInfo from '../components/itemDetails/ItemBasicInfo'
+import ItemMedia from '../components/itemDetails/ItemMedia'
 import AttributesList from '../components/itemDetails/AttributesList'
 import ItemDetailFooter from '../components/itemDetails/ItemDetailFooter'
 
@@ -205,6 +206,24 @@ const ItemDetail = () => {
     setError(null)
 
     try {
+      // Validar portada obligatoria si se está publicando el item
+      if (itemData.status === 'published' && item.status !== 'published') {
+        // El item está cambiando a estado publicado, verificar portada
+        const { data: images, error: mediaError } = await supabase
+          .from('item_media')
+          .select('id, is_cover')
+          .eq('item_id', itemId)
+          .eq('file_type', 'image')
+
+        if (mediaError) throw mediaError
+
+        const hasCover = images && images.some(img => img.is_cover === true)
+        
+        if (images && images.length > 0 && !hasCover) {
+          throw new Error(t('itemMedia.coverRequiredToPublish') || 'Para publicar un item con imágenes, debe tener una imagen de portada.')
+        }
+      }
+
       await itemService.updateItem(itemId, {
         title: itemData.title,
         summary: itemData.summary,
@@ -407,6 +426,11 @@ const ItemDetail = () => {
         loading={false}
         editableFields={editableFields}
         onToggleEditable={toggleFieldEditable}
+      />
+
+      <ItemMedia
+        itemId={itemId}
+        canEdit={canEdit}
       />
 
       <AttributesList

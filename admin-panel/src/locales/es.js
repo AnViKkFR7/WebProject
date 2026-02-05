@@ -19,6 +19,11 @@ export const es = {
     savingChanges: 'Guardando...',
     saveChanges: 'Guardar Cambios',
     back: 'Volver',
+    share: 'Compartir',
+    copied: 'Copiado',
+    urlCopied: 'URL copiada al portapapeles',
+    expand: 'Expandir',
+    collapse: 'Colapsar',
   },
 
   // Navigation
@@ -246,6 +251,35 @@ export const es = {
     url: 'URL',
     publicKey: 'Clave pública',
     comingSoon: 'Próximamente...',
+  },
+
+  // Item Media
+  itemMedia: {
+    title: 'Imágenes y Documentos',
+    images: 'Imágenes',
+    pdfs: 'Documentos PDF',
+    addImages: '+ Añadir Imágenes',
+    addPdfs: '+ Añadir PDFs',
+    noImages: 'No hay imágenes',
+    noPdfs: 'No hay documentos PDF',
+    uploading: 'Subiendo...',
+    maxImagesWarning: 'Solo puedes tener un máximo de {max} imágenes',
+    maxPdfsWarning: 'Solo puedes tener un máximo de {max} PDFs',
+    fileSizeError: 'El archivo {name} supera el límite de 50MB',
+    pdfDescriptionPrompt: 'Introduce una descripción para el PDF:',
+    pdfDescriptionRequired: 'Los archivos PDF requieren una descripción',
+    deleteConfirm: '¿Estás seguro de que deseas eliminar este archivo?',
+    coverImage: 'Portada',
+    setCover: 'Marcar como portada',
+    delete: 'Eliminar',
+    moveLeft: 'Mover izquierda',
+    moveRight: 'Mover derecha',
+    view: 'Ver',
+    noDescription: 'Sin descripción',
+    descriptionPlaceholder: 'Añadir descripción...',
+    openInNewTab: 'Abrir en nueva pestaña',
+    coverRequiredToPublish: 'Para publicar un item con imágenes, debe tener una imagen de portada.',
+    dimensions: 'Dimensiones',
   },
 
   // Profile

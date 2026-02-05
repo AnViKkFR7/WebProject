@@ -14,6 +14,7 @@ const Items = () => {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [copiedItemId, setCopiedItemId] = useState(null)
   
   // Pagination
   const [page, setPage] = useState(1)
@@ -314,9 +315,21 @@ const Items = () => {
     const diffDays = Math.floor(diffMs / 86400000)
 
     if (diffMins < 1) return t('items.relativeNow')
-    if (diffMins < 60) return `${t('items.relativeMinutesPrefix')}${diffMins}${t('items.relativeMinutesSuffix')}`
-    if (diffHours < 24) return `${t('items.relativeHoursPrefix')}${diffHours}${t('items.relativeHoursSuffix')}`
-    if (diffDays < 7) return `${t('items.relativeDaysPrefix')}${diffDays}${t('items.relativeDaysSuffix')}`
+    if (diffMins < 60) {
+      const prefix = t('items.relativeMinutesPrefix')
+      const suffix = t('items.relativeMinutesSuffix')
+      return `${prefix}${diffMins}${suffix}`
+    }
+    if (diffHours < 24) {
+      const prefix = t('items.relativeHoursPrefix')
+      const suffix = t('items.relativeHoursSuffix')
+      return `${prefix}${diffHours}${suffix}`
+    }
+    if (diffDays < 7) {
+      const prefix = t('items.relativeDaysPrefix')
+      const suffix = t('items.relativeDaysSuffix')
+      return `${prefix}${diffDays}${suffix}`
+    }
     
     return date.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { 
       year: 'numeric', 
@@ -327,6 +340,18 @@ const Items = () => {
 
   const handleItemClick = (item) => {
     navigate(`/items/${item.id}`)
+  }
+
+  const handleShare = async (e, itemId) => {
+    e.stopPropagation()
+    try {
+      const url = `${window.location.origin}/items/${itemId}`
+      await navigator.clipboard.writeText(url)
+      setCopiedItemId(itemId)
+      setTimeout(() => setCopiedItemId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy URL:', err)
+    }
   }
 
   return (
@@ -513,6 +538,7 @@ const Items = () => {
                 <span>{t('items.typeColumn')}</span>
                 <span>{t('items.statusColumn')}</span>
                 <span>{t('items.updatedColumn')}</span>
+                <span>{t('common.actions')}</span>
               </div>
               {items.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -534,6 +560,39 @@ const Items = () => {
                       </span>
                     </span>
                     <span>{formatDate(item.updated_at)}</span>
+                    <span>
+                      <button
+                        onClick={(e) => handleShare(e, item.id)}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '0.375rem 0.75rem',
+                          cursor: 'pointer',
+                          color: 'var(--text-color)',
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+                          e.currentTarget.style.borderColor = 'var(--primary-color)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                          e.currentTarget.style.borderColor = 'var(--border-color)'
+                        }}
+                        title={t('common.share')}
+                      >
+                        {copiedItemId === item.id ? (
+                          <>✓ {t('common.copied')}</>
+                        ) : (
+                          <>🔗 {t('common.share')}</>
+                        )}
+                      </button>
+                    </span>
                   </div>
                 ))
               )}
