@@ -20,8 +20,8 @@ const PrivacyPolicy = () => {
         <h3>1. Responsable del Tratamiento</h3>
         <p>
           El responsable del tratamiento de los datos personales recogidos en esta plataforma es <strong>Moira Ordo</strong>, 
-          con domicilio en <strong>Vilanova i la Geltrú</strong> y NIF/CIF <strong>[XXXXXX]</strong>. 
-          Puede contactar con el responsable a través del correo electrónico: <strong>gasa.aaron@gmail.com</strong>.
+          con domicilio en <strong>Vilanova i la Geltrú</strong> y NIF/CIF <strong>53321515V</strong>. 
+          Puede contactar con el responsable a través del correo electrónico: <strong>info@moiraordo.es</strong>.
         </p>
 
         <h3>2. Datos Recopilados y Origen</h3>
