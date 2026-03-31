@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatPhoneNumber } from '../lib/phoneUtils'
 import { useLanguage } from '../contexts/LanguageContext'
+import { getClientCompaniesFlexible } from '../services/clientCompanyService'
 
 const Companies = () => {
   const { t } = useLanguage()
@@ -15,94 +16,44 @@ const Companies = () => {
   const [itemCounts, setItemCounts] = useState({})
   const [userCounts, setUserCounts] = useState({})
 
+
   useEffect(() => {
-    loadCompanies()
+    loadClientCompanies()
   }, [])
 
-  const loadCompanies = async () => {
+  const loadClientCompanies = async () => {
     try {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Obtener empresas del usuario
-      const { data: memberships, error: membershipsError } = await supabase
-        .from('company_members')
-        .select('company_id, role')
-        .eq('user_id', user.id)
-
-      if (membershipsError) throw membershipsError
-
-      const companyIds = memberships.map(m => m.company_id)
-
-      // Obtener datos de las empresas
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-        .in('id', companyIds)
-
-      if (companiesError) throw companiesError
-
-      // Crear mapa de roles
-      const rolesMap = {}
-      memberships.forEach(m => {
-        rolesMap[m.company_id] = m.role
-      })
-
-      // Añadir rol a cada empresa
-      const companiesWithRoles = companiesData.map(company => ({
-        ...company,
-        userRole: rolesMap[company.id]
-      }))
-
-      setCompanies(companiesWithRoles)
-
-      // Cargar conteo de items publicados para cada empresa
-      const counts = {}
-      const userCountsData = {}
-      for (const company of companiesWithRoles) {
-        const { count, error: countError } = await supabase
-          .from('items')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .eq('status', 'published')
-
-        if (!countError) {
-          counts[company.id] = count || 0
-        }
-
-        // Contar usuarios de la empresa
-        const { count: userCount, error: userCountError } = await supabase
-          .from('company_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-
-        if (!userCountError) {
-          userCountsData[company.id] = userCount || 0
-        }
-      }
-      setItemCounts(counts)
-      setUserCounts(userCountsData)
+      // Si eres admin, muestra todas las empresas cliente; si no, solo las tuyas
+      const isAdmin = user.app_metadata?.role === 'admin' || user.app_metadata?.is_admin
+      const clientCompanies = await getClientCompaniesFlexible(user.id, isAdmin)
+      setCompanies(clientCompanies)
 
       // Guardar valores originales
       const original = {}
-      companiesWithRoles.forEach(company => {
+      clientCompanies.forEach(company => {
         original[company.id] = {
           description: company.description || '',
-          contact_email: company.contact_email || '',
-          contact_phone: company.contact_phone || '',
-          website_url: company.website_url || ''
+          email: company.email || '',
+          phone: company.phone || '',
+          responsible: company.responsible || '',
+          color: company.color || ''
         }
       })
       setOriginalValues(original)
-
     } catch (err) {
-      console.error('Error loading companies:', err)
+      console.error('Error loading client companies:', err)
       setError(t('errors.loadingCompanies'))
     } finally {
       setLoading(false)
     }
   }
+
+
+
 
   const toggleEdit = (companyId) => {
     setEditableCompanies(prev => ({
@@ -249,72 +200,55 @@ const Companies = () => {
               )}
 
               {/* Nombre de la empresa */}
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                margin: 0,
-                color: 'var(--text-primary)',
-                paddingRight: '3rem'
-              }}>
-                {company.name}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {/* Círculo de color */}
+                <span style={{
+                  display: 'inline-block',
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '50%',
+                  background: company.color || '#ccc',
+                  border: '2px solid #eee',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+                }} title={company.color || 'Sin color'} />
+                <h3 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                  paddingRight: '3rem'
+                }}>
+                  {company.name}
+                </h3>
+              </div>
 
-              {/* Descripción */}
+              {/* Responsable */}
               <div>
                 <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                  {t('companies.companyDescription')}
+                  Responsable
                 </label>
-                {editableCompanies[company.id] ? (
-                  <textarea
-                    className="input"
-                    value={company.description || ''}
-                    onChange={(e) => handleFieldChange(company.id, 'description', e.target.value)}
-                    rows={3}
-                    style={{ resize: 'vertical', width: '100%' }}
-                  />
-                ) : (
-                  <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                    {company.description || t('companies.missingDescription')}
-                  </p>
-                )}
+                <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  {company.responsible || 'Sin responsable'}
+                </p>
               </div>
 
               {/* Contacto */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    {t('companies.contactEmail')}
+                    Email
                   </label>
-                  {editableCompanies[company.id] ? (
-                    <input
-                      type="email"
-                      className="input"
-                      value={company.contact_email || ''}
-                      onChange={(e) => handleFieldChange(company.id, 'contact_email', e.target.value)}
-                    />
-                  ) : (
-                    <p style={{ margin: 0, color: company.contact_email ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
-                      {company.contact_email || t('companies.missingEmail')}
-                    </p>
-                  )}
+                  <p style={{ margin: 0, color: company.email ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+                    {company.email || 'Sin email'}
+                  </p>
                 </div>
-
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    {t('companies.contactPhone')}
+                    Teléfono
                   </label>
-                  {editableCompanies[company.id] ? (
-                    <input
-                      type="tel"
-                      className="input"
-                      value={company.contact_phone || ''}
-                      onChange={(e) => handleFieldChange(company.id, 'contact_phone', e.target.value)}
-                    />
-                  ) : (
-                    <p style={{ margin: 0, color: company.contact_phone ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
-                      {company.contact_phone ? formatPhoneNumber(company.contact_phone) : t('companies.missingPhone')}
-                    </p>
-                  )}
+                  <p style={{ margin: 0, color: company.phone ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+                    {company.phone ? formatPhoneNumber(company.phone) : 'Sin teléfono'}
+                  </p>
                 </div>
               </div>
 

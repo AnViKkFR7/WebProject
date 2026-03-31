@@ -30,3 +30,15 @@ export async function deleteClientCompany(companyId) {
   if (error) throw error
   return true
 }
+
+// Obtener todas las empresas (para admin) o solo las del usuario
+export async function getClientCompaniesFlexible(userId, isAdmin) {
+  let query = supabase.from('client_company').select('*')
+  if (!isAdmin) {
+    query = query.eq('user_id', userId)
+  }
+  // Si es admin, no filtra por user_id (devuelve todas)
+  const { data, error } = await query.order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
