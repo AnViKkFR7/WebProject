@@ -6,7 +6,7 @@ export async function getPlanningTasks(companyIds, fromDate, toDate) {
   let query = supabase
     .from('planning_task')
     .select('*')
-    .in('client_company_id', companyIds)
+    .in('company_id', companyIds)
   if (fromDate) query = query.gte('start_datetime', fromDate)
   if (toDate) query = query.lte('end_datetime', toDate)
   const { data, error } = await query.order('start_datetime', { ascending: true })
@@ -30,7 +30,7 @@ export async function getBilling(companyIds, fromDate, toDate) {
   let query = supabase
     .from('billing')
     .select('*')
-    .in('client_company_id', companyIds)
+    .in('company_id', companyIds)
   if (fromDate) query = query.gte('billing_date', fromDate)
   if (toDate) query = query.lte('billing_date', toDate)
   const { data, error } = await query.order('billing_date', { ascending: true })
