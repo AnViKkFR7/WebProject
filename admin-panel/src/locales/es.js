@@ -35,6 +35,7 @@ export const es = {
     myData: 'Atributos',
     blog: 'Blog',
     media: 'Media',
+    planning: 'Planning',
     settings: 'Ajustes',
     profile: 'Perfil',
     logout: 'Cerrar Sesión',

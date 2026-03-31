@@ -19,6 +19,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
     { to: '/companies', label: t('nav.companies'), icon: '🏢' },
     { to: '/users', label: t('nav.users'), icon: '👥' },
     { to: '/blog', label: t('nav.blog'), icon: '✍️' },
+    { to: '/planning', label: t('nav.planning'), icon: '🗓️' },
   ]
 
   useEffect(() => {

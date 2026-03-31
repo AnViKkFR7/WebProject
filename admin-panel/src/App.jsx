@@ -16,6 +16,7 @@ import Profile from './pages/Profile.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import LegalNotice from './pages/LegalNotice.jsx'
 import CookiesPolicy from './pages/CookiesPolicy.jsx'
+import Planning from './pages/Planning.jsx'
 import AuthGuard from './components/AuthGuard.jsx'
 import { CompanyProvider } from './contexts/CompanyContext.jsx'
 
@@ -40,6 +41,7 @@ const App = () => {
             <Route path="/users" element={<Users />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/media" element={<Media />} />
+            <Route path="/planning" element={<Planning />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
