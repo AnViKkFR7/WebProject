@@ -1,3 +1,16 @@
+// Devuelve el color de la empresa, o genera uno único si no tiene
+function getCompanyColor(company) {
+  if (company.color) return company.color;
+  // Generar color único basado en el id
+  let hash = 0;
+  for (let i = 0; i < company.id.length; i++) {
+    hash = company.id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c = (hash & 0x00FFFFFF)
+    .toString(16)
+    .toUpperCase();
+  return '#' + '00000'.substring(0, 6 - c.length) + c;
+}
 import React, { useEffect, useState } from 'react';
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { companyService } from '../services/companyService';
@@ -66,13 +79,21 @@ const Planning = () => {
   const handleAddTask = async (e) => {
     e.preventDefault();
     setErrorTask('');
+    // Validar company_id
+    if (!taskForm.company_id || taskForm.company_id === '') {
+      setErrorTask('Debes seleccionar una empresa para la tarea.');
+      return;
+    }
     try {
       const newTask = { ...taskForm, created_by: userId };
-      const created = await createPlanningTask(newTask);
-      setTasks(prev => [created, ...prev]);
+      await createPlanningTask(newTask);
+      // Recargar tareas desde la BBDD para evitar inconsistencias
+      const ids = selectedCompanies.map(c => c.id);
+      const updatedTasks = await getPlanningTasks(ids);
+      setTasks(updatedTasks);
       setShowTaskModal(false);
     } catch (err) {
-      setErrorTask('Error al crear la tarea');
+      setErrorTask(err.message || 'Error al crear la tarea');
     }
   };
   // Guardar facturación
@@ -192,7 +213,7 @@ const Planning = () => {
               {filteredCompanies.map(company => (
                 <div
                   key={company.id}
-                  style={{ padding: 8, cursor: 'pointer', color: company.color || '#1976d2' }}
+                  style={{ padding: 8, cursor: 'pointer', color: getCompanyColor(company) }}
                   onClick={() => toggleCompany(company)}
                 >
                   {company.name}
@@ -214,7 +235,7 @@ const Planning = () => {
           {selectedCompanies.map(company => (
             <li
               key={company.id}
-              style={{ color: company.color || '#1976d2', background: company.color ? `${company.color}22` : '#e3f2fd', borderRadius: 8, padding: '4px 12px', display: 'flex', alignItems: 'center' }}
+              style={{ color: getCompanyColor(company), background: `${getCompanyColor(company)}22`, borderRadius: 8, padding: '4px 12px', display: 'flex', alignItems: 'center' }}
             >
               {company.name}
               <span
@@ -412,7 +433,7 @@ const Planning = () => {
                               {dayTasks.map(task => (
                                 <li key={task.id} style={{ marginBottom: 10 }}>
                                   <div
-                                    style={{ borderLeft: `6px solid ${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}`, background: `${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
+                                    style={{ borderLeft: `6px solid ${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}`, background: `${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
                                     onClick={() => setDetailTask(task)}
                                   >
                                     <strong>{task.title}</strong> <span style={{ fontSize: 12, color: '#888' }}>({task.type})</span><br />
@@ -441,7 +462,7 @@ const Planning = () => {
                           {dayTasks.map(task => (
                             <li key={task.id} style={{ marginBottom: 10 }}>
                               <div
-                                style={{ borderLeft: `6px solid ${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}`, background: `${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
+                                style={{ borderLeft: `6px solid ${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}`, background: `${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
                                 onClick={() => setDetailTask(task)}
                               >
                                 <strong>{task.title}</strong> <span style={{ fontSize: 12, color: '#888' }}>({task.type})</span><br />
@@ -460,7 +481,7 @@ const Planning = () => {
                     {tasks.map(task => (
                       <li key={task.id} style={{ marginBottom: 12 }}>
                         <div
-                          style={{ borderLeft: `6px solid ${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}`, background: `${companies.find(c => c.id === task.company_id)?.color || '#1976d2'}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
+                          style={{ borderLeft: `6px solid ${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}`, background: `${getCompanyColor(companies.find(c => c.id === task.company_id) || {})}22`, borderRadius: 8, padding: 12, cursor: 'pointer' }}
                           onClick={() => setDetailTask(task)}
                         >
                           <strong>{task.title}</strong> <span style={{ fontSize: 12, color: '#888' }}>({task.type})</span><br />
@@ -495,7 +516,7 @@ const Planning = () => {
                 {bills.map(bill => (
                   <li key={bill.id} style={{ marginBottom: 10 }}>
                     <div
-                      style={{ borderLeft: `6px solid ${companies.find(c => c.id === bill.company_id)?.color || '#1976d2'}`, background: `${companies.find(c => c.id === bill.company_id)?.color || '#1976d2'}22`, borderRadius: 8, padding: 10, cursor: 'pointer' }}
+                      style={{ borderLeft: `6px solid ${getCompanyColor(companies.find(c => c.id === bill.company_id) || {})}`, background: `${getCompanyColor(companies.find(c => c.id === bill.company_id) || {})}22`, borderRadius: 8, padding: 10, cursor: 'pointer' }}
                       onClick={() => setDetailBill(bill)}
                     >
                       <strong>{bill.title}</strong> <span style={{ fontSize: 12, color: '#888' }}>({bill.direction === 'cobrar' ? 'A cobrar' : 'A pagar'})</span><br />
