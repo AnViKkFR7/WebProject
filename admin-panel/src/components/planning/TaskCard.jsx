@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 // Aclara un color hex mezclándolo con blanco
 function lighten(hex, amount = 0.82) {
@@ -64,10 +65,7 @@ function DetailModal({ task, color, onClose }) {
             <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Adjuntos</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {task.attachments.map((f, i) => (
-                <a key={i} href={f.url || '#'} target="_blank" rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: '#f2f2f7', fontSize: 12, color: '#007AFF', textDecoration: 'none' }}>
-                  📎 {f.name || `Archivo ${i + 1}`}
-                </a>
+                <AttachmentLink key={i} file={f} index={i} />
               ))}
             </div>
           </div>
@@ -78,6 +76,32 @@ function DetailModal({ task, color, onClose }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function AttachmentLink({ file, index }) {
+  const handleClick = async (e) => {
+    e.preventDefault();
+    try {
+      // Si tiene path, genera URL firmada (bucket privado)
+      if (file.path) {
+        const { data, error } = await supabase.storage
+          .from('media-planner')
+          .createSignedUrl(file.path, 3600); // 1 hora
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } else if (file.url) {
+        window.open(file.url, '_blank');
+      }
+    } catch {
+      alert('No se pudo abrir el archivo.');
+    }
+  };
+  return (
+    <a href="#" onClick={handleClick}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: '#f2f2f7', fontSize: 12, color: '#007AFF', textDecoration: 'none' }}>
+      📎 {file.name || `Archivo ${index + 1}`}
+    </a>
   );
 }
 

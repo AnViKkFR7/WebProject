@@ -44,6 +44,27 @@ function taskToCalendarEvent(task, companies) {
   return { ...task, start, end, company, _color };
 }
 
+function BillingAttachmentLink({ file, index }) {
+  const handleClick = async (e) => {
+    e.preventDefault();
+    try {
+      if (file.path) {
+        const { data, error } = await supabase.storage.from('media-planner').createSignedUrl(file.path, 3600);
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } else if (file.url) {
+        window.open(file.url, '_blank');
+      }
+    } catch { alert('No se pudo abrir el archivo.'); }
+  };
+  return (
+    <a href="#" onClick={handleClick}
+      style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "#f2f2f7", fontSize: 12, color: "#007AFF", textDecoration: "none" }}>
+      📎 {file.name || `Archivo ${index + 1}`}
+    </a>
+  );
+}
+
 // VISTA FACTURACION
 function BillingView({ bills, companies }) {
   const [detailBill, setDetailBill] = useState(null);
@@ -108,11 +129,11 @@ function BillingView({ bills, companies }) {
             {detailBill.attachments && detailBill.attachments.length > 0 && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Adjuntos</div>
-                {detailBill.attachments.map((f,i) => (
-                  <a key={i} href={f.url || "#"} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "#f2f2f7", fontSize: 12, color: "#007AFF", textDecoration: "none", marginRight: 6 }}>
-                    Adjunto {f.name || i+1}
-                  </a>
-                ))}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {detailBill.attachments.map((f, i) => (
+                    <BillingAttachmentLink key={i} file={f} index={i} />
+                  ))}
+                </div>
               </div>
             )}
             <button onClick={() => setDetailBill(null)} style={{ marginTop: 8, padding: "9px 0", borderRadius: 10, border: "none", background: "#007AFF", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Cerrar</button>
