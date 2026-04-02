@@ -46,16 +46,19 @@ export default function WeekView({ date, tasks }) {
   const now    = new Date();
   const nowMin = getHours(now) * 60 + getMinutes(now);
 
-  // Agrupar tareas por día
+  // Agrupar tareas por día (separar all-day del grid)
   const byDay = {};
+  const allDayByDay = {};
   days.forEach(day => {
     const k = format(day, 'yyyy-MM-dd');
     const dayTasks = tasks.filter(t => {
       if (!t.start_datetime) return false;
       return format(new Date(t.start_datetime), 'yyyy-MM-dd') === k;
     });
-    byDay[k] = layoutDay(dayTasks.map(toGridEvent).filter(Boolean));
+    allDayByDay[k] = dayTasks.filter(t => t.is_all_day);
+    byDay[k] = layoutDay(dayTasks.filter(t => !t.is_all_day).map(toGridEvent).filter(Boolean));
   });
+  const hasAnyAllDay = days.some(d => (allDayByDay[format(d, 'yyyy-MM-dd')] || []).length > 0);
 
   const colTemplate = `52px repeat(7, 1fr)`;
 
@@ -78,6 +81,26 @@ export default function WeekView({ date, tasks }) {
           );
         })}
       </div>
+
+      {/* Fila Todo el día */}
+      {hasAnyAllDay && (
+        <div style={{ display: 'grid', gridTemplateColumns: colTemplate, borderBottom: '1px solid #e5e5ea', flexShrink: 0, background: '#fafafa' }}>
+          <div style={{ borderRight: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0', fontSize: 10, color: '#8e8e93', userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: 0.5 }}>
+            Todo el día
+          </div>
+          {days.map((day, di) => {
+            const k = format(day, 'yyyy-MM-dd');
+            const evs = allDayByDay[k] || [];
+            return (
+              <div key={di} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 2px', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', minHeight: 26 }}>
+                {evs.map((t, i) => (
+                  <TaskCard key={t.id || i} task={t} view="week" style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: '100%', zIndex: 1 }} />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Grid con scroll */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto' }}>

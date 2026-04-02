@@ -59,8 +59,10 @@ export default function DayView({ date, tasks }) {
     return format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
   });
 
-  const gridEvents = dayTasks.map(toGridEvent).filter(Boolean);
-  const laid = layoutEvents(gridEvents);
+  const allDayTasks = dayTasks.filter(t => t.is_all_day);
+  const timedTasks  = dayTasks.filter(t => !t.is_all_day);
+  const gridEvents  = timedTasks.map(toGridEvent).filter(Boolean);
+  const laid        = layoutEvents(gridEvents);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -76,6 +78,20 @@ export default function DayView({ date, tasks }) {
           <span style={{ fontSize: 13, color: '#8e8e93' }}>{format(date, 'MMMM yyyy')}</span>
         </div>
       </div>
+
+      {/* Fila Todo el día */}
+      {allDayTasks.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', borderBottom: '1px solid #e5e5ea', flexShrink: 0, background: '#fafafa' }}>
+          <div style={{ borderRight: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0', fontSize: 10, color: '#8e8e93', userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: 0.5 }}>
+            Todo el día
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '4px 6px' }}>
+            {allDayTasks.map((t, i) => (
+              <TaskCard key={t.id || i} task={t} view="day" style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: 'auto', flex: '0 0 auto', maxWidth: '100%' }} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Grid con scroll */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
