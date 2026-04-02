@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabaseClient'
 
+// Subir archivos al bucket media-planner y devolver array [{name, url}]
+export async function uploadPlannerFiles(files, folder = 'tasks') {
+  if (!files || !files.length) return []
+  const results = []
+  for (const file of files) {
+    const ext  = file.name.split('.').pop()
+    const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage
+      .from('media-planner')
+      .upload(path, file, { upsert: false })
+    if (error) throw new Error(`Error subiendo ${file.name}: ${error.message}`)
+    const { data: { publicUrl } } = supabase.storage
+      .from('media-planner')
+      .getPublicUrl(path)
+    results.push({ name: file.name, url: publicUrl, path })
+  }
+  return results
+}
 // Obtener tareas de empresas seleccionadas en un rango de fechas
 export async function getPlanningTasks(companyIds, fromDate, toDate) {
   if (!companyIds.length) return []

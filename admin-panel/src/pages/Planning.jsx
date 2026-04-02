@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 import { companyService } from "../services/companyService";
-import { getPlanningTasks, createPlanningTask, getBilling, createBilling } from "../services/planningService";
+import { getPlanningTasks, createPlanningTask, getBilling, createBilling, uploadPlannerFiles } from "../services/planningService";
 import { supabase } from "../lib/supabaseClient";
 import CalendarWrapper from "../components/planning/CalendarWrapper";
 
@@ -226,7 +226,14 @@ const Planning = () => {
   const handleAddCompany = async (e) => {
     e.preventDefault(); setAdding(true); setErrorAdd("");
     try {
-      const created = await companyService.createCompany({ ...addForm, user_id: userId });
+      const created = await companyService.createCompany({
+        name:          addForm.name,
+        contact_email: addForm.email || "sin-email@placeholder.com",
+        contact_phone: addForm.phone || "-",
+        color:         addForm.color,
+        description:   addForm.responsible ? `Responsable: ${addForm.responsible}` : undefined,
+        user_id:       userId,
+      });
       setCompanies(prev => [created, ...prev]); setShowAddModal(false);
     } catch { setErrorAdd("Error al crear la empresa"); } finally { setAdding(false); }
   };
@@ -240,7 +247,8 @@ const Planning = () => {
     e.preventDefault(); setErrorTask("");
     if (!taskForm.company_id) { setErrorTask("Selecciona una empresa."); return; }
     try {
-      await createPlanningTask({ ...taskForm, created_by: userId });
+      const attachments = await uploadPlannerFiles(taskFiles, "tasks");
+      await createPlanningTask({ ...taskForm, attachments, created_by: userId });
       const updated = await getPlanningTasks(selectedCompanies.map(c => c.id));
       setTasks(updated); setShowTaskModal(false);
     } catch (err) { setErrorTask(err.message || "Error al crear la tarea"); }
@@ -254,7 +262,8 @@ const Planning = () => {
   const handleAddBill = async (e) => {
     e.preventDefault(); setErrorBill("");
     try {
-      const created = await createBilling({ ...billForm, created_by: userId });
+      const attachments = await uploadPlannerFiles(billFiles, "billing");
+      const created = await createBilling({ ...billForm, attachments, created_by: userId });
       setBills(prev => [created, ...prev]); setShowBillModal(false);
     } catch { setErrorBill("Error al crear la facturacion"); }
   };
