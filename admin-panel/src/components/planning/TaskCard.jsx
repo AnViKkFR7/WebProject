@@ -26,7 +26,15 @@ function fmt(dt) {
 }
 
 // ── Modal de detalle completo ──────────────────────────────────────
-function DetailModal({ task, color, onClose }) {
+function DetailModal({ task, color, onClose, onEdit, onDelete }) {
+  const [confirming, setConfirming] = useState(false);
+
+  const handleDelete = () => {
+    if (!confirming) { setConfirming(true); return; }
+    onDelete(task.id);
+    onClose();
+  };
+
   return (
     <div
       onClick={onClose}
@@ -71,9 +79,24 @@ function DetailModal({ task, color, onClose }) {
           </div>
         )}
 
-        <button onClick={onClose} style={{ marginTop: 10, padding: '9px 0', borderRadius: 10, border: 'none', background: '#007AFF', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-          Cerrar
-        </button>
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          {onEdit && (
+            <button
+              onClick={() => { onEdit(task); onClose(); }}
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: '1px solid #d1d1d6', background: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#1c1c1e' }}
+            >✏️ Editar</button>
+          )}
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: confirming ? '#FF3B30' : '#fff3f3', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: confirming ? '#fff' : '#FF3B30', border: `1px solid #FF3B3040` }}
+            >{confirming ? '¿Confirmar?' : '🗑️ Eliminar'}</button>
+          )}
+          <button onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: '#007AFF', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -117,7 +140,7 @@ function Row({ label, children }) {
 // ── TaskCard principal ─────────────────────────────────────────────
 // view: 'day' | 'week' | 'month'
 // style prop: estilos de posicionamiento desde el padre (top/left/width/height etc.)
-export default function TaskCard({ task, view, style = {} }) {
+export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
   const [open, setOpen] = useState(false);
   const color = task._color || task.company?.color || '#8e8e93';
   const bg = lighten(color, 0.82);
@@ -167,7 +190,7 @@ export default function TaskCard({ task, view, style = {} }) {
         </div>
       )}
 
-      {open && <DetailModal task={task} color={color} onClose={() => setOpen(false)} />}
+      {open && <DetailModal task={task} color={color} onClose={() => setOpen(false)} onEdit={onEdit} onDelete={onDelete} />}
     </>
   );
 }

@@ -65,3 +65,39 @@ export async function createBilling(bill) {
   if (error) throw error
   return data
 }
+
+// Eliminar tarea
+export async function deletePlanningTask(id) {
+  const { error } = await supabase.from('planning_task').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Actualizar tarea
+export async function updatePlanningTask(id, updates) {
+  const { data, error } = await supabase
+    .from('planning_task')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Eliminar facturación
+export async function deleteBilling(id) {
+  const { error } = await supabase.from('billing').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Actualizar facturación
+export async function updateBilling(id, updates) {
+  const { data, error } = await supabase
+    .from('billing')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

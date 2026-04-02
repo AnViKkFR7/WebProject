@@ -23,7 +23,7 @@ function getTitle(view, date) {
   return `${DAYS_ES[date.getDay()]}, ${date.getDate()} de ${MONTHS_ES[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-export default function CalendarWrapper({ tasks, defaultView = 'week' }) {
+export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask }) {
   const [view, setView]       = useState(defaultView);
   const [current, setCurrent] = useState(new Date());
 
@@ -90,9 +90,9 @@ export default function CalendarWrapper({ tasks, defaultView = 'week' }) {
 
       {/* ── Cuerpo ── */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {view === 'day'   && <DayView   date={current} tasks={tasks} />}
-        {view === 'week'  && <WeekView  date={current} tasks={tasks} />}
-        {view === 'month' && <MonthView date={current} tasks={tasks} />}
+        {view === 'day'   && <DayView   date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
+        {view === 'week'  && <WeekView  date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
+        {view === 'month' && <MonthView date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
       </div>
     </div>
   );

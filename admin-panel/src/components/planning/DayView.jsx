@@ -42,7 +42,7 @@ function toGridEvent(task) {
   return { ...task, _start: startMin, _end: endMin };
 }
 
-export default function DayView({ date, tasks }) {
+export default function DayView({ date, tasks, onDelete, onEdit }) {
   const scrollRef = useRef(null);
   useEffect(() => {
     // Hacer scroll al inicio de la jornada laboral
@@ -87,7 +87,7 @@ export default function DayView({ date, tasks }) {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '4px 6px' }}>
             {allDayTasks.map((t, i) => (
-              <TaskCard key={t.id || i} task={t} view="day" style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: 'auto', flex: '0 0 auto', maxWidth: '100%' }} />
+              <TaskCard key={t.id || i} task={t} view="day" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: 'auto', flex: '0 0 auto', maxWidth: '100%' }} />
             ))}
           </div>
         </div>
@@ -132,6 +132,8 @@ export default function DayView({ date, tasks }) {
                   key={ev.id || i}
                   task={ev}
                   view="day"
+                  onDelete={onDelete}
+                  onEdit={onEdit}
                   style={{
                     position: 'absolute',
                     top,

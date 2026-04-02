@@ -4,7 +4,7 @@ import TaskCard from './TaskCard';
 
 const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-export default function MonthView({ date, tasks }) {
+export default function MonthView({ date, tasks, onDelete, onEdit }) {
   const monthStart = startOfMonth(date);
   const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1 });
   const gridEnd    = endOfWeek(endOfMonth(date), { weekStartsOn: 1 });
@@ -60,7 +60,7 @@ export default function MonthView({ date, tasks }) {
 
                   {/* Tarjetas pequeñas (máx 3 + "+N") */}
                   {dayTasks.slice(0, 3).map((task, ti) => (
-                    <TaskCard key={task.id || ti} task={task} view="month" style={{ flexShrink: 0 }} />
+                    <TaskCard key={task.id || ti} task={task} view="month" onDelete={onDelete} onEdit={onEdit} style={{ flexShrink: 0 }} />
                   ))}
                   {dayTasks.length > 3 && (
                     <div style={{ fontSize: 10, color: '#8e8e93', paddingLeft: 4 }}>+{dayTasks.length - 3} más</div>

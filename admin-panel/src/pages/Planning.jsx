@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 import { companyService } from "../services/companyService";
-import { getPlanningTasks, createPlanningTask, getBilling, createBilling, uploadPlannerFiles } from "../services/planningService";
+import { getPlanningTasks, createPlanningTask, getBilling, createBilling, uploadPlannerFiles, deletePlanningTask, updatePlanningTask, deleteBilling, updateBilling } from "../services/planningService";
 import { supabase } from "../lib/supabaseClient";
 import CalendarWrapper from "../components/planning/CalendarWrapper";
 
@@ -66,8 +66,9 @@ function BillingAttachmentLink({ file, index }) {
 }
 
 // VISTA FACTURACION
-function BillingView({ bills, companies }) {
+function BillingView({ bills, companies, onDelete, onEdit }) {
   const [detailBill, setDetailBill] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const today = new Date();
 
   return (
@@ -112,7 +113,7 @@ function BillingView({ bills, companies }) {
 
       {/* Modal detalle factura */}
       {detailBill && (
-        <div onClick={() => setDetailBill(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={() => { setDetailBill(null); setConfirmingDelete(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 28, minWidth: 300, maxWidth: 400, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column", gap: 10, borderTop: `4px solid ${detailBill.direction === "cobrar" ? "#34C759" : "#FF3B30"}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <h3 style={{ margin: 0, fontSize: 18, color: "#1c1c1e" }}>{detailBill.title}</h3>
@@ -136,7 +137,17 @@ function BillingView({ bills, companies }) {
                 </div>
               </div>
             )}
-            <button onClick={() => setDetailBill(null)} style={{ marginTop: 8, padding: "9px 0", borderRadius: 10, border: "none", background: "#007AFF", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Cerrar</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              {onEdit && (
+                <button onClick={() => { onEdit(detailBill); setDetailBill(null); setConfirmingDelete(false); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid #007AFF", background: "#fff", color: "#007AFF", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Editar</button>
+              )}
+              {onDelete && (
+                confirmingDelete
+                  ? <button onClick={() => { onDelete(detailBill.id); setDetailBill(null); setConfirmingDelete(false); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#FF3B30", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>¿Confirmar?</button>
+                  : <button onClick={() => setConfirmingDelete(true)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid #FF3B30", background: "#fff", color: "#FF3B30", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Eliminar</button>
+              )}
+              <button onClick={() => { setDetailBill(null); setConfirmingDelete(false); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#007AFF", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
@@ -203,12 +214,14 @@ const Planning = () => {
   const [taskForm, setTaskForm]                 = useState({ title: "", description: "", company_id: "", type: "todo", start_datetime: "", end_datetime: "", is_all_day: false, recurrence_type: "none", recurrence_value: null });
   const [taskFiles, setTaskFiles]               = useState([]);
   const [errorTask, setErrorTask]               = useState("");
+  const [editingTask, setEditingTask]           = useState(null);
 
   // modal facturacion
   const [showBillModal, setShowBillModal]       = useState(false);
   const [billForm, setBillForm]                 = useState({ title: "", description: "", company_id: "", billing_date: "", amount: "", direction: "cobrar", recurrence_type: "none", recurrence_value: null });
   const [billFiles, setBillFiles]               = useState([]);
   const [errorBill, setErrorBill]               = useState("");
+  const [editingBill, setEditingBill]           = useState(null);
 
   // usuario
   useEffect(() => {
@@ -261,6 +274,7 @@ const Planning = () => {
 
   // tarea
   const openTaskModal = () => {
+    setEditingTask(null);
     setTaskForm({ title: "", description: "", company_id: selectedCompanies[0]?.id || "", type: "todo", start_datetime: "", end_datetime: "", is_all_day: false, recurrence_type: "none", recurrence_value: null });
     setTaskFiles([]); setErrorTask(""); setShowTaskModal(true);
   };
@@ -268,25 +282,85 @@ const Planning = () => {
     e.preventDefault(); setErrorTask("");
     if (!taskForm.company_id) { setErrorTask("Selecciona una empresa."); return; }
     try {
-      const attachments = await uploadPlannerFiles(taskFiles, "tasks");
-      await createPlanningTask({ ...taskForm, attachments, created_by: userId });
+      const attachments = taskFiles.length > 0
+        ? await uploadPlannerFiles(taskFiles, "tasks")
+        : (editingTask?.attachments || []);
+      if (editingTask) {
+        await updatePlanningTask(editingTask.id, { ...taskForm, attachments });
+      } else {
+        await createPlanningTask({ ...taskForm, attachments, created_by: userId });
+      }
       const updated = await getPlanningTasks(selectedCompanies.map(c => c.id));
-      setTasks(updated); setShowTaskModal(false);
-    } catch (err) { setErrorTask(err.message || "Error al crear la tarea"); }
+      setTasks(updated); setShowTaskModal(false); setEditingTask(null);
+    } catch (err) { setErrorTask(err.message || "Error al guardar la tarea"); }
   };
 
   // facturacion
   const openBillModal = () => {
+    setEditingBill(null);
     setBillForm({ title: "", description: "", company_id: selectedCompanies[0]?.id || "", billing_date: "", amount: "", direction: "cobrar", recurrence_type: "none", recurrence_value: null });
     setBillFiles([]); setErrorBill(""); setShowBillModal(true);
   };
   const handleAddBill = async (e) => {
     e.preventDefault(); setErrorBill("");
     try {
-      const attachments = await uploadPlannerFiles(billFiles, "billing");
-      const created = await createBilling({ ...billForm, attachments, created_by: userId });
-      setBills(prev => [created, ...prev]); setShowBillModal(false);
-    } catch { setErrorBill("Error al crear la facturacion"); }
+      const attachments = billFiles.length > 0
+        ? await uploadPlannerFiles(billFiles, "billing")
+        : (editingBill?.attachments || []);
+      if (editingBill) {
+        await updateBilling(editingBill.id, { ...billForm, attachments });
+        setBills(prev => prev.map(b => b.id === editingBill.id ? { ...b, ...billForm, attachments } : b));
+      } else {
+        const created = await createBilling({ ...billForm, attachments, created_by: userId });
+        setBills(prev => [created, ...prev]);
+      }
+      setShowBillModal(false); setEditingBill(null);
+    } catch { setErrorBill("Error al guardar la facturacion"); }
+  };
+
+  // delete / edit tarea
+  const handleDeleteTask = async (id) => {
+    try {
+      await deletePlanningTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+    } catch { /* silencioso */ }
+  };
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title:            task.title || "",
+      description:      task.description || "",
+      company_id:       task.company_id || "",
+      type:             task.type || "todo",
+      start_datetime:   task.start_datetime || "",
+      end_datetime:     task.end_datetime || "",
+      is_all_day:       task.is_all_day || false,
+      recurrence_type:  task.recurrence_type || "none",
+      recurrence_value: task.recurrence_value || null,
+    });
+    setTaskFiles([]); setErrorTask(""); setShowTaskModal(true);
+  };
+
+  // delete / edit facturación
+  const handleDeleteBill = async (id) => {
+    try {
+      await deleteBilling(id);
+      setBills(prev => prev.filter(b => b.id !== id));
+    } catch { /* silencioso */ }
+  };
+  const handleEditBill = (bill) => {
+    setEditingBill(bill);
+    setBillForm({
+      title:            bill.title || "",
+      description:      bill.description || "",
+      company_id:       bill.company_id || "",
+      billing_date:     bill.billing_date || "",
+      amount:           bill.amount || "",
+      direction:        bill.direction || "cobrar",
+      recurrence_type:  bill.recurrence_type || "none",
+      recurrence_value: bill.recurrence_value || null,
+    });
+    setBillFiles([]); setErrorBill(""); setShowBillModal(true);
   };
 
   // Eventos del calendario
@@ -352,14 +426,14 @@ const Planning = () => {
         {/* Calendario o Facturacion (4/6) */}
         <div style={{ flex: 4, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {mainView === "calendar"
-            ? <CalendarWrapper tasks={calendarEvents} defaultView="week" />
+            ? <CalendarWrapper tasks={calendarEvents} defaultView="week" onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             : (
               <div style={{ flex: 1, overflowY: "auto", background: "#fff", borderRadius: 14, border: "1px solid #e5e5ea", padding: 16 }}>
                 {selectedCompanies.length === 0
                   ? <div style={{ color: "#c7c7cc", textAlign: "center", paddingTop: 40 }}>Selecciona al menos una empresa</div>
                   : loadingBills
                     ? <div style={{ color: "#8e8e93", textAlign: "center", paddingTop: 40 }}>Cargando facturacion...</div>
-                    : <BillingView bills={bills} companies={selectedCompanies} />
+                    : <BillingView bills={bills} companies={selectedCompanies} onDelete={handleDeleteBill} onEdit={handleEditBill} />
                 }
               </div>
             )
@@ -437,7 +511,7 @@ const Planning = () => {
       {showTaskModal && (
         <div style={modalOverlay}>
           <form onSubmit={handleAddTask} style={modalBox}>
-            <h3 style={{ margin: "0 0 4px" }}>Nueva tarea</h3>
+            <h3 style={{ margin: "0 0 4px" }}>{editingTask ? "Editar tarea" : "Nueva tarea"}</h3>
             <input required placeholder="Titulo" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} />
             <textarea placeholder="Descripcion" value={taskForm.description} onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))} style={{ ...inputStyle, minHeight: 68, resize: "vertical" }} />
             <select required value={taskForm.company_id} onChange={e => setTaskForm(f => ({ ...f, company_id: e.target.value }))} style={inputStyle}>
@@ -486,7 +560,7 @@ const Planning = () => {
             {taskFiles.length > 0 && <div style={{ fontSize: 12, color: "#636366" }}>{taskFiles.map(f => f.name).join(", ")}</div>}
             {errorTask && <div style={{ color: "#FF3B30", fontSize: 13 }}>{errorTask}</div>}
             <div style={modalActions}>
-              <button type="button" onClick={() => setShowTaskModal(false)} style={btnSecondary}>Cancelar</button>
+              <button type="button" onClick={() => { setShowTaskModal(false); setEditingTask(null); }} style={btnSecondary}>Cancelar</button>
               <button type="submit" style={btnPrimary}>Guardar</button>
             </div>
           </form>
@@ -497,7 +571,7 @@ const Planning = () => {
       {showBillModal && (
         <div style={modalOverlay}>
           <form onSubmit={handleAddBill} style={modalBox}>
-            <h3 style={{ margin: "0 0 4px" }}>Nueva facturacion</h3>
+            <h3 style={{ margin: "0 0 4px" }}>{editingBill ? "Editar facturacion" : "Nueva facturacion"}</h3>
             <input required placeholder="Titulo" value={billForm.title} onChange={e => setBillForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} />
             <textarea placeholder="Descripcion" value={billForm.description} onChange={e => setBillForm(f => ({ ...f, description: e.target.value }))} style={{ ...inputStyle, minHeight: 68, resize: "vertical" }} />
             <select required value={billForm.company_id} onChange={e => setBillForm(f => ({ ...f, company_id: e.target.value }))} style={inputStyle}>
@@ -528,7 +602,7 @@ const Planning = () => {
             {billFiles.length > 0 && <div style={{ fontSize: 12, color: "#636366" }}>{billFiles.map(f => f.name).join(", ")}</div>}
             {errorBill && <div style={{ color: "#FF3B30", fontSize: 13 }}>{errorBill}</div>}
             <div style={modalActions}>
-              <button type="button" onClick={() => setShowBillModal(false)} style={btnSecondary}>Cancelar</button>
+              <button type="button" onClick={() => { setShowBillModal(false); setEditingBill(null); }} style={btnSecondary}>Cancelar</button>
               <button type="submit" style={btnPrimary}>Guardar</button>
             </div>
           </form>

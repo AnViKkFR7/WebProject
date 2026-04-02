@@ -34,7 +34,7 @@ function layoutDay(events) {
   }).map((ev, _, arr) => ({ ...ev, _totalCols: colEnds.length }));
 }
 
-export default function WeekView({ date, tasks }) {
+export default function WeekView({ date, tasks, onDelete, onEdit }) {
   const scrollRef = useRef(null);
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_H;
@@ -94,7 +94,7 @@ export default function WeekView({ date, tasks }) {
             return (
               <div key={di} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 2px', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', minHeight: 26 }}>
                 {evs.map((t, i) => (
-                  <TaskCard key={t.id || i} task={t} view="week" style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: '100%', zIndex: 1 }} />
+                  <TaskCard key={t.id || i} task={t} view="week" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: '100%', zIndex: 1 }} />
                 ))}
               </div>
             );
@@ -147,6 +147,8 @@ export default function WeekView({ date, tasks }) {
                       key={ev.id || i}
                       task={ev}
                       view="week"
+                      onDelete={onDelete}
+                      onEdit={onEdit}
                       style={{
                         position: 'absolute',
                         top,
