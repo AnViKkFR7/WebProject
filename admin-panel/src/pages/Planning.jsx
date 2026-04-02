@@ -5,15 +5,23 @@ import { getPlanningTasks, createPlanningTask, getBilling, createBilling } from 
 import { supabase } from "../lib/supabaseClient";
 import CalendarWrapper from "../components/planning/CalendarWrapper";
 
-function getCompanyColor(company) {
-  if (!company || !company.id) return "#8e8e93";
+const PALETTE = [
+  "#007AFF", "#FF3B30", "#34C759", "#FF9500", "#AF52DE",
+  "#5856D6", "#FF2D55", "#00C7BE", "#FF6B6B", "#FFD60A",
+  "#BF5AF2", "#4ECDC4", "#45B7D1", "#30D158", "#FF8C42",
+  "#6BCB77",
+];
+
+function getCompanyColor(company, idx) {
+  if (!company) return PALETTE[0];
   if (company.color) return company.color;
+  // idx pasado explícitamente → paleta por posición
+  if (idx !== undefined) return PALETTE[idx % PALETTE.length];
+  // fallback: hash del id → índice en paleta (siempre vivo)
   let hash = 0;
-  for (let i = 0; i < company.id.length; i++) {
-    hash = company.id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const c = (hash & 0x00ffffff).toString(16).toUpperCase();
-  return "#" + "000000".substring(0, 6 - c.length) + c;
+  const str = company.id || company.name || "";
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return PALETTE[Math.abs(hash) % PALETTE.length];
 }
 
 function lighten(hex, a = 0.82) {
@@ -267,12 +275,12 @@ const Planning = () => {
           />
           {search && filteredCompanies.length > 0 && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e5e5ea", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 20, maxHeight: 200, overflowY: "auto", marginTop: 4 }}>
-              {filteredCompanies.map(co => (
+              {filteredCompanies.map((co, i) => (
                 <div key={co.id} style={{ padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}
                   onClick={() => { toggleCompany(co); setSearch(""); }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: getCompanyColor(co), flexShrink: 0 }} />
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: getCompanyColor(co, companies.findIndex(c => c.id === co.id)), flexShrink: 0 }} />
                   {co.name}
-                  {selectedCompanies.some(c => c.id === co.id) && <span style={{ marginLeft: "auto", color: "#34C759", fontWeight: 700 }}>v</span>}
+                  {selectedCompanies.some(c => c.id === co.id) && <span style={{ marginLeft: "auto", color: "#34C759", fontWeight: 700 }}>✓</span>}
                 </div>
               ))}
             </div>
@@ -292,13 +300,14 @@ const Planning = () => {
       {selectedCompanies.length > 0 && (
         <ul style={{ margin: 0, padding: "0 0 0 4px", display: "flex", flexWrap: "wrap", gap: 8, listStyle: "none" }}>
           {selectedCompanies.map(co => {
-            const color = getCompanyColor(co);
+            const idx = companies.findIndex(c => c.id === co.id);
+            const color = getCompanyColor(co, idx);
             return (
-              <li key={co.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color, fontSize: 16, lineHeight: 1 }}>•</span>
+              <li key={co.id} style={{ display: "flex", alignItems: "center", gap: 6, background: color + "18", border: `1px solid ${color}50`, borderRadius: 20, padding: "3px 10px 3px 6px" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, color: "#1c1c1e", fontWeight: 500 }}>{co.name}</span>
                 <button onClick={() => removeCompany(co.id)}
-                  style={{ all: "unset", cursor: "pointer", fontSize: 13, color: "#8e8e93", lineHeight: 1, marginLeft: 2 }}>x</button>
+                  style={{ all: "unset", cursor: "pointer", fontSize: 13, color: color, fontWeight: 700, lineHeight: 1, marginLeft: 2 }}>×</button>
               </li>
             );
           })}
@@ -410,14 +419,24 @@ const Planning = () => {
               <option value="recibir_pago">Recibir pago</option>
               <option value="realizar_pago">Realizar pago</option>
             </select>
-            <Label>Fecha inicio</Label>
-            <input type="datetime-local" required value={taskForm.start_datetime} onChange={e => setTaskForm(f => ({ ...f, start_datetime: e.target.value }))} style={inputStyle} />
-            <Label>Fecha fin (opcional)</Label>
-            <input type="datetime-local" value={taskForm.end_datetime} onChange={e => setTaskForm(f => ({ ...f, end_datetime: e.target.value }))} style={inputStyle} />
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-              <input type="checkbox" checked={taskForm.is_all_day} onChange={e => setTaskForm(f => ({ ...f, is_all_day: e.target.checked }))} />
-              Todo el dia
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, padding: "2px 0" }}>
+              <input type="checkbox" checked={taskForm.is_all_day} onChange={e => setTaskForm(f => ({ ...f, is_all_day: e.target.checked, end_datetime: "" }))} />
+              <span style={{ fontWeight: 500 }}>Todo el día</span>
+              <span style={{ fontSize: 12, color: "#8e8e93" }}>(se mostrará a las 08:00 durante 30 min)</span>
             </label>
+            {taskForm.is_all_day ? (
+              <>
+                <Label>Fecha</Label>
+                <input type="date" required value={taskForm.start_datetime?.slice(0,10) || ""} onChange={e => setTaskForm(f => ({ ...f, start_datetime: e.target.value + "T08:00", end_datetime: e.target.value + "T08:30" }))} style={inputStyle} />
+              </>
+            ) : (
+              <>
+                <Label>Fecha inicio</Label>
+                <input type="datetime-local" required value={taskForm.start_datetime} onChange={e => setTaskForm(f => ({ ...f, start_datetime: e.target.value }))} style={inputStyle} />
+                <Label>Fecha fin (opcional)</Label>
+                <input type="datetime-local" value={taskForm.end_datetime} onChange={e => setTaskForm(f => ({ ...f, end_datetime: e.target.value }))} style={inputStyle} />
+              </>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
               <select value={taskForm.recurrence_type} onChange={e => setTaskForm(f => ({ ...f, recurrence_type: e.target.value }))} style={{ ...inputStyle, flex: 2 }}>
                 <option value="none">Sin repeticion</option>
