@@ -38,8 +38,10 @@ function taskToCalendarEvent(task, companies) {
   if (isNaN(start.getTime())) return null;
   let end = task.end_datetime ? new Date(task.end_datetime) : new Date(start.getTime() + 3600000);
   if (isNaN(end.getTime())) end = new Date(start.getTime() + 3600000);
-  const company = companies.find(c => c.id === task.company_id) || {};
-  return { ...task, start, end, company };
+  const idx     = companies.findIndex(c => c.id === task.company_id);
+  const company = idx >= 0 ? companies[idx] : {};
+  const _color  = getCompanyColor(company, idx >= 0 ? idx : undefined);
+  return { ...task, start, end, company, _color };
 }
 
 // VISTA FACTURACION

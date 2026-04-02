@@ -95,7 +95,7 @@ function Row({ label, children }) {
 // style prop: estilos de posicionamiento desde el padre (top/left/width/height etc.)
 export default function TaskCard({ task, view, style = {} }) {
   const [open, setOpen] = useState(false);
-  const color = task.company?.color || '#8e8e93';
+  const color = task._color || task.company?.color || '#8e8e93';
   const bg = lighten(color, 0.82);
 
   const base = {
