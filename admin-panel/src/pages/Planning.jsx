@@ -65,6 +65,78 @@ function BillingAttachmentLink({ file, index }) {
   );
 }
 
+function downloadInvoicePDF(bill, companies) {
+  const company = companies.find(c => c.id === bill.company_id);
+  const companyName = company?.name || "Empresa desconocida";
+  const isCobrar = bill.direction === "cobrar";
+  const invoiceNum = `FAC-${bill.id ? String(bill.id).slice(0,8).toUpperCase() : Date.now()}`;
+  const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" });
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Factura ${invoiceNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1c1c1e; background: #fff; padding: 48px; }
+  .invoice { max-width: 720px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid ${isCobrar ? "#34C759" : "#FF3B30"}; }
+  .company-name { font-size: 36px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; }
+  .invoice-label { text-align: right; }
+  .invoice-label h2 { font-size: 22px; font-weight: 700; color: ${isCobrar ? "#34C759" : "#FF3B30"}; text-transform: uppercase; letter-spacing: 2px; }
+  .invoice-label p { font-size: 13px; color: #8e8e93; margin-top: 4px; }
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8e8e93; margin-bottom: 8px; }
+  .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f2f7; font-size: 15px; }
+  .row .label { color: #636366; font-weight: 500; }
+  .row .value { font-weight: 600; color: #1c1c1e; }
+  .amount-box { background: ${isCobrar ? "#34C75912" : "#FF3B3012"}; border: 1.5px solid ${isCobrar ? "#34C759" : "#FF3B30"}; border-radius: 12px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+  .amount-box .amt-label { font-size: 14px; font-weight: 600; color: #636366; text-transform: uppercase; letter-spacing: 0.5px; }
+  .amount-box .amt-value { font-size: 32px; font-weight: 800; color: ${isCobrar ? "#34C759" : "#FF3B30"}; }
+  .description-box { background: #f9f9f9; border-radius: 10px; padding: 14px 18px; font-size: 14px; color: #3a3a3c; line-height: 1.6; }
+  .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e5ea; font-size: 12px; color: #aeaeb2; text-align: center; }
+  @media print { body { padding: 0; } .invoice { padding: 32px; } }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="header">
+    <div class="company-name">${companyName}</div>
+    <div class="invoice-label">
+      <h2>${isCobrar ? "Factura a cobrar" : "Factura a pagar"}</h2>
+      <p>${invoiceNum}</p>
+      <p>Emitida el ${today}</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Detalle</div>
+    <div class="row"><span class="label">Concepto</span><span class="value">${bill.title || "-"}</span></div>
+    <div class="row"><span class="label">Empresa</span><span class="value">${companyName}</span></div>
+    <div class="row"><span class="label">Fecha de facturación</span><span class="value">${bill.billing_date || "-"}</span></div>
+    <div class="row"><span class="label">Tipo</span><span class="value">${isCobrar ? "A cobrar" : "A pagar"}</span></div>
+    ${bill.recurrence_type && bill.recurrence_type !== "none" ? `<div class="row"><span class="label">Repetición</span><span class="value">${bill.recurrence_type}${bill.recurrence_value ? " cada " + bill.recurrence_value : ""}</span></div>` : ""}
+  </div>
+
+  ${bill.description ? `<div class="section"><div class="section-title">Descripción / Notas</div><div class="description-box">${bill.description}</div></div>` : ""}
+
+  <div class="amount-box">
+    <span class="amt-label">Importe total</span>
+    <span class="amt-value">${isCobrar ? "+" : "-"}${bill.amount} EUR</span>
+  </div>
+
+  <div class="footer">Documento generado el ${today} — ${invoiceNum}</div>
+</div>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=820,height=1100");
+  if (!win) { alert("Permite ventanas emergentes para descargar la factura."); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
 // VISTA FACTURACION
 function BillingView({ bills, companies, onDelete, onEdit }) {
   const [detailBill, setDetailBill] = useState(null);
@@ -137,7 +209,8 @@ function BillingView({ bills, companies, onDelete, onEdit }) {
                 </div>
               </div>
             )}
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button onClick={() => downloadInvoicePDF(detailBill, companies)} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1.5px solid #5856D6", background: "#fff", color: "#5856D6", fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 2 }}>Descargar factura PDF</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               {onEdit && (
                 <button onClick={() => { onEdit(detailBill); setDetailBill(null); setConfirmingDelete(false); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid #007AFF", background: "#fff", color: "#007AFF", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Editar</button>
               )}
