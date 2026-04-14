@@ -143,7 +143,7 @@ function Row({ label, children }) {
 export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
   const [open, setOpen] = useState(false);
   const color = task._color || task.company?.color || '#8e8e93';
-  const bg = lighten(color, 0.82);
+  const bg = lighten(color, 0.75);
 
   const base = {
     borderLeft: `3px solid ${color}`,
@@ -158,26 +158,30 @@ export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
   return (
     <>
       {view === 'day' && (
-        <div onClick={() => setOpen(true)} style={{ ...base, padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div onClick={() => setOpen(true)} style={{ ...base, padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color, lineHeight: 1, flexShrink: 0 }}>
+            {task.start_datetime?.slice(11, 16) || ''}
+            {task.end_datetime ? ` – ${task.end_datetime.slice(11, 16)}` : ''}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', flex: 1, minHeight: 0 }}>
             {task.title}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
             {task.company?.name || ''}
-          </div>
-          <div style={{ fontSize: 11, color: '#636366' }}>
-            {TYPE_LABELS[task.type] || task.type}
           </div>
         </div>
       )}
 
       {view === 'week' && (
         <div onClick={() => setOpen(true)} style={{ ...base, padding: '3px 5px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color, lineHeight: 1, flexShrink: 0 }}>
+            {task.start_datetime?.slice(11, 16) || ''}
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', flex: 1, minHeight: 0 }}>
             {task.title}
           </div>
-          <div style={{ fontSize: 10, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {TYPE_LABELS[task.type] || task.type}
+          <div style={{ fontSize: 10, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {task.company?.name || ''}
           </div>
         </div>
       )}
