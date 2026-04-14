@@ -282,13 +282,19 @@ const Planning = () => {
     e.preventDefault(); setErrorTask("");
     if (!taskForm.company_id) { setErrorTask("Selecciona una empresa."); return; }
     try {
+      const normalizedTask = {
+        ...taskForm,
+        start_datetime: taskForm.start_datetime || null,
+        end_datetime: taskForm.end_datetime || null,
+        recurrence_value: taskForm.recurrence_value || null,
+      };
       const attachments = taskFiles.length > 0
         ? await uploadPlannerFiles(taskFiles, "tasks")
         : (editingTask?.attachments || []);
       if (editingTask) {
-        await updatePlanningTask(editingTask.id, { ...taskForm, attachments });
+        await updatePlanningTask(editingTask.id, { ...normalizedTask, attachments });
       } else {
-        await createPlanningTask({ ...taskForm, attachments, created_by: userId });
+        await createPlanningTask({ ...normalizedTask, attachments, created_by: userId });
       }
       const updated = await getPlanningTasks(selectedCompanies.map(c => c.id));
       setTasks(updated); setShowTaskModal(false); setEditingTask(null);
