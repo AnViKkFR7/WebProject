@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { format, startOfWeek, addDays, isToday, getHours, getMinutes, isSameDay } from 'date-fns';
 import TaskCard from './TaskCard';
 
-const HOUR_H   = 56;
+const HOUR_H   = 68;
 const HOURS    = Array.from({ length: 24 }, (_, i) => i);
 const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -141,7 +141,7 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
                   const tc   = Math.max(ev._totalCols, 1);
                   const pct  = 98 / tc;
                   const top    = ev._start * HOUR_H / 60 + 1;
-                  const height = Math.max((ev._end - ev._start) * HOUR_H / 60 - 2, 20);
+                  const height = Math.max((ev._end - ev._start) * HOUR_H / 60 - 2, 46);
                   return (
                     <TaskCard
                       key={ev.id || i}

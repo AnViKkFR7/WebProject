@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { format, isToday, getHours, getMinutes } from 'date-fns';
 import TaskCard from './TaskCard';
 
-const HOUR_H = 64; // px por hora
+const HOUR_H = 80; // px por hora
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 // Asigna columnas a eventos que se solapan
@@ -124,7 +124,7 @@ export default function DayView({ date, tasks, onDelete, onEdit }) {
             {/* Tarjetas */}
             {laid.map((ev, i) => {
               const top    = ev._start * HOUR_H / 60 + 1;
-              const height = Math.max((ev._end - ev._start) * HOUR_H / 60 - 2, 22);
+              const height = Math.max((ev._end - ev._start) * HOUR_H / 60 - 2, 58);
               const totalCols = Math.max(ev._totalCols, 1);
               const pct    = 98 / totalCols;
               return (
