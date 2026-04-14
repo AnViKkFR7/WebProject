@@ -388,13 +388,12 @@ const Planning = () => {
         : (editingBill?.attachments || []);
       if (editingBill) {
         await updateBilling(editingBill.id, { ...billForm, attachments });
-        setBills(prev => prev.map(b => b.id === editingBill.id ? { ...b, ...billForm, attachments } : b));
       } else {
-        const created = await createBilling({ ...billForm, attachments, created_by: userId });
-        setBills(prev => [created, ...prev]);
+        await createBilling({ ...billForm, attachments, created_by: userId });
       }
-      setShowBillModal(false); setEditingBill(null);
-    } catch { setErrorBill("Error al guardar la facturacion"); }
+      const updated = await getBilling(selectedCompanies.map(c => c.id));
+      setBills(updated); setShowBillModal(false); setEditingBill(null);
+    } catch (err) { setErrorBill(err.message || "Error al guardar la facturacion"); }
   };
 
   // delete / edit tarea
