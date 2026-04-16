@@ -227,8 +227,8 @@ const ItemMedia = ({ itemId, canEdit }) => {
           {/* IMAGES SECTION */}
           <div className="media-section">
         <div className="media-section-header">
-          <h3>{t('itemMedia.images')} ({images.length}/10)</h3>
-          {canEdit && images.length < 10 && (
+          <h3>{t('itemMedia.images')} ({images.length}/15)</h3>
+          {canEdit && images.length < 15 && (
             <label className="upload-button">
               <input
                 type="file"
