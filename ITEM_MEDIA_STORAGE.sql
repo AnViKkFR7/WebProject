@@ -3,7 +3,7 @@
 -- ================================================================
 -- Este script añade la lógica completa para gestionar imágenes
 -- y PDFs asociados a items con las siguientes reglas:
--- - Max 10 imágenes por item
+-- - Max 15 imágenes por item
 -- - Max 2 PDFs por item
 -- - Si hay imágenes, una y solo una debe ser portada
 -- - Descripción obligatoria para PDFs
@@ -62,8 +62,8 @@ begin
     and (tg_op = 'INSERT' or id != new.id);
 
   -- Validar límites
-  if new.file_type = 'image' and image_count >= 10 then
-    raise exception 'Un item no puede tener más de 10 imágenes';
+  if new.file_type = 'image' and image_count >= 15 then
+    raise exception 'Un item no puede tener más de 15 imágenes';
   end if;
 
   if new.file_type = 'pdf' and pdf_count >= 2 then
@@ -269,13 +269,13 @@ begin
   where id = _media_id
     and file_type = 'image';
 end;
-$$;
+$$; 
 
 -- 10) COMENTARIOS EN COLUMNAS (Documentación en la DB)
 comment on column public.item_media.is_cover is 'Marca si esta imagen es la portada del item. Solo una imagen puede ser portada. Solo aplica a file_type=image.';
 comment on column public.item_media.alt_text is 'Texto descriptivo. Opcional para imágenes, OBLIGATORIO para PDFs.';
 comment on column public.item_media.sort_order is 'Orden de visualización. Se usa para ordenar las imágenes en galerías.';
-comment on column public.item_media.file_type is 'Tipo de archivo: "image" o "pdf". Límites: max 10 imágenes, max 2 PDFs por item.';
+comment on column public.item_media.file_type is 'Tipo de archivo: "image" o "pdf". Límites: max 15 imágenes, max 2 PDFs por item.';
 
 -- ================================================================
 -- INSTRUCCIONES POST-INSTALACIÓN

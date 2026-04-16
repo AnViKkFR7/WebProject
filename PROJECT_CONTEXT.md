@@ -357,7 +357,7 @@ Cuando se genere código, arquitectura o sugerencias:
 
 ---
 
-## 10. Principios de interfaz de usuario
+## 10. Principios de interfaz de usuario 
 
 **Todo lo desarrollado en el proyecto debe cumplir con:**
 
@@ -625,7 +625,7 @@ Cada item genérico puede tener archivos multimedia asociados (imágenes y docum
 ### 14.2 Reglas de Negocio
 
 #### Límites por Item
-*   **Imágenes:** Entre 0 y 10 por item
+*   **Imágenes:** Entre 0 y 15 por item
 *   **PDFs:** Entre 0 y 2 por item
 
 #### Imagen de Portada
@@ -646,7 +646,7 @@ Cada item genérico puede tener archivos multimedia asociados (imágenes y docum
 #### Crear
 *   Subir archivo al Storage bucket
 *   Crear registro en `item_media` con la URL del Storage
-*   Validar límites (10 imágenes / 2 PDFs)
+*   Validar límites (15 imágenes / 2 PDFs)
 *   Si es la primera imagen, marcarla automáticamente como portada
 
 #### Editar
@@ -664,7 +664,7 @@ Cada item genérico puede tener archivos multimedia asociados (imágenes y docum
 Implementadas mediante triggers y constraints en PostgreSQL:
 
 1.  **Validación de tipo:** Solo "image" o "pdf"
-2.  **Validación de límites:** Max 10 imágenes, max 2 PDFs por item
+2.  **Validación de límites:** Max 15 imágenes, max 2 PDFs por item
 3.  **Validación de portada única:** Solo una imagen puede tener `is_cover = true`
 4.  **Validación de portada obligatoria:** Si hay imágenes, debe haber exactamente una portada
 5.  **Validación de descripción:** PDFs requieren `alt_text` no vacío
