@@ -66,7 +66,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
     const files = Array.from(e.target.files)
     if (files.length === 0) return
 
-    const maxCount = fileType === 'image' ? 10 : 2
+    const maxCount = fileType === 'image' ? 15 : 2
     const currentCount = fileType === 'image' ? images.length : pdfs.length
     const availableSlots = maxCount - currentCount
 
