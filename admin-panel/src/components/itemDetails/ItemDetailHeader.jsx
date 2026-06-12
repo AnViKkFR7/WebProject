@@ -47,14 +47,14 @@ const ItemDetailHeader = ({ item, loading }) => {
   }
 
   return (
-    <div style={{ 
+    <div className="item-detail-header" style={{ 
       padding: '1.5rem',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center'
     }}>
       <div>
-        <h1 style={{ 
+        <h1 className="item-detail-header__title" style={{ 
           fontSize: '1.5rem', 
           fontWeight: 'bold', 
           marginBottom: '0.5rem',
@@ -63,7 +63,7 @@ const ItemDetailHeader = ({ item, loading }) => {
           {item?.title || t('itemDetail.loading')}
         </h1>
       </div>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+      <div className="item-detail-header__actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
         {copySuccess && (
           <span style={{ 
             fontSize: '0.875rem', 

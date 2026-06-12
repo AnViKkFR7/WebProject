@@ -447,10 +447,10 @@ const Planning = () => {
     .filter(Boolean);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px 20px 0", boxSizing: "border-box", gap: 14, fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div className="planning-page" style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px 20px 0", boxSizing: "border-box", gap: 14, fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" }}>
 
       {/* ── Selector de empresas ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <div className="planning-company-row" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <div style={{ position: "relative" }}>
           <input
             type="text" placeholder="Buscar empresa cliente..."
@@ -482,7 +482,7 @@ const Planning = () => {
 
       {/* ── Bullet-list de empresas seleccionadas ── */}
       {selectedCompanies.length > 0 && (
-        <ul style={{ margin: 0, padding: "0 0 0 4px", display: "flex", flexWrap: "wrap", gap: 8, listStyle: "none" }}>
+        <ul className="planning-chips" style={{ margin: 0, padding: "0 0 0 4px", display: "flex", flexWrap: "wrap", gap: 8, listStyle: "none" }}>
           {selectedCompanies.map(co => {
             const idx = companies.findIndex(c => c.id === co.id);
             const color = getCompanyColor(co, idx);
@@ -499,10 +499,10 @@ const Planning = () => {
       )}
 
       {/* ── Cuerpo principal ── */}
-      <div style={{ display: "flex", flex: 1, gap: 16, minHeight: 0 }}>
+      <div className="planning-body" style={{ display: "flex", flex: 1, gap: 16, minHeight: 0 }}>
 
         {/* Calendario o Facturacion (4/6) */}
-        <div style={{ flex: 4, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div className="planning-main-area" style={{ flex: 4, minHeight: 0, display: "flex", flexDirection: "column" }}>
           {mainView === "calendar"
             ? <CalendarWrapper tasks={calendarEvents} defaultView="week" onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             : (
@@ -519,7 +519,7 @@ const Planning = () => {
         </div>
 
         {/* Panel lateral (2/6) */}
-        <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+        <div className="planning-sidebar" style={{ flex: 2, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
 
           {/* Switcher */}
           <div style={{ display: "flex", background: "#f2f2f7", borderRadius: 10, padding: 3, flexShrink: 0 }}>

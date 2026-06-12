@@ -280,6 +280,10 @@ export const en = {
     openInNewTab: 'Open in new tab',
     coverRequiredToPublish: 'To publish an item with images, it must have a cover image.',
     dimensions: 'Dimensions',
+    reorderImages: 'Reorder images',
+    reorderTitle: 'Reorder images',
+    reorderHint: 'Drag thumbnails to change their order. Changes are saved when you confirm.',
+    saveOrder: 'Save order',
   },
 
   // Profile

@@ -50,6 +50,10 @@ const ItemMedia = ({ itemId, canEdit }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [imageDimensions, setImageDimensions] = useState({})
   const imageRefs = useRef({})
+  const dragItem = useRef(null)
+  const reorderGridRef = useRef(null)
+  const [showReorderModal, setShowReorderModal] = useState(false)
+  const [reorderImages, setReorderImages] = useState([])
 
   const images = media.filter(m => m.file_type === 'image')
   const pdfs = media.filter(m => m.file_type === 'pdf')
@@ -215,21 +219,68 @@ const ItemMedia = ({ itemId, canEdit }) => {
     }
   }
 
-  const handleMoveImage = async (direction) => {
-    const newIndex = currentImageIndex + direction
-    if (newIndex < 0 || newIndex >= images.length) return
+  // Non-passive touchmove on reorder grid to prevent background scroll while dragging
+  useEffect(() => {
+    if (!showReorderModal) return
+    const el = reorderGridRef.current
+    if (!el) return
+    const prevent = (e) => { if (dragItem.current !== null) e.preventDefault() }
+    el.addEventListener('touchmove', prevent, { passive: false })
+    return () => el.removeEventListener('touchmove', prevent)
+  }, [showReorderModal])
 
-    const imagesToReorder = [...images]
-    const [moved] = imagesToReorder.splice(currentImageIndex, 1)
-    imagesToReorder.splice(newIndex, 0, moved)
+  const handleTouchStart = (index) => {
+    dragItem.current = index
+  }
 
+  const handleTouchMove = (e) => {
+    if (dragItem.current === null) return
+    const touch = e.touches[0]
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)
+    if (!el) return
+    const thumb = el.closest('[data-reorder-index]')
+    if (!thumb) return
+    const targetIndex = parseInt(thumb.dataset.reorderIndex, 10)
+    if (!isNaN(targetIndex) && targetIndex !== dragItem.current) {
+      handleDragEnter(targetIndex)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    dragItem.current = null
+  }
+
+  const openReorderModal = () => {
+    setReorderImages([...images])
+    setShowReorderModal(true)
+  }
+
+  const closeReorderModal = () => {
+    setShowReorderModal(false)
+  }
+
+  const handleDragStart = (index) => {
+    dragItem.current = index
+  }
+
+  const handleDragEnter = (index) => {
+    if (dragItem.current === null || dragItem.current === index) return
+    const copy = [...reorderImages]
+    const [dragged] = copy.splice(dragItem.current, 1)
+    copy.splice(index, 0, dragged)
+    dragItem.current = index
+    setReorderImages(copy)
+  }
+
+  const saveReorder = async () => {
     try {
       setError(null)
-      await itemMediaService.reorderMedia(imagesToReorder)
-      setCurrentImageIndex(newIndex)
+      await itemMediaService.reorderMedia(reorderImages)
       await loadMedia()
+      setShowReorderModal(false)
     } catch (err) {
       setError(err.message)
+      setShowReorderModal(false)
     }
   }
 
@@ -298,30 +349,43 @@ const ItemMedia = ({ itemId, canEdit }) => {
           <div className="media-section">
         <div className="media-section-header">
           <h3>{t('itemMedia.images')} ({images.length}/35)</h3>
-          {canEdit && images.length < 35 && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <label className="upload-button">
-                <input
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                  onChange={(e) => handleFileUpload(e, 'image')}
+          {canEdit && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {images.length < 35 && (
+                <>
+                  <label className="upload-button">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      onChange={(e) => handleFileUpload(e, 'image')}
+                      disabled={uploading}
+                      style={{ display: 'none' }}
+                    />
+                    {uploading ? t('itemMedia.uploading') : t('itemMedia.addImages')}
+                  </label>
+                  <label className="upload-button upload-button--optimized">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleOptimizedUpload}
+                      disabled={uploading}
+                      style={{ display: 'none' }}
+                    />
+                    {uploading ? t('itemMedia.uploading') : '✨ Subir imágenes optimizadas'}
+                  </label>
+                </>
+              )}
+              {images.length > 1 && (
+                <button
+                  className="upload-button upload-button--reorder"
+                  onClick={openReorderModal}
                   disabled={uploading}
-                  style={{ display: 'none' }}
-                />
-                {uploading ? t('itemMedia.uploading') : t('itemMedia.addImages')}
-              </label>
-              <label className="upload-button upload-button--optimized">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleOptimizedUpload}
-                  disabled={uploading}
-                  style={{ display: 'none' }}
-                />
-                {uploading ? t('itemMedia.uploading') : '✨ Subir imágenes optimizadas'}
-              </label>
+                >
+                  ⠿ {t('itemMedia.reorderImages')}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -422,20 +486,6 @@ const ItemMedia = ({ itemId, canEdit }) => {
               {canEdit && (
                 <div className="image-actions">
                   <button
-                    onClick={() => handleMoveImage(-1)}
-                    disabled={currentImageIndex === 0}
-                    className="action-btn"
-                  >
-                    ← {t('itemMedia.moveLeft')}
-                  </button>
-                  <button
-                    onClick={() => handleMoveImage(1)}
-                    disabled={currentImageIndex === images.length - 1}
-                    className="action-btn"
-                  >
-                    {t('itemMedia.moveRight')} →
-                  </button>
-                  <button
                     onClick={() => handleSetCover(images[currentImageIndex].id)}
                     className="action-btn primary"
                     disabled={images[currentImageIndex]?.is_cover}
@@ -533,6 +583,48 @@ const ItemMedia = ({ itemId, canEdit }) => {
         )}
       </div>
         </>
+      )}
+
+      {/* Reorder Modal */}
+      {showReorderModal && (
+        <div className="reorder-modal" onClick={closeReorderModal}>
+          <div className="reorder-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="reorder-modal-header">
+              <h3>{t('itemMedia.reorderTitle')}</h3>
+              <button onClick={closeReorderModal} className="modal-close-btn">✕</button>
+            </div>
+            <p className="reorder-hint">{t('itemMedia.reorderHint')}</p>
+            <div className="reorder-grid" ref={reorderGridRef}>
+              {reorderImages.map((img, index) => (
+                <div
+                  key={img.id}
+                  className="reorder-thumb"
+                  data-reorder-index={index}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragEnter={() => handleDragEnter(index)}
+                  onDragEnd={() => { dragItem.current = null }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onTouchStart={() => handleTouchStart(index)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <img src={img.url_externa} alt={img.alt_text || ''} loading="lazy" />
+                  <span className="reorder-thumb-num">{index + 1}</span>
+                  {img.is_cover && <span className="reorder-thumb-cover">⭐</span>}
+                </div>
+              ))}
+            </div>
+            <div className="reorder-modal-footer">
+              <button onClick={closeReorderModal} className="action-btn">
+                {t('common.cancel')}
+              </button>
+              <button onClick={saveReorder} className="action-btn primary">
+                {t('itemMedia.saveOrder')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* PDF Preview Modal */}

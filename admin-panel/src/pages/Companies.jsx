@@ -156,7 +156,7 @@ const Companies = () => {
           </div>
         )}
 
-        <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: '1fr 1fr' }}>
+        <div className="companies-grid" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: '1fr 1fr' }}>
           {companies.map(company => (
             <div
               key={company.id}
@@ -211,7 +211,7 @@ const Companies = () => {
                   border: '2px solid #eee',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
                 }} title={company.color || 'Sin color'} />
-                <h3 style={{
+                <h3 className="company-card-name" style={{
                   fontSize: '1.5rem',
                   fontWeight: 700,
                   margin: 0,
@@ -233,7 +233,7 @@ const Companies = () => {
               </div>
 
               {/* Contacto */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="company-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
                     Email
@@ -253,7 +253,7 @@ const Companies = () => {
               </div>
 
               {/* Stats: Items y Usuarios */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="company-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
                     {t('companies.itemsPublished')}

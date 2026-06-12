@@ -333,7 +333,7 @@ const Users = () => {
             </div>
           </div>
 
-          <div style={{
+          <div className="users-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
             gap: '1.5rem'

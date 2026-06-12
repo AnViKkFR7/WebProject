@@ -19,6 +19,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('personal')
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false)
 
   // Data States
   const [companies, setCompanies] = useState([])
@@ -93,8 +94,8 @@ const Profile = () => {
         <div className="loading-state">{t('profile.loading')}</div>
       ) : (
         <div>
-          {/* Tabs Header */}
-          <div className="tabs-header">
+          {/* Desktop/Tablet: horizontal tabs */}
+          <div className="tabs-header profile-tabs-desktop">
             <button
               className={`tab-button ${activeTab === 'personal' ? 'active' : ''}`}
               onClick={() => setActiveTab('personal')}
@@ -135,6 +136,47 @@ const Profile = () => {
                   {t('profile.tabs.assignUser')}
                 </button>
               </>
+            )}
+          </div>
+
+          {/* Mobile: pill dropdown */}
+          <div className="profile-tabs-mobile">
+            <button
+              className="profile-tab-pill"
+              onClick={() => setMobileDropdownOpen(o => !o)}
+            >
+              <span className="profile-tab-pill__label">
+                {activeTab === 'personal' && t('profile.tabs.personal')}
+                {activeTab === 'security' && t('profile.tabs.security')}
+                {activeTab === 'company' && t('profile.tabs.company')}
+                {activeTab === 'create-company' && t('profile.tabs.createCompany')}
+                {activeTab === 'create-user' && t('profile.tabs.createUser')}
+                {activeTab === 'assign-user' && t('profile.tabs.assignUser')}
+              </span>
+              <span className="profile-tab-pill__arrow">{mobileDropdownOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {mobileDropdownOpen && (
+              <div className="profile-tab-dropdown">
+                {[
+                  { key: 'personal',        label: t('profile.tabs.personal') },
+                  { key: 'security',        label: t('profile.tabs.security') },
+                  { key: 'company',         label: t('profile.tabs.company') },
+                  ...(isAdmin ? [
+                    { key: 'create-company', label: t('profile.tabs.createCompany') },
+                    { key: 'create-user',    label: t('profile.tabs.createUser') },
+                    { key: 'assign-user',    label: t('profile.tabs.assignUser') },
+                  ] : [])
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    className={`profile-tab-option ${activeTab === key ? 'active' : ''}`}
+                    onClick={() => { setActiveTab(key); setMobileDropdownOpen(false) }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
