@@ -286,7 +286,7 @@ const AttributeItem = ({
   }
 
   return (
-    <div style={{ 
+    <div className="attr-item-card" style={{ 
       padding: '1rem',
       backgroundColor: 'var(--bg-hover)',
       borderRadius: '8px',
@@ -294,7 +294,7 @@ const AttributeItem = ({
       marginBottom: '1.5rem'
     }}>
       {/* Attribute Header */}
-      <div style={{ 
+      <div className="attr-item-header" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'flex-start',
@@ -302,7 +302,7 @@ const AttributeItem = ({
         flexWrap: 'wrap',
         gap: '1rem'
       }}>
-        <div style={{ flex: 1 }}>
+        <div className="attr-item-info" style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <label style={{ fontWeight: 600, fontSize: '1rem' }}>
               {definition.label}
@@ -319,7 +319,7 @@ const AttributeItem = ({
               {definition.description}
             </p>
           )}
-          <div style={{ 
+          <div className="attr-item-meta" style={{ 
             fontSize: '0.75rem',
             display: 'flex',
             gap: '0.5rem',
@@ -344,7 +344,7 @@ const AttributeItem = ({
 
         {/* Attribute Settings */}
         {canEdit && onUpdateDefinition && (
-          <div style={{ 
+          <div className="attr-item-settings" style={{ 
             display: 'flex', 
             gap: '1rem',
             fontSize: '0.875rem',
@@ -384,7 +384,7 @@ const AttributeItem = ({
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="attr-item-input-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           {renderInput()}
         </div>

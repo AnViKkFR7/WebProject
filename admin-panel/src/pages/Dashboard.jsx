@@ -62,13 +62,13 @@ const Dashboard = () => {
         </div>
 
         {/* Selector de empresa con llamada de atención */}
-        <div className="card" style={{ 
+        <div className="dashboard-hero-card card" style={{ 
           marginBottom: '2rem',
           background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05))',
           border: '2px solid var(--primary-color)',
           padding: '2rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+          <div className="dashboard-hero-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
             <div style={{ 
               fontSize: '3rem', 
               flexShrink: 0,
@@ -94,7 +94,7 @@ const Dashboard = () => {
                 {t('dashboard.selectCompanyDescription')}
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              <div className="company-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                 {companies.map(company => {
                   const roleInfo = getRoleBadgeColor(company.userRole)
                   const isSelected = selectedCompany?.id === company.id

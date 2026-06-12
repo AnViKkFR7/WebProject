@@ -281,6 +281,10 @@ export const es = {
     openInNewTab: 'Abrir en nueva pestaña',
     coverRequiredToPublish: 'Para publicar un item con imágenes, debe tener una imagen de portada.',
     dimensions: 'Dimensiones',
+    reorderImages: 'Reordenar imágenes',
+    reorderTitle: 'Reordenar imágenes',
+    reorderHint: 'Arrastra las miniaturas para cambiar el orden. Los cambios se guardan al confirmar.',
+    saveOrder: 'Guardar orden',
   },
 
   // Profile

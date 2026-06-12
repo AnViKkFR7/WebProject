@@ -2181,3 +2181,553 @@ input[type="number"] {
 .attribute-field.longtext-field {
   grid-column: 1 / -1;
 }
+
+/* ========================================
+   ITEM DETAIL PAGE — MOBILE RESPONSIVE
+   ======================================== */
+
+@media (max-width: 767px) {
+
+  /* ── Page wrapper: reduce generous desktop side padding ── */
+  .page {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+    padding-bottom: 1.5rem;
+  }
+
+  /* ── Section cards: tighter padding and margin ── */
+  .section-card {
+    padding: 0.875rem;
+    margin-bottom: 0.875rem;
+    border-radius: 8px;
+  }
+
+  /* ── ItemDetailHeader ── */
+  .item-detail-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 0.75rem 0 !important;
+    gap: 0.5rem !important;
+  }
+
+  .item-detail-header__title {
+    font-size: 1.125rem !important;
+    margin-bottom: 0 !important;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+
+  .item-detail-header__actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    flex-wrap: wrap;
+  }
+
+  /* Copy-success text can take its own line */
+  .item-detail-header__actions > span {
+    width: 100%;
+    font-size: 0.8125rem;
+  }
+
+  /* ── AttributeItem cards ── */
+  .attr-item-card {
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .attr-item-header {
+    gap: 0.5rem !important;
+    margin-bottom: 0.625rem !important;
+  }
+
+  /* Label inside info block */
+  .attr-item-info label {
+    font-size: 0.9375rem !important;
+  }
+
+  /* Meta badges (Clave / Tipo) — smaller text */
+  .attr-item-meta {
+    gap: 0.25rem !important;
+  }
+
+  .attr-item-meta span {
+    font-size: 0.6875rem !important;
+    padding: 1px 5px !important;
+  }
+
+  /* Settings checkboxes — stack vertically */
+  .attr-item-settings {
+    flex-direction: column !important;
+    gap: 0.375rem !important;
+    font-size: 0.8125rem !important;
+    width: 100%;
+  }
+
+  /* Input + icon row — keep compact */
+  .attr-item-input-row {
+    gap: 0.25rem !important;
+  }
+
+  /* ── ItemMedia upload buttons — full width on mobile ── */
+  .upload-button,
+  .upload-button--optimized,
+  .upload-button--reorder {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* ── ItemDetailFooter — already set to left:0 elsewhere;
+        just ensure button text doesn't overflow ── */
+  .item-detail-footer .button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* ========================================
+   SHARED PAGES — MOBILE RESPONSIVE
+   ======================================== */
+
+@media (max-width: 767px) {
+
+  /* ── Cards: tighter padding matching section-card ── */
+  .card {
+    padding: 0.875rem;
+  }
+
+  /* ── Page header: smaller title & description ── */
+  .page-header h2 {
+    font-size: 1.375rem !important;
+  }
+
+  .page-header p {
+    font-size: 0.875rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  /* ══════════════════════════════════════
+     DASHBOARD
+  ══════════════════════════════════════ */
+
+  /* Main hero selector card */
+  .dashboard-hero-card {
+    padding: 1rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  /* Stack emoji + content vertically */
+  .dashboard-hero-inner {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: flex-start !important;
+  }
+
+  .dashboard-hero-inner > div:first-child {
+    font-size: 2rem !important;  /* Shrink the ⚠️ emoji */
+  }
+
+  /* Hero heading inside the card */
+  .dashboard-hero-inner h3 {
+    font-size: 1.125rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  /* Company selector cards: 1 col only */
+  .company-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* ══════════════════════════════════════
+     COMPANIES
+  ══════════════════════════════════════ */
+
+  /* Outer companies grid: 1 col */
+  .companies-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.875rem !important;
+  }
+
+  /* Company name heading: less huge */
+  .company-card-name {
+    font-size: 1.125rem !important;
+    padding-right: 2.5rem !important;
+  }
+
+  /* Contact grid (Email / Phone) → stack */
+  .company-contact-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Stats grid (Items / Users) → keep 2 cols, they're just numbers */
+  .company-stats-grid {
+    gap: 0.5rem !important;
+  }
+
+  /* ══════════════════════════════════════
+     USERS
+  ══════════════════════════════════════ */
+
+  /* Users grid: 1 col, no min-width constraint */
+  .users-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.875rem !important;
+  }
+
+  /* ══════════════════════════════════════
+     MYDATA (Atributos)
+  ══════════════════════════════════════ */
+
+  /* Attribute table card header row: stack title + button */
+  .attr-table-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .attr-table-header-row h3 {
+    font-size: 1rem !important;
+    word-break: break-word;
+  }
+
+  /* "Create attribute" button: full width */
+  .attr-table-header-row .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ========================================
+   PROFILE TABS — BASE STYLES + MOBILE RESPONSIVE
+   ======================================== */
+
+/* ── Base definitions (shared across all profile tabs) ── */
+
+.card-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.375rem 0;
+}
+
+.card-header p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.card-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
+}
+
+.form-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.info-banner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.info-banner .icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  gap: 1.5rem;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.setting-info p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ── Mobile overrides ── */
+
+@media (max-width: 767px) {
+
+  /* Tab content: already reduced to 1rem padding via the existing rule —
+     ensure card-header/footer also adapt */
+  .card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .card-header h3 {
+    font-size: 1rem;
+  }
+
+  .card-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  /* Form grid: single column on mobile */
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  /* .primary-button: full width in forms */
+  .card-footer .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Setting items: stack info + button */
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .setting-item .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Info banner: ensure content wraps cleanly */
+  .info-banner {
+    padding: 0.875rem;
+  }
+}
+
+/* ========================================
+   PROFILE MOBILE TAB DROPDOWN
+   ======================================== */
+
+/* Hide mobile dropdown on desktop/tablet */
+.profile-tabs-mobile {
+  display: none;
+}
+
+/* Hide desktop tabs on mobile */
+@media (max-width: 767px) {
+  .profile-tabs-desktop {
+    display: none !important;
+  }
+
+  .profile-tabs-mobile {
+    display: block;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .profile-tab-pill {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .profile-tab-pill:hover {
+    background: var(--primary-light);
+  }
+
+  .profile-tab-pill__label {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-tab-pill__arrow {
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .profile-tab-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 200;
+    overflow: hidden;
+    animation: slideUp 0.15s ease;
+  }
+
+  .profile-tab-option {
+    width: 100%;
+    text-align: left;
+    padding: 0.875rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .profile-tab-option:last-child {
+    border-bottom: none;
+  }
+
+  .profile-tab-option:hover {
+    background: var(--bg-hover);
+  }
+
+  .profile-tab-option.active {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 700;
+  }
+
+  /* tab-content loses its top-left-radius=0 folder look on mobile
+     since the pill replaces the folder tab header */
+  .profile-tabs-mobile ~ main .tab-content {
+    border-top-left-radius: var(--radius-lg);
+  }
+}
+
+/* ========================================
+   PLANNING PAGE — MOBILE RESPONSIVE
+   ======================================== */
+
+@media (max-width: 767px) {
+
+  /* Outer wrapper: reduce padding, let height be auto */
+  .planning-page {
+    padding: 0.75rem 0.875rem 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Company selector: wrap naturally */
+  .planning-company-row {
+    gap: 6px !important;
+  }
+
+  .planning-company-row input[type="text"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 !important;
+  }
+
+  /* Chips list: smaller text */
+  .planning-chips li {
+    font-size: 12px !important;
+  }
+
+  /* Body: stack vertically, sidebar goes first (above calendar) */
+  .planning-body {
+    flex-direction: column !important;
+    flex: none !important;
+    gap: 10px !important;
+  }
+
+  /* Sidebar: move above calendar, switch to row layout */
+  .planning-sidebar {
+    flex: none !important;
+    order: -1;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+  }
+
+  /* Switcher: takes full width row */
+  .planning-sidebar > div:first-child {
+    width: 100% !important;
+  }
+
+  /* Action buttons: each takes ~half width */
+  .planning-sidebar > button {
+    flex: 1 !important;
+    min-width: 140px !important;
+  }
+
+  /* "Próximas tareas" panel: full width, limited height */
+  .planning-sidebar > div:last-child {
+    width: 100% !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Main area: fixed height so calendar is usable */
+  .planning-main-area {
+    flex: none !important;
+    height: 480px !important;
+    min-height: 0 !important;
+  }
+}

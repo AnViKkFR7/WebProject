@@ -32,6 +32,7 @@ const ItemDetail = () => {
   const [attributeDefinitions, setAttributeDefinitions] = useState([])
   const [attributeDefinitionChanges, setAttributeDefinitionChanges] = useState({})
   const [editableFields, setEditableFields] = useState({})
+  const [originalItemData, setOriginalItemData] = useState(null)
   
   const [user, setUser] = useState(null)
   const [userRole, setUserRole] = useState(null)
@@ -47,12 +48,18 @@ const ItemDetail = () => {
     loadItemData()
   }, [itemId])
 
-  // Count changed fields (including attribute definitions)
+  // Count changed fields (including attribute definitions and basic info)
   useEffect(() => {
     const valueChanges = Object.values(attributeValues).filter(v => v.edited).length
     const definitionChangesCount = Object.keys(attributeDefinitionChanges).length
-    setChangedFieldsCount(valueChanges + definitionChangesCount)
-  }, [attributeValues, attributeDefinitionChanges])
+    let basicInfoChanges = 0
+    if (originalItemData) {
+      if (itemData.title !== originalItemData.title) basicInfoChanges++
+      if (itemData.summary !== originalItemData.summary) basicInfoChanges++
+      if (itemData.status !== originalItemData.status) basicInfoChanges++
+    }
+    setChangedFieldsCount(valueChanges + definitionChangesCount + basicInfoChanges)
+  }, [attributeValues, attributeDefinitionChanges, itemData, originalItemData])
 
   const loadItemData = async () => {
     setLoading(true)
@@ -101,12 +108,14 @@ const ItemDetail = () => {
       setCanEdit(membership.role === 'admin' || membership.role === 'editor')
 
       setItem(itemData)
-      setItemData({
+      const basicData = {
         title: itemData.title || '',
         summary: itemData.summary || '',
         status: itemData.status || 'draft',
         item_type: itemData.item_type || ''
-      })
+      }
+      setItemData(basicData)
+      setOriginalItemData(basicData)
 
       const definitions = await attributeDefinitionService.getDefinitions(itemData.company_id, itemData.item_type)
       setAttributeDefinitions(definitions)
