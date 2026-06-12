@@ -353,7 +353,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {images.length < 35 && (
                 <>
-                  <label className="upload-button">
+                  {/* <label className="upload-button">
                     <input
                       type="file"
                       multiple
@@ -363,7 +363,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
                       style={{ display: 'none' }}
                     />
                     {uploading ? t('itemMedia.uploading') : t('itemMedia.addImages')}
-                  </label>
+                  </label> */}
                   <label className="upload-button upload-button--optimized">
                     <input
                       type="file"
