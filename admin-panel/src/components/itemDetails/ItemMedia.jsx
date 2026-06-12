@@ -3,6 +3,39 @@ import { itemMediaService } from '../../services/itemMediaService'
 import { useLanguage } from '../../contexts/LanguageContext'
 import '../../styles/ItemMedia.css'
 
+/**
+ * Compresses and converts an image file to WebP.
+ * Resizes so neither side exceeds maxPx; then encodes at given quality (0–1).
+ */
+const compressToWebP = (file, maxPx = 1920, quality = 0.82) =>
+  new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { naturalWidth: w, naturalHeight: h } = img
+      if (w > maxPx || h > maxPx) {
+        if (w >= h) { h = Math.round(h * (maxPx / w)); w = maxPx }
+        else        { w = Math.round(w * (maxPx / h)); h = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width  = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error(`No se pudo comprimir: ${file.name}`))
+          const name = file.name.replace(/\.[^.]+$/, '') + '.webp'
+          resolve(new File([blob], name, { type: 'image/webp' }))
+        },
+        'image/webp',
+        quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`No se pudo leer: ${file.name}`)) }
+    img.src = url
+  })
+
 const ItemMedia = ({ itemId, canEdit }) => {
   const { t } = useLanguage()
   const [media, setMedia] = useState([])
@@ -66,7 +99,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
     const files = Array.from(e.target.files)
     if (files.length === 0) return
 
-    const maxCount = fileType === 'image' ? 15 : 2
+    const maxCount = fileType === 'image' ? 35 : 2
     const currentCount = fileType === 'image' ? images.length : pdfs.length
     const availableSlots = maxCount - currentCount
 
@@ -110,6 +143,43 @@ const ItemMedia = ({ itemId, canEdit }) => {
         )
       }
 
+      await loadMedia()
+      e.target.value = null
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleOptimizedUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    const availableSlots = 35 - images.length
+    if (files.length > availableSlots) {
+      alert(t('itemMedia.maxImagesWarning').replace('{max}', 35))
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const raw = files[i]
+        const optimized = await compressToWebP(raw)
+        const nextSortOrder = images.length + i
+        const isCover = images.length === 0 && i === 0
+        await itemMediaService.uploadMedia(
+          optimized,
+          itemId,
+          'image',
+          '',
+          isCover,
+          nextSortOrder
+        )
+      }
       await loadMedia()
       e.target.value = null
     } catch (err) {
@@ -227,19 +297,32 @@ const ItemMedia = ({ itemId, canEdit }) => {
           {/* IMAGES SECTION */}
           <div className="media-section">
         <div className="media-section-header">
-          <h3>{t('itemMedia.images')} ({images.length}/15)</h3>
-          {canEdit && images.length < 15 && (
-            <label className="upload-button">
-              <input
-                type="file"
-                multiple
-                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                onChange={(e) => handleFileUpload(e, 'image')}
-                disabled={uploading}
-                style={{ display: 'none' }}
-              />
-              {uploading ? t('itemMedia.uploading') : t('itemMedia.addImages')}
-            </label>
+          <h3>{t('itemMedia.images')} ({images.length}/35)</h3>
+          {canEdit && images.length < 35 && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <label className="upload-button">
+                <input
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  onChange={(e) => handleFileUpload(e, 'image')}
+                  disabled={uploading}
+                  style={{ display: 'none' }}
+                />
+                {uploading ? t('itemMedia.uploading') : t('itemMedia.addImages')}
+              </label>
+              <label className="upload-button upload-button--optimized">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleOptimizedUpload}
+                  disabled={uploading}
+                  style={{ display: 'none' }}
+                />
+                {uploading ? t('itemMedia.uploading') : '✨ Subir imágenes optimizadas'}
+              </label>
+            </div>
           )}
         </div>
 

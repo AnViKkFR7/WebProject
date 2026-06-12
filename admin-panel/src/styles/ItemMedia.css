@@ -92,6 +92,14 @@
     cursor: not-allowed;
 }
 
+.upload-button--optimized {
+    background-color: #16a34a;
+}
+
+.upload-button--optimized:hover {
+    background-color: #15803d;
+}
+
 .no-media {
     padding: 3rem;
     text-align: center;
