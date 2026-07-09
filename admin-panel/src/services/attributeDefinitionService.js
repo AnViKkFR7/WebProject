@@ -64,8 +64,8 @@ export const attributeDefinitionService = {
 
   async getUniqueItemTypes(companyId) {
     const { data, error } = await supabase
-      .from('items')
-      .select('item_type')
+      .from('attribute_definitions')
+      .select('*')
       .eq('company_id', companyId)
 
     if (error) throw error
