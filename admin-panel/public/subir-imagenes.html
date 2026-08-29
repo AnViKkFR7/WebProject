@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Optimizar imágenes</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17201c;
+      --muted: #68736d;
+      --line: #d9e0da;
+      --paper: #f7f8f4;
+      --panel: #ffffff;
+      --accent: #1d765d;
+      --accent-dark: #155640;
+      --accent-soft: #e2f0e9;
+      --danger: #a33d35;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 100% 0, #e7f2ea 0, transparent 35%), var(--paper);
+      color: var(--ink);
+      font: 16px/1.5 Georgia, "Times New Roman", serif;
+    }
+    main { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 8vh 0 10vh; }
+    header { margin-bottom: 28px; }
+    .eyebrow { margin: 0 0 8px; color: var(--accent); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.7rem); line-height: 1; font-weight: 500; }
+    .intro { max-width: 570px; margin: 16px 0 0; color: var(--muted); font-size: 1.08rem; }
+    .panel { padding: 24px; background: rgba(255,255,255,.88); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 16px 42px rgba(32, 57, 43, .08); }
+    .dropzone { display: grid; place-items: center; min-height: 180px; padding: 24px; border: 2px dashed #a9c5b5; border-radius: 6px; background: #f4faf5; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+    .dropzone strong { display: block; margin-bottom: 6px; color: var(--accent-dark); font-size: 1.2rem; }
+    .dropzone span { color: var(--muted); font-size: .95rem; }
+    input[type="file"] { display: none; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    button { border: 0; border-radius: 4px; padding: 12px 16px; color: #fff; background: var(--accent); font: 700 14px Arial, sans-serif; cursor: pointer; }
+    button:hover:not(:disabled) { background: var(--accent-dark); }
+    button.secondary { color: var(--ink); background: #edf1ed; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .summary { display: flex; justify-content: space-between; gap: 12px; margin: 22px 0 10px; color: var(--muted); font: 13px Arial, sans-serif; }
+    .files { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); font: 14px Arial, sans-serif; }
+    .file-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { color: var(--muted); white-space: nowrap; }
+    .status { min-height: 24px; margin: 18px 0 0; color: var(--muted); font: 14px Arial, sans-serif; }
+    .status.error { color: var(--danger); }
+    .note { margin: 20px 0 0; color: var(--muted); font: 12px/1.5 Arial, sans-serif; }
+    @media (max-width: 520px) { main { padding-top: 38px; } .panel { padding: 16px; } .file-size { display: none; } button { flex: 1; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">RegiaMare / Media</p>
+      <h1>Optimizar imágenes</h1>
+      <p class="intro">Selecciona una o varias fotos, conviértelas a WebP y guárdalas en una carpeta de tu ordenador.</p>
+    </header>
+
+    <section class="panel">
+      <label class="dropzone" id="dropzone" for="file-input">
+        <span><strong>Seleccionar imágenes</strong>También puedes arrastrarlas aquí</span>
+        <input id="file-input" type="file" accept="image/*" multiple>
+      </label>
+      <div class="toolbar">
+        <button id="choose-folder" type="button">Elegir carpeta y guardar</button>
+        <button id="download-files" class="secondary" type="button" disabled>Descargar archivos</button>
+        <button id="clear" class="secondary" type="button" disabled>Limpiar</button>
+      </div>
+      <div class="summary"><span id="count">Ninguna imagen seleccionada</span><span>Máximo: 1920 px · WebP 82%</span></div>
+      <ul class="files" id="files"></ul>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <p class="note">La optimización ocurre localmente en tu navegador. No se suben imágenes a Internet. Para guardar directamente en una carpeta, usa Chrome o Edge.</p>
+    </section>
+  </main>
+
+  <script>
+    const MAX_PX = 1920
+    const QUALITY = 0.82
+    let selectedFiles = []
+    let optimizedFiles = []
+
+    const fileInput = document.querySelector('#file-input')
+    const dropzone = document.querySelector('#dropzone')
+    const filesList = document.querySelector('#files')
+    const count = document.querySelector('#count')
+    const status = document.querySelector('#status')
+    const chooseFolder = document.querySelector('#choose-folder')
+    const downloadFiles = document.querySelector('#download-files')
+    const clear = document.querySelector('#clear')
+
+    const formatBytes = (bytes) => {
+      if (bytes < 1024) return `${bytes} B`
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    }
+
+    const setStatus = (message, isError = false) => {
+      status.textContent = message
+      status.className = isError ? 'status error' : 'status'
+    }
+
+    const renderFiles = () => {
+      filesList.innerHTML = ''
+      selectedFiles.forEach((file) => {
+        const row = document.createElement('li')
+        row.className = 'file'
+        row.innerHTML = `<span class="file-name">${file.name}</span><span class="file-size">${formatBytes(file.size)}</span>`
+        filesList.append(row)
+      })
+      count.textContent = selectedFiles.length
+        ? `${selectedFiles.length} imagen${selectedFiles.length === 1 ? '' : 'es'} seleccionada${selectedFiles.length === 1 ? '' : 's'}`
+        : 'Ninguna imagen seleccionada'
+      clear.disabled = selectedFiles.length === 0
+      downloadFiles.disabled = optimizedFiles.length === 0
+    }
+
+    const addFiles = (files) => {
+      const images = Array.from(files).filter((file) => file.type.startsWith('image/'))
+      if (!images.length) return setStatus('Selecciona archivos de imagen válidos.', true)
+      selectedFiles = images
+      optimizedFiles = []
+      renderFiles()
+      setStatus('Listo para optimizar y guardar.')
+    }
+
+    const compressToWebP = (file) => new Promise((resolve, reject) => {
+      const image = new Image()
+      const url = URL.createObjectURL(file)
+      image.onload = () => {
+        URL.revokeObjectURL(url)
+        let width = image.naturalWidth
+        let height = image.naturalHeight
+        if (width > MAX_PX || height > MAX_PX) {
+          if (width >= height) {
+            height = Math.round(height * (MAX_PX / width))
+            width = MAX_PX
+          } else {
+            width = Math.round(width * (MAX_PX / height))
+            height = MAX_PX
+          }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d').drawImage(image, 0, 0, width, height)
+        canvas.toBlob((blob) => {
+          if (!blob) return reject(new Error(`No se pudo comprimir: ${file.name}`))
+          const name = file.name.replace(/\.[^.]+$/, '') + '.webp'
+          resolve(new File([blob], name, { type: 'image/webp' }))
+        }, 'image/webp', QUALITY)
+      }
+      image.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`No se pudo leer: ${file.name}`)) }
+      image.src = url
+    })
+
+    const optimizeFiles = async () => {
+      if (!selectedFiles.length) throw new Error('Selecciona al menos una imagen.')
+      const result = []
+      for (let index = 0; index < selectedFiles.length; index += 1) {
+        setStatus(`Optimizando ${index + 1} de ${selectedFiles.length}: ${selectedFiles[index].name}`)
+        result.push(await compressToWebP(selectedFiles[index]))
+      }
+      optimizedFiles = result
+      renderFiles()
+      return result
+    }
+
+    const saveToFolder = async () => {
+      try {
+        if (!window.showDirectoryPicker) throw new Error('FALLBACK')
+        const directory = await window.showDirectoryPicker({ mode: 'readwrite' })
+        const files = await optimizeFiles()
+        for (const file of files) {
+          const handle = await directory.getFileHandle(file.name, { create: true })
+          const writable = await handle.createWritable()
+          await writable.write(file)
+          await writable.close()
+        }
+        setStatus(`${files.length} archivo${files.length === 1 ? '' : 's'} guardado${files.length === 1 ? '' : 's'} correctamente.`)
+      } catch (error) {
+        if (error.message === 'FALLBACK') {
+          setStatus('Tu navegador no permite elegir carpetas. Usa “Descargar archivos”.', true)
+        } else if (error.name !== 'AbortError') {
+          setStatus(error.message, true)
+        }
+      }
+    }
+
+    const downloadOptimized = async () => {
+      try {
+        const files = optimizedFiles.length ? optimizedFiles : await optimizeFiles()
+        files.forEach((file, index) => {
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(file)
+          link.download = file.name
+          link.click()
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000 + index * 100)
+        })
+        setStatus(`${files.length} archivo${files.length === 1 ? '' : 's'} preparado${files.length === 1 ? '' : 's'} para descargar.`)
+      } catch (error) { setStatus(error.message, true) }
+    }
+
+    fileInput.addEventListener('change', (event) => addFiles(event.target.files))
+    ;['dragenter', 'dragover'].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault(); dropzone.classList.add('dragover')
+    }))
+    ;['dragleave', 'drop'].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault(); dropzone.classList.remove('dragover')
+    }))
+    dropzone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files))
+    chooseFolder.addEventListener('click', saveToFolder)
+    downloadFiles.addEventListener('click', downloadOptimized)
+    clear.addEventListener('click', () => { selectedFiles = []; optimizedFiles = []; fileInput.value = ''; renderFiles(); setStatus('') })
+  </script>
+</body>
+</html>

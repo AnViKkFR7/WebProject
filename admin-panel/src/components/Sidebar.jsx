@@ -15,6 +15,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: '📊' },
     { to: '/items', label: t('nav.items'), icon: '🧩' },
+    { to: '/analytics', label: t('nav.analytics'), icon: '📈' },
     { to: '/my-data', label: t('nav.myData'), icon: '⚡' },
     { to: '/companies', label: t('nav.companies'), icon: '🏢' },
     { to: '/users', label: t('nav.users'), icon: '👥' },

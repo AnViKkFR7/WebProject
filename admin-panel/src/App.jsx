@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import AdminLayout from './layouts/AdminLayout.jsx'
+import Analytics from './pages/Analytics.jsx'
 import Blog from './pages/Blog.jsx'
 import Companies from './pages/Companies.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -36,6 +37,7 @@ const App = () => {
             <Route path="/cookies-policy" element={<CookiesPolicy />} />
             <Route path="/items" element={<Items />} />
             <Route path="/items/:itemId" element={<ItemDetail />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/my-data" element={<MyData />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/users" element={<Users />} />
