@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import DatePicker from '../DatePicker'
+import { displayLabel } from '../../lib/attributeLabel'
 
 const AttributeItem = ({ 
   definition, 
@@ -305,7 +306,7 @@ const AttributeItem = ({
         <div className="attr-item-info" style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <label style={{ fontWeight: 600, fontSize: '1rem' }}>
-              {definition.label}
+              {displayLabel(definition.label)}
               {definition.is_required && <span style={{ color: '#ef4444' }}> *</span>}
             </label>
           </div>

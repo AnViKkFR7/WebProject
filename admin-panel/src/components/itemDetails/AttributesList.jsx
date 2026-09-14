@@ -1,5 +1,6 @@
 import AttributeItem from './AttributeItem'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { displayLabel } from '../../lib/attributeLabel'
 
 const AttributesList = ({ 
   attributeDefinitions,
@@ -22,8 +23,8 @@ const AttributesList = ({
     // Filter by search term
     if (searchFilter.trim()) {
       const search = searchFilter.toLowerCase()
-      filtered = filtered.filter(def => 
-        def.label.toLowerCase().includes(search) ||
+      filtered = filtered.filter(def =>
+        displayLabel(def.label).toLowerCase().includes(search) ||
         (def.description && def.description.toLowerCase().includes(search))
       )
     }

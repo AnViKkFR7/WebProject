@@ -15,7 +15,15 @@ const Items = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [copiedItemId, setCopiedItemId] = useState(null)
-  
+
+  // View mode: 'rows' (tabla actual) o 'cards' (grid visual con imagen)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('items_view_mode') || 'rows')
+  const [coverUrls, setCoverUrls] = useState({}) // { itemId: url } — solo se usa en vista cards
+
+  // Filtro de texto por título
+  const [titleSearch, setTitleSearch] = useState('')
+  const [titleSearchDebounced, setTitleSearchDebounced] = useState('')
+
   // Pagination
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -54,6 +62,20 @@ const Items = () => {
     { value: 'published', label: t('items.published') },
     { value: 'archived', label: t('items.archived') }
   ]
+
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem('items_view_mode', viewMode)
+  }, [viewMode])
+
+  // Debounce del texto de búsqueda por título antes de disparar la query
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setTitleSearchDebounced(titleSearch)
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(handle)
+  }, [titleSearch])
 
   // Load user
   useEffect(() => {
@@ -115,7 +137,8 @@ const Items = () => {
         const filters = {
           status: statusFilter,
           item_type: itemTypeFilter,
-          sort_by_date: sortByDate
+          sort_by_date: sortByDate,
+          title_search: titleSearchDebounced
         }
 
         const result = await itemService.getItemsByAdvancedFilters(
@@ -138,7 +161,30 @@ const Items = () => {
     }
 
     loadItems()
-  }, [selectedCompany?.id, statusFilter, itemTypeFilter, sortByDate, advancedFilterValues, page])
+  }, [selectedCompany?.id, statusFilter, itemTypeFilter, sortByDate, advancedFilterValues, titleSearchDebounced, page])
+
+  // Load cover images only for the card view — avoids the extra query when
+  // browsing in row view, where no image is shown.
+  useEffect(() => {
+    if (viewMode !== 'cards' || items.length === 0) {
+      setCoverUrls({})
+      return
+    }
+
+    let cancelled = false
+    itemService.getItemMediaSummaries(items.map((item) => item.id))
+      .then((summaries) => {
+        if (cancelled) return
+        const map = {}
+        summaries.forEach((s) => {
+          if (s.cover_url) map[s.item_id] = s.cover_url
+        })
+        setCoverUrls(map)
+      })
+      .catch((err) => console.error('Error loading cover images:', err))
+
+    return () => { cancelled = true }
+  }, [items, viewMode])
 
   // Save advanced filter preferences
   const saveFilterPreferences = async (filterIds) => {
@@ -227,6 +273,8 @@ const Items = () => {
     setItemTypeFilter([])
     setSortByDate(null)
     setAdvancedFilterValues({})
+    setTitleSearch('')
+    setTitleSearchDebounced('')
     setPage(1)
   }
 
@@ -361,8 +409,30 @@ const Items = () => {
           <h2>{t('items.title')}</h2>
           <p>{t('items.description')}</p>
         </div>
-        <div className="header-actions">
-          <button 
+        <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+            <button
+              type="button"
+              className={viewMode === 'rows' ? 'primary-button' : 'ghost-button'}
+              style={{ borderRadius: 0 }}
+              onClick={() => setViewMode('rows')}
+              title={t('items.viewRows')}
+              aria-pressed={viewMode === 'rows'}
+            >
+              ☰
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'cards' ? 'primary-button' : 'ghost-button'}
+              style={{ borderRadius: 0 }}
+              onClick={() => setViewMode('cards')}
+              title={t('items.viewCards')}
+              aria-pressed={viewMode === 'cards'}
+            >
+              ▦
+            </button>
+          </div>
+          <button
             className="primary-button"
             onClick={() => setShowCreateModal(true)}
           >
@@ -507,6 +577,25 @@ const Items = () => {
               })}
             </div>
           )}
+
+          {/* Filtro de texto por título */}
+          <div style={{
+            width: '100%',
+            paddingTop: '1rem',
+            borderTop: '1px solid var(--border-color)'
+          }}>
+            <label style={{ fontSize: '0.875rem', marginBottom: '0.25rem', display: 'block' }}>
+              {t('items.searchTitleLabel')}
+            </label>
+            <input
+              type="text"
+              className="input"
+              value={titleSearch}
+              onChange={(e) => setTitleSearch(e.target.value)}
+              placeholder={t('items.searchTitlePlaceholder')}
+              style={{ maxWidth: '400px', width: '100%' }}
+            />
+          </div>
         </div>
 
         {/* Loading state */}
@@ -529,74 +618,108 @@ const Items = () => {
           </div>
         )}
 
-        {/* Items table */}
+        {/* Items: tabla o cards según viewMode */}
         {!loading && !error && (
           <>
-            <div className="table">
-              <div className="table-row table-header">
-                <span>{t('items.titleColumn')}</span>
-                <span>{t('items.typeColumn')}</span>
-                <span>{t('items.statusColumn')}</span>
-                <span>{t('items.updatedColumn')}</span>
-                <span>{t('common.actions')}</span>
+            {viewMode === 'rows' ? (
+              <div className="table">
+                <div className="table-row table-header">
+                  <span>{t('items.titleColumn')}</span>
+                  <span>{t('items.typeColumn')}</span>
+                  <span>{t('items.statusColumn')}</span>
+                  <span>{t('items.updatedColumn')}</span>
+                  <span>{t('common.actions')}</span>
+                </div>
+                {items.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    {t('items.noItemsFound')}
+                  </div>
+                ) : (
+                  items.map((item) => (
+                    <div
+                      className="table-row"
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <span className="row-title">{item.title}</span>
+                      <span>{item.item_type}</span>
+                      <span>
+                        <span className={`pill ${item.status.toLowerCase()}`}>
+                          {STATUS_OPTIONS.find(s => s.value === item.status)?.label || item.status}
+                        </span>
+                      </span>
+                      <span>{formatDate(item.updated_at)}</span>
+                      <span>
+                        <button
+                          onClick={(e) => handleShare(e, item.id)}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            padding: '0.375rem 0.75rem',
+                            cursor: 'pointer',
+                            color: 'var(--text-color)',
+                            fontSize: '0.875rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+                            e.currentTarget.style.borderColor = 'var(--primary-color)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                            e.currentTarget.style.borderColor = 'var(--border-color)'
+                          }}
+                          title={t('common.share')}
+                        >
+                          {copiedItemId === item.id ? (
+                            <>✓ {t('common.copied')}</>
+                          ) : (
+                            <>🔗 {t('common.share')}</>
+                          )}
+                        </button>
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-              {items.length === 0 ? (
+            ) : (
+              items.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                   {t('items.noItemsFound')}
                 </div>
               ) : (
-                items.map((item) => (
-                  <div 
-                    className="table-row" 
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <span className="row-title">{item.title}</span>
-                    <span>{item.item_type}</span>
-                    <span>
-                      <span className={`pill ${item.status.toLowerCase()}`}>
-                        {STATUS_OPTIONS.find(s => s.value === item.status)?.label || item.status}
-                      </span>
-                    </span>
-                    <span>{formatDate(item.updated_at)}</span>
-                    <span>
-                      <button
-                        onClick={(e) => handleShare(e, item.id)}
-                        style={{
-                          background: 'transparent',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '6px',
-                          padding: '0.375rem 0.75rem',
-                          cursor: 'pointer',
-                          color: 'var(--text-color)',
-                          fontSize: '0.875rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
-                          e.currentTarget.style.borderColor = 'var(--primary-color)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                          e.currentTarget.style.borderColor = 'var(--border-color)'
-                        }}
-                        title={t('common.share')}
-                      >
-                        {copiedItemId === item.id ? (
-                          <>✓ {t('common.copied')}</>
+                <div className="items-cards-grid">
+                  {items.map((item) => (
+                    <div
+                      className="item-card"
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <div className="item-card-image">
+                        {coverUrls[item.id] ? (
+                          <img src={coverUrls[item.id]} alt={item.title} loading="lazy" />
                         ) : (
-                          <>🔗 {t('common.share')}</>
+                          <span className="item-card-placeholder" aria-hidden="true">🖼️</span>
                         )}
-                      </button>
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+                      </div>
+                      <div className="item-card-body">
+                        <span className="item-card-title" title={item.title}>{item.title}</span>
+                        <span>
+                          <span className={`pill ${item.status.toLowerCase()}`}>
+                            {STATUS_OPTIONS.find(s => s.value === item.status)?.label || item.status}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

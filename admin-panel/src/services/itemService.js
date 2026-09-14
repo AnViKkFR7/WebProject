@@ -22,6 +22,9 @@ export const itemService = {
     if (filters.item_type && filters.item_type.length > 0) {
       query = query.in('item_type', filters.item_type)
     }
+    if (filters.title_search && filters.title_search.trim()) {
+      query = query.ilike('title', `%${filters.title_search.trim()}%`)
+    }
 
     // Sorting
     if (filters.sort_by_date) {
@@ -249,6 +252,22 @@ export const itemService = {
   },
 
   // --- Item Media ---
+
+  /**
+   * Portadas para la vista de cards: usa la vista item_media_summary
+   * (cover_url ya resuelta) en vez de traer item_media completo.
+   */
+  async getItemMediaSummaries(itemIds) {
+    if (!itemIds || itemIds.length === 0) return []
+
+    const { data, error } = await supabase
+      .from('item_media_summary')
+      .select('item_id, cover_url')
+      .in('item_id', itemIds)
+
+    if (error) throw error
+    return data
+  },
 
   async getItemMedia(itemId) {
     const { data, error } = await supabase
