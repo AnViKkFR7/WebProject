@@ -11,11 +11,24 @@ export async function getClientCompanies(userId) {
   return data
 }
 
+// Obtener las empresas cliente de la empresa tenant actualmente seleccionada
+// (todas las que gestiona esa empresa, no solo las creadas por este usuario)
+export async function getClientCompaniesByCompany(companyId) {
+  const { data, error } = await supabase
+    .from('client_company')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
 // Crear una nueva empresa cliente
 export async function createClientCompany(company) {
   const { data, error } = await supabase
     .from('client_company')
     .insert([company])
+    .select()
     .single()
   if (error) throw error
   return data

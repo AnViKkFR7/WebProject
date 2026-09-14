@@ -18,13 +18,24 @@ export async function uploadPlannerFiles(files, folder = 'tasks') {
   }
   return results
 }
-// Obtener tareas de empresas seleccionadas en un rango de fechas
-export async function getPlanningTasks(companyIds, fromDate, toDate) {
-  if (!companyIds.length) return []
+// Obtener tareas de la empresa tenant actual, filtradas por las empresas
+// cliente seleccionadas en un rango de fechas. Las tareas generales sin
+// empresa asociada (client_company_id null) se incluyen siempre, sea cual
+// sea la selección — un "IN" normal nunca las traería, porque en SQL NULL
+// nunca coincide con IN (...).
+export async function getPlanningTasks(companyId, clientCompanyIds, fromDate, toDate) {
+  if (!companyId) return []
   let query = supabase
     .from('planning_task')
     .select('*')
-    .in('company_id', companyIds)
+    .eq('company_id', companyId)
+
+  if (clientCompanyIds && clientCompanyIds.length > 0) {
+    query = query.or(`client_company_id.in.(${clientCompanyIds.join(',')}),client_company_id.is.null`)
+  } else {
+    query = query.is('client_company_id', null)
+  }
+
   if (fromDate) query = query.gte('start_datetime', fromDate)
   if (toDate) query = query.lte('end_datetime', toDate)
   const { data, error } = await query.order('start_datetime', { ascending: true })
@@ -37,18 +48,21 @@ export async function createPlanningTask(task) {
   const { data, error } = await supabase
     .from('planning_task')
     .insert([task])
+    .select()
     .single()
   if (error) throw error
   return data
 }
 
-// Obtener facturación de empresas seleccionadas en un rango de fechas
-export async function getBilling(companyIds, fromDate, toDate) {
-  if (!companyIds.length) return []
+// Obtener facturación de la empresa tenant actual, filtrada por las
+// empresas cliente seleccionadas en un rango de fechas
+export async function getBilling(companyId, clientCompanyIds, fromDate, toDate) {
+  if (!companyId || !clientCompanyIds?.length) return []
   let query = supabase
     .from('billing')
     .select('*')
-    .in('company_id', companyIds)
+    .eq('company_id', companyId)
+    .in('client_company_id', clientCompanyIds)
   if (fromDate) query = query.gte('billing_date', fromDate)
   if (toDate) query = query.lte('billing_date', toDate)
   const { data, error } = await query.order('billing_date', { ascending: true })
@@ -61,6 +75,7 @@ export async function createBilling(bill) {
   const { data, error } = await supabase
     .from('billing')
     .insert([bill])
+    .select()
     .single()
   if (error) throw error
   return data

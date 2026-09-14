@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { formatRecurrence } from '../../lib/recurrence';
 
 // Aclara un color hex mezclándolo con blanco
 function lighten(hex, amount = 0.82) {
@@ -12,14 +14,6 @@ function lighten(hex, amount = 0.82) {
   } catch { return '#f5f5f7'; }
 }
 
-const TYPE_LABELS = {
-  recibir_pago: '💰 Recibir pago',
-  realizar_pago: '💸 Realizar pago',
-  todo: '✅ ToDo',
-  entregable: '📦 Entregable',
-  reunion: '🤝 Reunión',
-};
-
 function fmt(dt) {
   if (!dt) return '';
   return dt.replace('T', ' ').slice(0, 16);
@@ -27,7 +21,9 @@ function fmt(dt) {
 
 // ── Modal de detalle completo ──────────────────────────────────────
 function DetailModal({ task, color, onClose, onEdit, onDelete }) {
+  const { t } = useLanguage();
   const [confirming, setConfirming] = useState(false);
+  const typeLabels = t('planning.taskTypeLabels');
 
   const handleDelete = () => {
     if (!confirming) { setConfirming(true); return; }
@@ -48,29 +44,31 @@ function DetailModal({ task, color, onClose, onEdit, onDelete }) {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.3 }}>{task.title}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color, marginTop: 2 }}>{task.company?.name || ''}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color, marginTop: 2 }}>{task.company?.name || t('planning.noCompanyLabel')}</div>
           </div>
           <button onClick={onClose} style={{ all: 'unset', cursor: 'pointer', fontSize: 22, color: '#8e8e93', lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
 
         <hr style={{ border: 'none', borderTop: '1px solid #f2f2f7', margin: '2px 0' }} />
 
-        <Row label="Tipo">{TYPE_LABELS[task.type] || task.type}</Row>
-        <Row label="Inicio">{fmt(task.start_datetime)}</Row>
-        {task.end_datetime && <Row label="Fin">{fmt(task.end_datetime)}</Row>}
-        <Row label="Todo el día">{task.is_all_day ? 'Sí' : 'No'}</Row>
+        <Row label={t('planning.typeLabel')}>{typeLabels[task.type] || task.type}</Row>
+        <Row label={t('planning.startLabel')}>{fmt(task.start_datetime)}</Row>
+        {task.end_datetime && <Row label={t('planning.endLabel')}>{fmt(task.end_datetime)}</Row>}
+        <Row label={t('planning.allDayLabel')}>{task.is_all_day ? t('common.yes') : t('common.no')}</Row>
         {task.recurrence_type && task.recurrence_type !== 'none' && (
-          <Row label="Repetición">{task.recurrence_type}{task.recurrence_value ? ` · cada ${task.recurrence_value}` : ''}</Row>
+          <Row label={t('planning.recurrenceLabel')}>
+            {formatRecurrence(task.recurrence_type, task.recurrence_value, t)}
+          </Row>
         )}
         {task.description && (
           <div style={{ marginTop: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Descripción</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{t('planning.descriptionLabel')}</div>
             <div style={{ fontSize: 14, color: '#3a3a3c', lineHeight: 1.6 }}>{task.description}</div>
           </div>
         )}
         {task.attachments && task.attachments.length > 0 && (
           <div style={{ marginTop: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Adjuntos</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{t('planning.attachmentsLabel')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {task.attachments.map((f, i) => (
                 <AttachmentLink key={i} file={f} index={i} />
@@ -85,16 +83,16 @@ function DetailModal({ task, color, onClose, onEdit, onDelete }) {
             <button
               onClick={() => { onEdit(task); onClose(); }}
               style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: '1px solid #d1d1d6', background: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#1c1c1e' }}
-            >✏️ Editar</button>
+            >✏️ {t('common.edit')}</button>
           )}
           {onDelete && (
             <button
               onClick={handleDelete}
-              style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: confirming ? '#FF3B30' : '#fff3f3', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: confirming ? '#fff' : '#FF3B30', border: `1px solid #FF3B3040` }}
-            >{confirming ? '¿Confirmar?' : '🗑️ Eliminar'}</button>
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: `1px solid #FF3B3040`, background: confirming ? '#FF3B30' : '#fff3f3', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: confirming ? '#fff' : '#FF3B30' }}
+            >{confirming ? t('planning.confirmDelete') : `🗑️ ${t('common.delete')}`}</button>
           )}
           <button onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: '#007AFF', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-            Cerrar
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -103,6 +101,7 @@ function DetailModal({ task, color, onClose, onEdit, onDelete }) {
 }
 
 function AttachmentLink({ file, index }) {
+  const { t } = useLanguage();
   const handleClick = async (e) => {
     e.preventDefault();
     try {
@@ -117,13 +116,13 @@ function AttachmentLink({ file, index }) {
         window.open(file.url, '_blank');
       }
     } catch {
-      alert('No se pudo abrir el archivo.');
+      alert(t('planning.fileOpenError'));
     }
   };
   return (
     <a href="#" onClick={handleClick}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: '#f2f2f7', fontSize: 12, color: '#007AFF', textDecoration: 'none' }}>
-      📎 {file.name || `Archivo ${index + 1}`}
+      📎 {file.name || `${index + 1}`}
     </a>
   );
 }
@@ -141,9 +140,12 @@ function Row({ label, children }) {
 // view: 'day' | 'week' | 'month'
 // style prop: estilos de posicionamiento desde el padre (top/left/width/height etc.)
 export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const color = task._color || task.company?.color || '#8e8e93';
   const bg = lighten(color, 0.75);
+  const typeLabels = t('planning.taskTypeLabels');
+  const typeLabel = typeLabels[task.type] || task.type;
 
   const base = {
     borderLeft: `3px solid ${color}`,
@@ -155,10 +157,17 @@ export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
     ...style,
   };
 
+  // Evita que el clic en la tarjeta también dispare el "crear tarea al
+  // clicar un hueco vacío" del grid que la contiene.
+  const handleOpen = (e) => {
+    e.stopPropagation();
+    setOpen(true);
+  };
+
   return (
     <>
       {view === 'day' && (
-        <div onClick={() => setOpen(true)} style={{ ...base, padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div onClick={handleOpen} title={task.company?.name || undefined} style={{ ...base, padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color, lineHeight: 1, flexShrink: 0 }}>
             {task.start_datetime?.slice(11, 16) || ''}
             {task.end_datetime ? ` – ${task.end_datetime.slice(11, 16)}` : ''}
@@ -166,14 +175,15 @@ export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', flex: 1, minHeight: 0 }}>
             {task.title}
           </div>
-          <div style={{ fontSize: 11, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {task.company?.name || ''}
+          <div style={{ fontSize: 11, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.company?.name || t('planning.noCompanyLabel')}</span>
+            <span style={{ flexShrink: 0 }}>{typeLabel}</span>
           </div>
         </div>
       )}
 
       {view === 'week' && (
-        <div onClick={() => setOpen(true)} style={{ ...base, padding: '3px 5px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <div onClick={handleOpen} title={task.company?.name || undefined} style={{ ...base, padding: '3px 5px', display: 'flex', flexDirection: 'column', gap: 1 }}>
           <div style={{ fontSize: 10, fontWeight: 600, color, lineHeight: 1, flexShrink: 0 }}>
             {task.start_datetime?.slice(11, 16) || ''}
           </div>
@@ -181,15 +191,15 @@ export default function TaskCard({ task, view, style = {}, onDelete, onEdit }) {
             {task.title}
           </div>
           <div style={{ fontSize: 10, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {task.company?.name || ''}
+            {typeLabel}
           </div>
         </div>
       )}
 
       {view === 'month' && (
-        <div onClick={() => setOpen(true)} style={{ ...base, padding: '2px 5px', display: 'flex', alignItems: 'center', gap: 4, minHeight: 20 }}>
+        <div onClick={handleOpen} title={task.company?.name || undefined} style={{ ...base, padding: '2px 5px', display: 'flex', alignItems: 'center', gap: 4, minHeight: 20 }}>
           <span style={{ fontSize: 10, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            {TYPE_LABELS[task.type] || task.type}
+            {typeLabel}
           </span>
         </div>
       )}

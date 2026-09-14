@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react';
-import { format, startOfWeek, addDays, isToday, getHours, getMinutes, isSameDay } from 'date-fns';
+import { useRef, useEffect } from 'react';
+import { format, startOfWeek, addDays, isToday, getHours, getMinutes, setHours, setMinutes } from 'date-fns';
 import TaskCard from './TaskCard';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const HOUR_H   = 68;
 const HOURS    = Array.from({ length: 24 }, (_, i) => i);
-const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 function toGridEvent(task) {
   let startMin, endMin;
@@ -31,14 +31,17 @@ function layoutDay(events) {
     if (col === -1) { col = colEnds.length; colEnds.push(ev._end); }
     else colEnds[col] = ev._end;
     return { ...ev, _col: col, _totalCols: colEnds.length };
-  }).map((ev, _, arr) => ({ ...ev, _totalCols: colEnds.length }));
+  }).map(ev => ({ ...ev, _totalCols: colEnds.length }));
 }
 
-export default function WeekView({ date, tasks, onDelete, onEdit }) {
+export default function WeekView({ date, tasks, onDelete, onEdit, onSelectSlot }) {
+  const { t } = useLanguage();
   const scrollRef = useRef(null);
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_H;
   }, []);
+
+  const dayShort = t('planning.weekdaysShort');
 
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -51,16 +54,25 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
   const allDayByDay = {};
   days.forEach(day => {
     const k = format(day, 'yyyy-MM-dd');
-    const dayTasks = tasks.filter(t => {
-      if (!t.start_datetime) return false;
-      return format(new Date(t.start_datetime), 'yyyy-MM-dd') === k;
+    const dayTasks = tasks.filter(task => {
+      if (!task.start_datetime) return false;
+      return format(new Date(task.start_datetime), 'yyyy-MM-dd') === k;
     });
-    allDayByDay[k] = dayTasks.filter(t => t.is_all_day);
-    byDay[k] = layoutDay(dayTasks.filter(t => !t.is_all_day).map(toGridEvent).filter(Boolean));
+    allDayByDay[k] = dayTasks.filter(task => task.is_all_day);
+    byDay[k] = layoutDay(dayTasks.filter(task => !task.is_all_day).map(toGridEvent).filter(Boolean));
   });
   const hasAnyAllDay = days.some(d => (allDayByDay[format(d, 'yyyy-MM-dd')] || []).length > 0);
 
   const colTemplate = `52px repeat(7, 1fr)`;
+
+  const handleColumnClick = (day) => (e) => {
+    if (!onSelectSlot) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const h = Math.min(Math.floor(relY / HOUR_H), 23);
+    const m = Math.min(Math.round(((relY % HOUR_H) / HOUR_H) * 60 / 15) * 15, 59);
+    onSelectSlot(setMinutes(setHours(new Date(day), h), m));
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -72,7 +84,7 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
           return (
             <div key={di} style={{ textAlign: 'center', padding: '8px 4px 6px', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none' }}>
               <div style={{ fontSize: 10, fontWeight: 600, color: di >= 5 ? '#c7c7cc' : '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {DAY_SHORT[di]}
+                {dayShort[di]}
               </div>
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', fontSize: 14, fontWeight: today ? 700 : 400, color: today ? '#fff' : '#1c1c1e', background: today ? '#FF3B30' : 'transparent', marginTop: 2 }}>
                 {format(day, 'd')}
@@ -86,15 +98,15 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
       {hasAnyAllDay && (
         <div style={{ display: 'grid', gridTemplateColumns: colTemplate, borderBottom: '1px solid #e5e5ea', flexShrink: 0, background: '#fafafa' }}>
           <div style={{ borderRight: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0', fontSize: 10, color: '#8e8e93', userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: 0.5 }}>
-            Todo el día
+            {t('planning.allDayColumn')}
           </div>
           {days.map((day, di) => {
             const k = format(day, 'yyyy-MM-dd');
             const evs = allDayByDay[k] || [];
             return (
               <div key={di} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '3px 2px', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', minHeight: 26 }}>
-                {evs.map((t, i) => (
-                  <TaskCard key={t.id || i} task={t} view="week" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: '100%', zIndex: 1 }} />
+                {evs.map((task, i) => (
+                  <TaskCard key={task._occurrenceKey || task.id || i} task={task} view="week" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: '100%', zIndex: 1 }} />
                 ))}
               </div>
             );
@@ -119,10 +131,9 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
             const k     = format(day, 'yyyy-MM-dd');
             const today = isToday(day);
             const evs   = byDay[k] || [];
-            const totalCols = evs.length ? Math.max(...evs.map(e => e._totalCols)) : 1;
 
             return (
-              <div key={di} style={{ position: 'relative', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', background: today ? '#fffaf9' : '#fff' }}>
+              <div key={di} onClick={handleColumnClick(day)} style={{ position: 'relative', borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', background: today ? '#fffaf9' : '#fff', cursor: onSelectSlot ? 'crosshair' : 'default' }}>
                 {/* Líneas */}
                 {HOURS.map(h => (
                   <div key={h} style={{ position: 'absolute', top: h * HOUR_H, left: 0, right: 0, borderTop: h === 0 ? 'none' : '1px solid #f0f0f0', pointerEvents: 'none' }} />
@@ -144,7 +155,7 @@ export default function WeekView({ date, tasks, onDelete, onEdit }) {
                   const height = Math.max((ev._end - ev._start) * HOUR_H / 60 - 2, 46);
                   return (
                     <TaskCard
-                      key={ev.id || i}
+                      key={ev._occurrenceKey || ev.id || i}
                       task={ev}
                       view="week"
                       onDelete={onDelete}

@@ -1,31 +1,17 @@
-import React, { useState } from 'react';
-import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns';
+import { useState } from 'react';
+import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns';
 import DayView   from './DayView';
 import WeekView  from './WeekView';
 import MonthView from './MonthView';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DAYS_ES   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-
-function getTitle(view, date) {
-  if (view === 'month') return `${MONTHS_ES[date.getMonth()]} ${date.getFullYear()}`;
-  if (view === 'week') {
-    const { startOfWeek, endOfWeek } = require('date-fns');
-    // Calcular manualmente para no importar dinámicamente
-    const ws = new Date(date);
-    const day = (ws.getDay() + 6) % 7; // 0=Lun
-    ws.setDate(ws.getDate() - day);
-    const we = new Date(ws); we.setDate(we.getDate() + 6);
-    if (ws.getMonth() === we.getMonth())
-      return `${MONTHS_ES[ws.getMonth()]} ${ws.getFullYear()}`;
-    return `${MONTHS_ES[ws.getMonth()]} – ${MONTHS_ES[we.getMonth()]} ${we.getFullYear()}`;
-  }
-  return `${DAYS_ES[date.getDay()]}, ${date.getDate()} de ${MONTHS_ES[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask }) {
+export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask, onSelectSlot }) {
+  const { t } = useLanguage();
   const [view, setView]       = useState(defaultView);
   const [current, setCurrent] = useState(new Date());
+
+  const months = t('planning.months');
+  const weekdaysLong = t('planning.weekdaysLong');
 
   const goBack = () => {
     if (view === 'month') setCurrent(d => subMonths(d, 1));
@@ -40,17 +26,17 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
 
   // Título según vista
   const title = (() => {
-    if (view === 'month') return `${MONTHS_ES[current.getMonth()]} ${current.getFullYear()}`;
+    if (view === 'month') return `${months[current.getMonth()]} ${current.getFullYear()}`;
     if (view === 'week') {
       const ws = new Date(current);
       const day = (ws.getDay() + 6) % 7;
       ws.setDate(ws.getDate() - day);
       const we = new Date(ws); we.setDate(we.getDate() + 6);
       if (ws.getMonth() === we.getMonth())
-        return `${MONTHS_ES[ws.getMonth()]} ${ws.getFullYear()}`;
-      return `${MONTHS_ES[ws.getMonth()]} – ${MONTHS_ES[we.getMonth()]} ${we.getFullYear()}`;
+        return `${months[ws.getMonth()]} ${ws.getFullYear()}`;
+      return `${months[ws.getMonth()]} – ${months[we.getMonth()]} ${we.getFullYear()}`;
     }
-    return `${DAYS_ES[current.getDay()]}, ${current.getDate()} de ${MONTHS_ES[current.getMonth()]} ${current.getFullYear()}`;
+    return `${weekdaysLong[current.getDay()]}, ${current.getDate()} ${months[current.getMonth()]} ${current.getFullYear()}`;
   })();
 
   return (
@@ -67,7 +53,7 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
             style={{ all: 'unset', cursor: 'pointer', padding: '4px 11px', fontSize: 12, fontWeight: 500, color: '#1c1c1e', border: '1px solid #d1d1d6', borderRadius: 8, background: '#fff' }}
             onMouseEnter={e => e.currentTarget.style.background = '#f2f2f7'}
             onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-          >Hoy</button>
+          >{t('planning.today')}</button>
           <NavBtn onClick={goFwd}>›</NavBtn>
         </div>
 
@@ -78,7 +64,7 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
 
         {/* Segmented control */}
         <div style={{ display: 'flex', background: '#f2f2f7', borderRadius: 9, padding: 2 }}>
-          {[{ k: 'day', l: 'Día' }, { k: 'week', l: 'Semana' }, { k: 'month', l: 'Mes' }].map(v => (
+          {[{ k: 'day', l: t('planning.viewDay') }, { k: 'week', l: t('planning.viewWeek') }, { k: 'month', l: t('planning.viewMonth') }].map(v => (
             <button
               key={v.k}
               onClick={() => setView(v.k)}
@@ -90,9 +76,9 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
 
       {/* ── Cuerpo ── */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {view === 'day'   && <DayView   date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
-        {view === 'week'  && <WeekView  date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
-        {view === 'month' && <MonthView date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} />}
+        {view === 'day'   && <DayView   date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
+        {view === 'week'  && <WeekView  date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
+        {view === 'month' && <MonthView date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
       </div>
     </div>
   );

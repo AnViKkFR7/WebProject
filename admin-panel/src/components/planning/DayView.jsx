@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { format, isToday, getHours, getMinutes } from 'date-fns';
+import { useRef, useEffect } from 'react';
+import { format, isToday, getHours, getMinutes, setHours, setMinutes } from 'date-fns';
 import TaskCard from './TaskCard';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const HOUR_H = 80; // px por hora
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -42,27 +43,40 @@ function toGridEvent(task) {
   return { ...task, _start: startMin, _end: endMin };
 }
 
-export default function DayView({ date, tasks, onDelete, onEdit }) {
+export default function DayView({ date, tasks, onDelete, onEdit, onSelectSlot }) {
+  const { t } = useLanguage();
   const scrollRef = useRef(null);
   useEffect(() => {
     // Hacer scroll al inicio de la jornada laboral
     if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_H;
   }, []);
 
+  const weekdaysLong = t('planning.weekdaysLong');
+  const months = t('planning.months');
+
   const today = isToday(date);
   const nowMin = today ? getHours(new Date()) * 60 + getMinutes(new Date()) : null;
 
   // Filtrar tareas del día
-  const dayTasks = tasks.filter(t => {
-    if (!t.start_datetime) return false;
-    const d = new Date(t.start_datetime);
+  const dayTasks = tasks.filter(task => {
+    if (!task.start_datetime) return false;
+    const d = new Date(task.start_datetime);
     return format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
   });
 
-  const allDayTasks = dayTasks.filter(t => t.is_all_day);
-  const timedTasks  = dayTasks.filter(t => !t.is_all_day);
+  const allDayTasks = dayTasks.filter(task => task.is_all_day);
+  const timedTasks  = dayTasks.filter(task => !task.is_all_day);
   const gridEvents  = timedTasks.map(toGridEvent).filter(Boolean);
   const laid        = layoutEvents(gridEvents);
+
+  const handleGridClick = (e) => {
+    if (!onSelectSlot) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const h = Math.min(Math.floor(relY / HOUR_H), 23);
+    const m = Math.min(Math.round(((relY % HOUR_H) / HOUR_H) * 60 / 15) * 15, 59);
+    onSelectSlot(setMinutes(setHours(new Date(date), h), m));
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -70,12 +84,12 @@ export default function DayView({ date, tasks, onDelete, onEdit }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px 8px', borderBottom: '1px solid #e5e5ea', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {format(date, 'EEEE')}
+            {weekdaysLong[date.getDay()]}
           </span>
           <span style={{ width: 32, height: 32, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: today ? 700 : 500, background: today ? '#FF3B30' : 'transparent', color: today ? '#fff' : '#1c1c1e' }}>
-            {format(date, 'd')}
+            {date.getDate()}
           </span>
-          <span style={{ fontSize: 13, color: '#8e8e93' }}>{format(date, 'MMMM yyyy')}</span>
+          <span style={{ fontSize: 13, color: '#8e8e93' }}>{months[date.getMonth()]} {date.getFullYear()}</span>
         </div>
       </div>
 
@@ -83,11 +97,11 @@ export default function DayView({ date, tasks, onDelete, onEdit }) {
       {allDayTasks.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', borderBottom: '1px solid #e5e5ea', flexShrink: 0, background: '#fafafa' }}>
           <div style={{ borderRight: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 0', fontSize: 10, color: '#8e8e93', userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: 0.5 }}>
-            Todo el día
+            {t('planning.allDayColumn')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '4px 6px' }}>
-            {allDayTasks.map((t, i) => (
-              <TaskCard key={t.id || i} task={t} view="day" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: 'auto', flex: '0 0 auto', maxWidth: '100%' }} />
+            {allDayTasks.map((task, i) => (
+              <TaskCard key={task._occurrenceKey || task.id || i} task={task} view="day" onDelete={onDelete} onEdit={onEdit} style={{ position: 'relative', top: 'unset', left: 'unset', height: 'auto', width: 'auto', flex: '0 0 auto', maxWidth: '100%' }} />
             ))}
           </div>
         </div>
@@ -106,7 +120,7 @@ export default function DayView({ date, tasks, onDelete, onEdit }) {
           </div>
 
           {/* Columna de eventos */}
-          <div style={{ position: 'relative', background: today ? '#fffaf9' : '#fff' }}>
+          <div onClick={handleGridClick} style={{ position: 'relative', background: today ? '#fffaf9' : '#fff', cursor: onSelectSlot ? 'crosshair' : 'default' }}>
             {/* Líneas de horas */}
             {HOURS.map(h => (
               <div key={h} style={{ position: 'absolute', top: h * HOUR_H, left: 0, right: 0, borderTop: h === 0 ? 'none' : '1px solid #f0f0f0', pointerEvents: 'none' }} />
@@ -129,7 +143,7 @@ export default function DayView({ date, tasks, onDelete, onEdit }) {
               const pct    = 98 / totalCols;
               return (
                 <TaskCard
-                  key={ev.id || i}
+                  key={ev._occurrenceKey || ev.id || i}
                   task={ev}
                   view="day"
                   onDelete={onDelete}

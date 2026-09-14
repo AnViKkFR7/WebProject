@@ -1,10 +1,11 @@
-import React from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday } from 'date-fns';
 import TaskCard from './TaskCard';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+export default function MonthView({ date, tasks, onDelete, onEdit, onSelectSlot }) {
+  const { t } = useLanguage();
+  const dayShort = t('planning.weekdaysShort');
 
-export default function MonthView({ date, tasks, onDelete, onEdit }) {
   const monthStart = startOfMonth(date);
   const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1 });
   const gridEnd    = endOfWeek(endOfMonth(date), { weekStartsOn: 1 });
@@ -28,7 +29,7 @@ export default function MonthView({ date, tasks, onDelete, onEdit }) {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* Cabecera días semana */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e5ea', flexShrink: 0 }}>
-        {DAY_SHORT.map((n, i) => (
+        {dayShort.map((n, i) => (
           <div key={n} style={{ textAlign: 'center', padding: '7px 0', fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: i >= 5 ? '#c7c7cc' : '#8e8e93', textTransform: 'uppercase' }}>
             {n}
           </div>
@@ -49,7 +50,8 @@ export default function MonthView({ date, tasks, onDelete, onEdit }) {
               return (
                 <div
                   key={k}
-                  style={{ borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', padding: '4px 4px 3px', background: today ? '#fff8f7' : !inMonth ? '#fafafa' : '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}
+                  onClick={() => onSelectSlot && onSelectSlot(day)}
+                  style={{ borderRight: di < 6 ? '1px solid #f2f2f7' : 'none', padding: '4px 4px 3px', background: today ? '#fff8f7' : !inMonth ? '#fafafa' : '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2, cursor: onSelectSlot ? 'pointer' : 'default' }}
                 >
                   {/* Número del día */}
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 1, flexShrink: 0 }}>
@@ -60,10 +62,10 @@ export default function MonthView({ date, tasks, onDelete, onEdit }) {
 
                   {/* Tarjetas pequeñas (máx 3 + "+N") */}
                   {dayTasks.slice(0, 3).map((task, ti) => (
-                    <TaskCard key={task.id || ti} task={task} view="month" onDelete={onDelete} onEdit={onEdit} style={{ flexShrink: 0 }} />
+                    <TaskCard key={task._occurrenceKey || task.id || ti} task={task} view="month" onDelete={onDelete} onEdit={onEdit} style={{ flexShrink: 0 }} />
                   ))}
                   {dayTasks.length > 3 && (
-                    <div style={{ fontSize: 10, color: '#8e8e93', paddingLeft: 4 }}>+{dayTasks.length - 3} más</div>
+                    <div style={{ fontSize: 10, color: '#8e8e93', paddingLeft: 4 }}>+{dayTasks.length - 3} {t('planning.more')}</div>
                   )}
                 </div>
               );
