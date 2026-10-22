@@ -17,5 +17,11 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-#SQL files
-*.sql
+# SQL
+# El esquema y las migraciones SÍ van a git: son la única copia de cómo está
+# montada la base de datos. Lo que nunca debe subirse es un .sql con valores
+# reales (claves, tokens): esas copias van en database/local/.
+database/local/*
+!database/local/.gitkeep
+*.local.sql
+*.secret.sql

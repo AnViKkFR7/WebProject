@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { userService } from '../../services/userService'
 import { companyService } from '../../services/companyService'
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const AssignUserTab = ({ companies }) => {
   const { t } = useLanguage()
@@ -183,7 +184,7 @@ const AssignUserTab = ({ companies }) => {
                     padding: '0.25rem'
                   }}
                 >
-                  ✕
+                  <Icon name="close" size={16} />
                 </button>
               )}
 
@@ -287,7 +288,7 @@ const AssignUserTab = ({ companies }) => {
                     padding: '0.25rem'
                   }}
                 >
-                  ✕
+                  <Icon name="close" size={16} />
                 </button>
               )}
 

@@ -55,3 +55,26 @@ export async function getClientCompaniesFlexible(userId, isAdmin) {
   if (error) throw error
   return data
 }
+
+// Actualizar una empresa cliente
+export async function updateClientCompany(companyId, updates) {
+  const { data, error } = await supabase
+    .from('client_company')
+    .update(updates)
+    .eq('id', companyId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Cuántas tareas y facturas dependen de una empresa cliente (para avisar antes de borrarla)
+export async function getClientCompanyUsage(companyId) {
+  const [tasks, bills] = await Promise.all([
+    supabase.from('planning_task').select('id', { count: 'exact', head: true }).eq('client_company_id', companyId),
+    supabase.from('billing').select('id', { count: 'exact', head: true }).eq('client_company_id', companyId),
+  ])
+  if (tasks.error) throw tasks.error
+  if (bills.error) throw bills.error
+  return { tasks: tasks.count || 0, bills: bills.count || 0 }
+}

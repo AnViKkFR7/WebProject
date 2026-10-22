@@ -1,8 +1,9 @@
 import AttributeItem from './AttributeItem'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { displayLabel } from '../../lib/attributeLabel'
+import Icon from '../ui/Icon'
 
-const AttributesList = ({ 
+const AttributesList = ({
   attributeDefinitions,
   attributeValues,
   editableFields,
@@ -11,7 +12,6 @@ const AttributesList = ({
   onToggleEditable,
   onDiscard,
   onUpdate,
-  onUpdateDefinition,
   onSearchChange,
   loading
 }) => {
@@ -35,9 +35,9 @@ const AttributesList = ({
   if (loading) {
     return (
       <div className="section-card">
-        <h2 style={{ 
-          fontSize: '1.125rem', 
-          fontWeight: '600', 
+        <h2 style={{
+          fontSize: '1.125rem',
+          fontWeight: '600',
           marginBottom: '1rem',
           color: 'var(--text-color)'
         }}>
@@ -46,17 +46,17 @@ const AttributesList = ({
         <div style={{ display: 'grid', gap: '1rem' }}>
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i}>
-              <div style={{ 
-                height: '20px', 
-                width: '120px', 
-                backgroundColor: 'var(--bg-secondary)', 
+              <div style={{
+                height: '20px',
+                width: '120px',
+                backgroundColor: 'var(--bg-secondary)',
                 borderRadius: '4px',
                 marginBottom: '0.5rem'
               }}></div>
-              <div style={{ 
-                height: '40px', 
-                width: '100%', 
-                backgroundColor: 'var(--bg-secondary)', 
+              <div style={{
+                height: '40px',
+                width: '100%',
+                backgroundColor: 'var(--bg-secondary)',
                 borderRadius: '4px'
               }}></div>
             </div>
@@ -70,9 +70,9 @@ const AttributesList = ({
 
   return (
     <div className="section-card" style={{ paddingBottom: '6rem' }}>
-      <h2 style={{ 
-        fontSize: '1.125rem', 
-        fontWeight: '600', 
+      <h2 style={{
+        fontSize: '1.125rem',
+        fontWeight: '600',
         marginBottom: '1rem',
         color: 'var(--text-color)'
       }}>
@@ -81,17 +81,17 @@ const AttributesList = ({
 
       {/* Search Filter */}
       <div style={{ marginBottom: '1rem', position: 'relative', maxWidth: '400px' }}>
-        <span style={{ 
-          position: 'absolute', 
-          left: '12px', 
-          top: '50%', 
-          transform: 'translateY(-50%)', 
-          fontSize: '1rem', 
+        <span style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '1rem',
           color: 'var(--text-tertiary)',
           pointerEvents: 'none',
           zIndex: 9
         }}>
-          🔍
+          <Icon name="search" size={16} />
         </span>
         <input
           type="text"
@@ -104,15 +104,15 @@ const AttributesList = ({
       </div>
 
       {/* Attributes List */}
-      <div style={{ 
+      <div style={{
         display: 'flex',
         flexDirection: 'column'
       }}>
         {filteredDefinitions.length === 0 ? (
-          <div style={{ 
-            padding: '2rem', 
-            textAlign: 'center', 
-            color: 'var(--text-secondary)' 
+          <div style={{
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--text-secondary)'
           }}>
             {t('itemDetail.noAttributesFound')} "{searchFilter}"
           </div>
@@ -127,7 +127,6 @@ const AttributesList = ({
               onToggleEditable={onToggleEditable}
               onDiscard={onDiscard}
               onUpdate={onUpdate}
-              onUpdateDefinition={onUpdateDefinition}
             />
           ))
         )}

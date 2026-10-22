@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { useLanguage } from '../contexts/LanguageContext'
+import Icon from '../components/ui/Icon'
 
 const Login = () => {
   const [view, setView] = useState('login') // 'login' | 'forgot'
@@ -49,7 +50,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="logo-placeholder">🌐</div>
+          <div className="logo-placeholder"><Icon name="globe" size={28} /></div>
           <h2>{view === 'login' ? t('login.title') : 'Recuperar Cuenta'}</h2>
           <p>
             {view === 'login' 

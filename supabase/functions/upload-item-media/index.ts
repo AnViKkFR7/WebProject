@@ -116,11 +116,12 @@ serve(async (req) => {
       const { data: membership } = await supabaseAdmin
         .from('company_members')
         .select('role')
+        .eq('is_active', true)
         .eq('company_id', item.company_id)
         .eq('user_id', user.id)
         .single()
 
-      if (!membership || membership.role !== 'editor') {
+      if (!membership || !['admin','editor'].includes(membership.role)) {
         return new Response(
           JSON.stringify({ error: 'Forbidden: Only admin or company editor can upload media' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

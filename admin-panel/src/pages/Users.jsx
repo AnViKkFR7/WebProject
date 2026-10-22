@@ -1,32 +1,37 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { companyService } from '../services/companyService'
 import { useCompany } from '../contexts/CompanyContext'
 import { formatPhoneNumber } from '../lib/phoneUtils'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useFeedback } from '../contexts/FeedbackContext'
+import Icon from '../components/ui/Icon'
+import PageHeader from '../components/ui/PageHeader'
+import UserAdminModal from '../components/users/UserAdminModal'
+import { usePermissions } from '../hooks/usePermissions'
 
 const Users = () => {
-  const { selectedCompany } = useCompany()
+  const { selectedCompany, reload:reloadCompany } = useCompany()
+  const companyId = selectedCompany?.id
   const { t } = useLanguage()
+  const { toast, confirm } = useFeedback()
+  const { canAdministerPlatform, canManageMemberAccess } = usePermissions()
+  const active = useRef(true)
+  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  const [adminMode, setAdminMode] = useState(null)
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentUserRole, setCurrentUserRole] = useState(null)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  
+
   // Editing state
   const [editingUsers, setEditingUsers] = useState({})
   const [originalValues, setOriginalValues] = useState({})
   const [savingUser, setSavingUser] = useState(null)
 
-  useEffect(() => {
-    if (selectedCompany?.id) {
-      loadUsers()
-    }
-  }, [selectedCompany?.id])
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -40,17 +45,17 @@ const Users = () => {
       const { data: currentMembership } = await supabase
         .from('company_members')
         .select('role')
-        .eq('company_id', selectedCompany.id)
+        .eq('company_id', companyId)
         .eq('user_id', currentUser.id)
         .single()
-      
+
       setCurrentUserRole(currentMembership?.role || null)
 
       // Get all members of the selected company with their profile data
       const { data: members, error: membersError } = await supabase
         .from('company_members')
-        .select('user_id, role, full_name, phone')
-        .eq('company_id', selectedCompany.id)
+        .select('user_id, role, full_name, phone, is_active')
+        .eq('company_id', companyId)
 
       if (membersError) throw membersError
 
@@ -66,7 +71,7 @@ const Users = () => {
             const { count: items } = await supabase
               .from('items')
               .select('id', { count: 'exact', head: true })
-              .eq('company_id', selectedCompany.id)
+              .eq('company_id', companyId)
               .eq('created_by', member.user_id)
 
             itemsCount = items || 0
@@ -75,7 +80,7 @@ const Users = () => {
             const { count: blogs } = await supabase
               .from('blog_posts')
               .select('id', { count: 'exact', head: true })
-              .eq('company_id', selectedCompany.id)
+              .eq('company_id', companyId)
               .eq('created_by', member.user_id)
 
             blogsCount = blogs || 0
@@ -86,6 +91,7 @@ const Users = () => {
             fullName: member.full_name || 'Sin nombre',
             phone: member.phone || '',
             role: member.role,
+            isActive: member.is_active,
             itemsCreated: itemsCount,
             blogsCreated: blogsCount
           }
@@ -99,21 +105,23 @@ const Users = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [companyId,t])
+
+  useEffect(() => { if (companyId) loadUsers() }, [companyId,loadUsers])
 
   const canEdit = () => {
-    return currentUserRole === 'admin' || currentUserRole === 'editor'
+    return canAdministerPlatform || currentUserRole === 'admin' || currentUserRole === 'editor'
   }
 
   const canEditRole = (targetRole) => {
-    if (currentUserRole === 'admin') return true
+    if (canAdministerPlatform || currentUserRole === 'admin') return true
     // Editors can only promote viewers to editors
     if (currentUserRole === 'editor' && targetRole === 'viewer') return true
     return false
   }
 
   const getAvailableRoles = (targetRole) => {
-    if (currentUserRole === 'admin') return ['admin', 'editor', 'viewer']
+    if (canAdministerPlatform || currentUserRole === 'admin') return ['admin', 'editor', 'viewer']
     if (currentUserRole === 'editor' && targetRole === 'viewer') return ['viewer', 'editor']
     return []
   }
@@ -132,8 +140,8 @@ const Users = () => {
   }
 
   const cancelEdit = (userId) => {
-    setUsers(prev => prev.map(u => 
-      u.userId === userId 
+    setUsers(prev => prev.map(u =>
+      u.userId === userId
         ? { ...u, ...originalValues[userId] }
         : u
     ))
@@ -155,38 +163,38 @@ const Users = () => {
 
       const roleChanged = canEditRole(originalRole) && originalRole !== user.role
 
-      // Build update object
-      const updateData = {
-        full_name: user.fullName,
-        phone: user.phone
-      }
-
-      // Update company_members (includes full_name, phone, and optionally role)
-      const { error: updateError } = await supabase
-        .from('company_members')
-        .update(updateData)
-        .eq('company_id', selectedCompany.id)
-        .eq('user_id', userId)
-
-      if (updateError) throw updateError
-
-      if (roleChanged) {
-        await companyService.updateMemberRole(selectedCompany.id, userId, user.role)
-      }
+      await companyService.updateMember(selectedCompany.id,userId,user.fullName,user.phone,roleChanged ? user.role : null)
 
       setEditingUsers(prev => ({ ...prev, [userId]: false }))
       delete originalValues[userId]
-      
+
+      if (roleChanged && userId === currentUserId) await reloadCompany()
       // Reload to refresh counts if role changed
       if (roleChanged) {
         await loadUsers()
       }
     } catch (err) {
       console.error('Error saving user:', err)
-      alert('Error al guardar los cambios: ' + err.message)
+      toast.error(`${t('errors.savingChanges')}: ${err.message}`)
     } finally {
       setSavingUser(null)
     }
+  }
+
+  const manageAccess = async (user, action) => {
+    if (!canManageMemberAccess || savingUser) return
+    const accepted = await confirm({ title:t(`memberAccess.${action}`),
+      message:t(`memberAccess.${action}Message`).replace('{name}',user.fullName).replace('{company}',selectedCompany.name),
+      confirmLabel:t(`memberAccess.${action}`), danger:action !== 'reactivate' })
+    if (!accepted || !active.current) return
+    setSavingUser(user.userId)
+    try {
+      await companyService.manageMemberAccess(selectedCompany.id,user.userId,action)
+      if (!active.current) return
+      setUsers(prev => action === 'remove' ? prev.filter(item => item.userId !== user.userId) : prev.map(item => item.userId === user.userId ? { ...item,isActive:action === 'reactivate' } : item))
+      toast.success(t('memberAccess.saved'))
+    } catch (err) { if (active.current) toast.error(err.message || t('errors.savingChanges')) }
+    finally { if (active.current) setSavingUser(null) }
   }
 
   const getRoleBadgeColor = (role) => {
@@ -233,16 +241,31 @@ const Users = () => {
     )
   }
 
+  const closeAdminModal = () => {
+    setAdminMode(null)
+    loadUsers()
+  }
+
   return (
     <div className="page-content">
-      <section className="page-header">
-        <div>
-          <h2>{t('users.title')}</h2>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: '0.5rem', maxWidth: '800px' }}>
-            {t('users.description')}
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        title={t('users.title')}
+        description={t('users.description')}
+        actions={canAdministerPlatform && (
+          <>
+            <button type="button" className="ghost-button" onClick={() => setAdminMode('assign')}>
+              <Icon name="link" size={16} />
+              {t('users.assignUser')}
+            </button>
+            <button type="button" className="primary-button" onClick={() => setAdminMode('create')}>
+              <Icon name="plus" size={16} />
+              {t('users.createUser')}
+            </button>
+          </>
+        )}
+      />
+
+      <UserAdminModal mode={adminMode} onClose={closeAdminModal} />
 
       {error && (
         <div style={{
@@ -271,17 +294,17 @@ const Users = () => {
           {/* Buscador */}
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <div style={{ position: 'relative' }}>
-              <span style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                fontSize: '1rem', 
+              <span style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '1rem',
                 color: 'var(--text-tertiary)',
                 pointerEvents: 'none',
                 zIndex: 9
               }}>
-                🔍
+                <Icon name="search" size={16} />
               </span>
               <input
                 type="text"
@@ -327,7 +350,7 @@ const Users = () => {
                     e.currentTarget.style.color = 'var(--text-secondary)'
                   }}
                 >
-                  ✕
+                  <Icon name="close" size={16} />
                 </button>
               )}
             </div>
@@ -335,15 +358,16 @@ const Users = () => {
 
           <div className="users-grid" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
             gap: '1.5rem'
           }}>
           {users
-            .filter(user => 
+            .filter(user =>
               user.fullName.toLowerCase().includes(searchQuery.toLowerCase())
             )
             .map((user) => (
             <div key={user.userId} className="card" style={{ position: 'relative' }}>
+              <p className="field-help" role="status">{t(user.isActive ? 'memberAccess.active' : 'memberAccess.inactive')}</p>
               {/* Edit button */}
               {canEdit() && (
                 <button
@@ -361,7 +385,7 @@ const Users = () => {
                     transition: 'color 0.2s'
                   }}
                 >
-                  {editingUsers[user.userId] ? '✕' : '✏️'}
+                  <Icon name={editingUsers[user.userId] ? 'close' : 'edit'} size={16} />
                 </button>
               )}
 
@@ -506,6 +530,10 @@ const Users = () => {
                   </div>
                 )}
 
+                {canManageMemberAccess && user.userId !== currentUserId && !editingUsers[user.userId] && <div style={{ display:'flex',flexWrap:'wrap',gap:'.5rem',marginTop:'1rem' }}>
+                  <button type="button" className="ghost-button" disabled={Boolean(savingUser)} onClick={() => manageAccess(user,user.isActive ? 'suspend' : 'reactivate')}>{t(user.isActive ? 'memberAccess.suspend' : 'memberAccess.reactivate')}</button>
+                  <button type="button" className="ghost-button" disabled={Boolean(savingUser)} onClick={() => manageAccess(user,'remove')}><Icon name="trash" size={16}/>{t('memberAccess.remove')}</button>
+                </div>}
                 {/* Save button when editing */}
                 {editingUsers[user.userId] && (
                   <button

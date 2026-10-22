@@ -1,28 +1,22 @@
 import { Outlet } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useCompany } from '../contexts/CompanyContext.jsx'
 import Sidebar from '../components/Sidebar.jsx'
 import Topbar from '../components/Topbar.jsx'
-import { authService } from '../services/authService'
-import { CompanyProvider } from '../contexts/CompanyContext'
 
 const AdminLayout = () => {
+  const { selectedCompany, user } = useCompany()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isTabletCollapsed, setIsTabletCollapsed] = useState(false)
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    authService.getCurrentUser().then(setUser).catch(() => setUser(null))
-  }, [])
 
   return (
-    <CompanyProvider>
+    <>
       <div className={`app-shell ${isTabletCollapsed ? 'tablet-collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <Sidebar 
           isMobileMenuOpen={isMobileMenuOpen} 
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           isTabletCollapsed={isTabletCollapsed}
           setIsTabletCollapsed={setIsTabletCollapsed}
-          user={user}
         />
         
         {/* Overlay para cerrar menú móvil al hacer click fuera */}
@@ -37,14 +31,13 @@ const AdminLayout = () => {
           <Topbar 
             isMobileMenuOpen={isMobileMenuOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
-            user={user}
           />
           <main className="page">
-            <Outlet />
+            <Outlet key={`${user?.id}-${selectedCompany?.id}`} />
           </main>
         </div>
       </div>
-    </CompanyProvider>
+    </>
   )
 }
 

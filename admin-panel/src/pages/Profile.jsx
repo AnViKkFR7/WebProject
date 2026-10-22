@@ -1,225 +1,60 @@
-import { useState, useEffect } from 'react'
-import { userService } from '../services/userService'
+import { useEffect, useState } from 'react'
+import { NavLink, Navigate, useParams } from 'react-router-dom'
 import { companyService } from '../services/companyService'
-import { authService } from '../services/authService'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useCompany } from '../contexts/CompanyContext'
-
-// Import Tabs
+import PageHeader from '../components/ui/PageHeader'
 import PersonalTab from '../components/profile/PersonalTab'
 import SecurityTab from '../components/profile/SecurityTab'
 import CompanyTab from '../components/profile/CompanyTab'
-import CreateCompanyTab from '../components/profile/CreateCompanyTab'
-import CreateUserTab from '../components/profile/CreateUserTab'
-import AssignUserTab from '../components/profile/AssignUserTab'
+
+// La pestaña vive en la URL (/profile/security) para poder enlazarla desde el menú de usuario.
+// Crear empresa / usuario y asignar usuario se movieron a /users y al selector de empresa.
+const TABS = [
+  { path: '', key: 'personal' },
+  { path: 'security', key: 'security' },
+  { path: 'company', key: 'company' },
+]
 
 const Profile = () => {
   const { t } = useLanguage()
-  const { selectedCompany } = useCompany()
-  const [activeTab, setActiveTab] = useState('personal')
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false)
-
-  // Data States
-  const [companies, setCompanies] = useState([])
-  const [currentUser, setCurrentUser] = useState(null)
+  const { tab = '' } = useParams()
+  const { selectedCompany, user } = useCompany()
   const [memberProfile, setMemberProfile] = useState(null)
 
   useEffect(() => {
-    const init = async () => {
-      await Promise.all([
-        checkAdminStatus(),
-        loadUserData(),
-        loadCompanies()
-      ])
-      setLoading(false)
-    }
-    init()
-  }, [])
+    if (!selectedCompany?.id) return undefined
+    let cancelled = false
+    companyService.getCurrentUserMemberProfile(selectedCompany.id)
+      .then((profile) => { if (!cancelled) setMemberProfile(profile) })
+      .catch((error) => console.error('Error cargando perfil del miembro:', error))
+    return () => { cancelled = true }
+  }, [selectedCompany?.id])
 
-  useEffect(() => {
-    if (selectedCompany?.id) {
-      loadMemberProfile()
-    }
-  }, [selectedCompany])
-
-  const checkAdminStatus = async () => {
-    try {
-      const adminStatus = await userService.isCurrentUserAdmin()
-      setIsAdmin(adminStatus)
-    } catch (error) {
-      console.error('Error verificando admin:', error)
-    }
-  }
-
-  const loadCompanies = async () => {
-    try {
-      const companiesData = await companyService.getAllCompanies()
-      setCompanies(companiesData)
-    } catch (error) {
-      console.error('Error cargando empresas:', error)
-    }
-  }
-
-  const loadUserData = async () => {
-    try {
-      const user = await authService.getCurrentUser()
-      setCurrentUser(user)
-    } catch (error) {
-      console.error('Error cargando usuario:', error)
-    }
-  }
-
-  const loadMemberProfile = async () => {
-    if (!selectedCompany?.id) return
-    try {
-      const profile = await companyService.getCurrentUserMemberProfile(selectedCompany.id)
-      setMemberProfile(profile)
-    } catch (error) {
-      console.error('Error cargando perfil del miembro:', error)
-    }
-  }
+  if (!TABS.some((item) => item.path === tab)) return <Navigate to="/profile" replace />
 
   return (
     <div className="page-content">
-      <section className="page-header">
-        <div>
-          <h2>{t('profile.title')}</h2>
-          <p>{t('profile.description')}</p>
-        </div>
-      </section>
+      <PageHeader title={t('profile.title')} description={t('profile.description')} />
 
-      {loading ? (
-        <div className="loading-state">{t('profile.loading')}</div>
-      ) : (
-        <div>
-          {/* Desktop/Tablet: horizontal tabs */}
-          <div className="tabs-header profile-tabs-desktop">
-            <button
-              className={`tab-button ${activeTab === 'personal' ? 'active' : ''}`}
-              onClick={() => setActiveTab('personal')}
-            >
-              {t('profile.tabs.personal')}
-            </button>
-            <button
-              className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              {t('profile.tabs.security')}
-            </button>
-            <button
-              className={`tab-button ${activeTab === 'company' ? 'active' : ''}`}
-              onClick={() => setActiveTab('company')}
-            >
-              {t('profile.tabs.company')}
-            </button>
+      <nav className="tabs-header" aria-label={t('profile.title')}>
+        {TABS.map((item) => (
+          <NavLink
+            key={item.key}
+            to={item.path ? `/profile/${item.path}` : '/profile'}
+            end
+            className={({ isActive }) => `tab-button${isActive ? ' active' : ''}`}
+          >
+            {t(`profile.tabs.${item.key}`)}
+          </NavLink>
+        ))}
+      </nav>
 
-            {isAdmin && (
-              <>
-                <button
-                  className={`tab-button ${activeTab === 'create-company' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('create-company')}
-                >
-                  {t('profile.tabs.createCompany')}
-                </button>
-                <button
-                  className={`tab-button ${activeTab === 'create-user' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('create-user')}
-                >
-                  {t('profile.tabs.createUser')}
-                </button>
-                <button
-                  className={`tab-button ${activeTab === 'assign-user' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('assign-user')}
-                >
-                  {t('profile.tabs.assignUser')}
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Mobile: pill dropdown */}
-          <div className="profile-tabs-mobile">
-            <button
-              className="profile-tab-pill"
-              onClick={() => setMobileDropdownOpen(o => !o)}
-            >
-              <span className="profile-tab-pill__label">
-                {activeTab === 'personal' && t('profile.tabs.personal')}
-                {activeTab === 'security' && t('profile.tabs.security')}
-                {activeTab === 'company' && t('profile.tabs.company')}
-                {activeTab === 'create-company' && t('profile.tabs.createCompany')}
-                {activeTab === 'create-user' && t('profile.tabs.createUser')}
-                {activeTab === 'assign-user' && t('profile.tabs.assignUser')}
-              </span>
-              <span className="profile-tab-pill__arrow">{mobileDropdownOpen ? '▲' : '▼'}</span>
-            </button>
-
-            {mobileDropdownOpen && (
-              <div className="profile-tab-dropdown">
-                {[
-                  { key: 'personal',        label: t('profile.tabs.personal') },
-                  { key: 'security',        label: t('profile.tabs.security') },
-                  { key: 'company',         label: t('profile.tabs.company') },
-                  ...(isAdmin ? [
-                    { key: 'create-company', label: t('profile.tabs.createCompany') },
-                    { key: 'create-user',    label: t('profile.tabs.createUser') },
-                    { key: 'assign-user',    label: t('profile.tabs.assignUser') },
-                  ] : [])
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    className={`profile-tab-option ${activeTab === key ? 'active' : ''}`}
-                    onClick={() => { setActiveTab(key); setMobileDropdownOpen(false) }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Main Content */}
-          <main>
-            {activeTab === 'personal' && (
-              <PersonalTab 
-                selectedCompany={selectedCompany} 
-                currentUser={currentUser} 
-              />
-            )}
-
-            {activeTab === 'security' && (
-              <SecurityTab />
-            )}
-
-            {activeTab === 'company' && (
-              <CompanyTab 
-                selectedCompany={selectedCompany} 
-                memberProfile={memberProfile} 
-              />
-            )}
-
-            {isAdmin && activeTab === 'create-company' && (
-              <CreateCompanyTab 
-                onCompanyCreated={loadCompanies} 
-              />
-            )}
-
-            {isAdmin && activeTab === 'create-user' && (
-              <CreateUserTab 
-                companies={companies} 
-              />
-            )}
-
-            {isAdmin && activeTab === 'assign-user' && (
-              <AssignUserTab 
-                companies={companies} 
-              />
-            )}
-          </main>
-        </div>
-      )}
+      <main>
+        {tab === '' && <PersonalTab selectedCompany={selectedCompany} currentUser={user} />}
+        {tab === 'security' && <SecurityTab />}
+        {tab === 'company' && <CompanyTab selectedCompany={selectedCompany} memberProfile={memberProfile} />}
+      </main>
     </div>
   )
 }

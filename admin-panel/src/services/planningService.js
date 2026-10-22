@@ -1,20 +1,20 @@
 import { supabase } from '../lib/supabaseClient'
 
 // Subir archivos al bucket media-planner y devolver array [{name, url}]
-export async function uploadPlannerFiles(files, folder = 'tasks') {
+export async function uploadPlannerFiles(files, folder = 'tasks', companyId) {
   if (!files || !files.length) return []
+  if (!/^[0-9a-f-]{36}$/i.test(companyId || '') || !['tasks','billing'].includes(folder)) throw new Error('Invalid tenant or attachment folder')
   const results = []
   for (const file of files) {
     const ext  = file.name.split('.').pop()
-    const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    const path = `${companyId}/${folder}/${crypto.randomUUID()}.${ext.replace(/[^a-zA-Z0-9]/g, '') || 'bin'}`
     const { error } = await supabase.storage
       .from('media-planner')
       .upload(path, file, { upsert: false })
     if (error) throw new Error(`Error subiendo ${file.name}: ${error.message}`)
-    const { data: { publicUrl } } = supabase.storage
-      .from('media-planner')
-      .getPublicUrl(path)
-    results.push({ name: file.name, url: publicUrl, path })
+    // El bucket es privado: se guarda solo la ruta y al abrir el archivo se
+    // pide una URL firmada. Antes se guardaba una URL pública que no abría.
+    results.push({ name: file.name, path })
   }
   return results
 }
@@ -36,8 +36,15 @@ export async function getPlanningTasks(companyId, clientCompanyIds, fromDate, to
     query = query.is('client_company_id', null)
   }
 
-  if (fromDate) query = query.gte('start_datetime', fromDate)
-  if (toDate) query = query.lte('end_datetime', toDate)
+  // Las recurrentes se traen siempre: su fila original puede ser muy anterior
+  // al rango y aun así tener ocurrencias dentro (se expanden en lib/recurrence).
+  if (fromDate && toDate) {
+    query = query.or(`recurrence_type.neq.none,and(start_datetime.gte.${fromDate},start_datetime.lte.${toDate})`)
+  } else if (fromDate) {
+    query = query.gte('start_datetime', fromDate)
+  } else if (toDate) {
+    query = query.lte('start_datetime', toDate)
+  }
   const { data, error } = await query.order('start_datetime', { ascending: true })
   if (error) throw error
   return data
@@ -63,8 +70,13 @@ export async function getBilling(companyId, clientCompanyIds, fromDate, toDate) 
     .select('*')
     .eq('company_id', companyId)
     .in('client_company_id', clientCompanyIds)
-  if (fromDate) query = query.gte('billing_date', fromDate)
-  if (toDate) query = query.lte('billing_date', toDate)
+  if (fromDate && toDate) {
+    query = query.or(`recurrence_type.neq.none,and(billing_date.gte.${fromDate},billing_date.lte.${toDate})`)
+  } else if (fromDate) {
+    query = query.gte('billing_date', fromDate)
+  } else if (toDate) {
+    query = query.lte('billing_date', toDate)
+  }
   const { data, error } = await query.order('billing_date', { ascending: true })
   if (error) throw error
   return data

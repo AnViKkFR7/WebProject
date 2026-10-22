@@ -796,3 +796,31 @@
         padding: 1rem;
     }
 }
+
+/* --- Fase 1: modales sobre components/ui/Modal --- */
+.reorder-dialog .modal-body { padding: 0; }
+
+.reorder-thumb-cover {
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    filter: none;
+}
+
+.pdf-preview-dialog { height: 90vh; }
+.pdf-preview-dialog .modal-body { display: flex; padding: 0; overflow: hidden; }
+.pdf-preview-dialog .pdf-preview-body { flex: 1; }
+
+.collapse-toggle-btn,
+.edit-btn,
+.save-btn,
+.cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-icon { color: var(--text-tertiary); }

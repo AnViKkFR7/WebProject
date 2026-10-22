@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import Icon from '../components/ui/Icon'
 
 const LegalNotice = () => {
   const { t } = useLanguage()
@@ -10,7 +11,7 @@ const LegalNotice = () => {
       <section className="page-header">
         <div>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1rem' }}>
-             ← {t('common.back') || 'Volver'}
+             <Icon name="chevronLeft" size={16} /> {t('common.back')}
           </button>
           <h2>Aviso Legal y Condiciones de Uso</h2>
         </div>

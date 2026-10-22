@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { userService } from '../../services/userService'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useFeedback } from '../../contexts/FeedbackContext'
+import Icon from '../ui/Icon'
 
 const CreateUserTab = ({ companies }) => {
   const { t } = useLanguage()
+  const { toast } = useFeedback()
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -68,10 +71,11 @@ const CreateUserTab = ({ companies }) => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
       .then(() => {
-        alert(t('profile.messages.clipboardCopied'))
+        toast.success(t('profile.messages.clipboardCopied'))
       })
       .catch(err => {
         console.error('Error al copiar:', err)
+        toast.error(t('feedback.copyError'))
       })
   }
 
@@ -237,7 +241,7 @@ const CreateUserTab = ({ companies }) => {
                     padding: '0.25rem'
                   }}
                 >
-                  ✕
+                  <Icon name="close" size={16} />
                 </button>
               )}
 
@@ -371,7 +375,7 @@ const CreateUserTab = ({ companies }) => {
                         alignItems: 'center'
                       }}
                     >
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                      <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
                     </button>
                   </div>
                   <button

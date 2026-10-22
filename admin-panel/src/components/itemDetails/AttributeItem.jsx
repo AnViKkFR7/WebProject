@@ -1,18 +1,20 @@
-import { useState } from 'react'
 import DatePicker from '../DatePicker'
 import { displayLabel } from '../../lib/attributeLabel'
+import { uiTypeOf } from '../../lib/attributeTypes'
+import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
-const AttributeItem = ({ 
-  definition, 
-  attributeValue, 
+const AttributeItem = ({
+  definition,
+  attributeValue,
   isEditable,
   canEdit,
   onToggleEditable,
   onDiscard,
   onUpdate,
-  onUpdateDefinition
 }) => {
-  const { value, originalValue, edited } = attributeValue || { value: null, originalValue: null, edited: false }
+  const { t } = useLanguage()
+  const { value, edited } = attributeValue || { value: null, edited: false }
 
   const handleValueChange = (newValue) => {
     onUpdate(definition.id, newValue)
@@ -41,8 +43,8 @@ const AttributeItem = ({
             className="input"
             value={value ?? ''}
             onChange={(e) => {
-              const val = e.target.value === '' ? null : 
-                         definition.data_type === 'integer' ? parseInt(e.target.value, 10) : 
+              const val = e.target.value === '' ? null :
+                         definition.data_type === 'integer' ? parseInt(e.target.value, 10) :
                          parseFloat(e.target.value)
               handleValueChange(val)
             }}
@@ -55,6 +57,7 @@ const AttributeItem = ({
       case 'date':
         return (
           <DatePicker
+            label={displayLabel(definition.label)}
             value={value || ''}
             onChange={(dateString) => handleValueChange(dateString || null)}
             disabled={!isEditable}
@@ -66,11 +69,11 @@ const AttributeItem = ({
         return (
           <div>
             {Array.isArray(value) && value.length > 0 && (
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '0.5rem', 
-                marginBottom: '0.75rem' 
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
               }}>
                 {value.map((item, index) => (
                   <div key={index} className="array-item">
@@ -92,7 +95,7 @@ const AttributeItem = ({
                         }}
                         title="Eliminar"
                       >
-                        ✕
+                        <Icon name="close" size={16} />
                       </button>
                     )}
                   </div>
@@ -155,11 +158,11 @@ const AttributeItem = ({
         return (
           <div>
             {Array.isArray(value) && value.length > 0 && (
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '0.5rem', 
-                marginBottom: '0.75rem' 
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
               }}>
                 {value.map((item, index) => (
                   <div key={index} className="array-item">
@@ -181,7 +184,7 @@ const AttributeItem = ({
                         }}
                         title="Eliminar"
                       >
-                        ✕
+                        <Icon name="close" size={16} />
                       </button>
                     )}
                   </div>
@@ -287,7 +290,7 @@ const AttributeItem = ({
   }
 
   return (
-    <div className="attr-item-card" style={{ 
+    <div className="attr-item-card" style={{
       padding: '1rem',
       backgroundColor: 'var(--bg-hover)',
       borderRadius: '8px',
@@ -295,9 +298,9 @@ const AttributeItem = ({
       marginBottom: '1.5rem'
     }}>
       {/* Attribute Header */}
-      <div className="attr-item-header" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div className="attr-item-header" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: '1rem',
         flexWrap: 'wrap',
@@ -311,8 +314,8 @@ const AttributeItem = ({
             </label>
           </div>
           {definition.description && (
-            <p style={{ 
-              fontSize: '0.75rem', 
+            <p style={{
+              fontSize: '0.75rem',
               color: 'var(--text-secondary)',
               marginTop: '0.25rem',
               marginBottom: '0.5rem'
@@ -320,79 +323,39 @@ const AttributeItem = ({
               {definition.description}
             </p>
           )}
-          <div className="attr-item-meta" style={{ 
+          <div className="attr-item-meta" style={{
             fontSize: '0.75rem',
             display: 'flex',
             gap: '0.5rem',
             flexWrap: 'wrap'
           }}>
-            <span style={{ 
-              backgroundColor: 'var(--primary-light)', 
+            <span style={{
+              backgroundColor: 'var(--primary-light)',
               color: 'var(--primary-color)',
-              padding: '2px 8px', 
+              padding: '2px 8px',
               borderRadius: '12px',
               fontWeight: 500
-            }}>Clave: {definition.key}</span>
-            <span style={{ 
-              backgroundColor: 'var(--primary-light)', 
+            }}>{t('attributes.key')}: {definition.key}</span>
+            <span style={{
+              backgroundColor: 'var(--primary-light)',
               color: 'var(--primary-color)',
-              padding: '2px 8px', 
+              padding: '2px 8px',
               borderRadius: '12px',
               fontWeight: 500
-            }}>Tipo: {definition.data_type}</span>
+            }}>{t(`attributes.types.${uiTypeOf(definition)}`)}</span>
           </div>
         </div>
 
-        {/* Attribute Settings */}
-        {canEdit && onUpdateDefinition && (
-          <div className="attr-item-settings" style={{ 
-            display: 'flex', 
-            gap: '1rem',
-            fontSize: '0.875rem',
-            flexWrap: 'wrap'
-          }}>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              cursor: isEditable ? 'pointer' : 'not-allowed',
-              opacity: isEditable ? 1 : 0.6
-            }} title="Marcar este campo como obligatorio">
-              <input
-                type="checkbox"
-                checked={definition.is_required}
-                onChange={(e) => isEditable && onUpdateDefinition(definition.id, { is_required: e.target.checked })}
-                disabled={!isEditable}
-              />
-              Requerido
-            </label>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              cursor: isEditable ? 'pointer' : 'not-allowed',
-              opacity: isEditable ? 1 : 0.6
-            }} title="Permitir filtrar por este campo en las búsquedas">
-              <input
-                type="checkbox"
-                checked={definition.is_filterable}
-                onChange={(e) => isEditable && onUpdateDefinition(definition.id, { is_filterable: e.target.checked })}
-                disabled={!isEditable}
-              />
-              Filtrable
-            </label>
-          </div>
-        )}
       </div>
 
       <div className="attr-item-input-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           {renderInput()}
         </div>
-        
+
         {/* Edit/Lock button and Discard button - outside input */}
         {canEdit && (
-          <div style={{ 
+          <div style={{
             display: 'flex',
             gap: '5px',
             alignItems: 'center'
@@ -413,10 +376,10 @@ const AttributeItem = ({
                 }}
                 title="Descartar cambios"
               >
-                ↺
+                <Icon name="reset" size={18} />
               </button>
             )}
-            
+
             {/* Edit/Lock toggle button */}
             <button
               onClick={() => onToggleEditable(`attr-${definition.id}`)}
@@ -432,7 +395,7 @@ const AttributeItem = ({
               }}
               title={isEditable ? 'Bloquear campo' : 'Editar campo'}
             >
-              ✏️
+              <Icon name="edit" size={16} />
             </button>
           </div>
         )}

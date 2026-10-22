@@ -54,11 +54,12 @@ serve(async (req) => {
     return json({ error: "Invalid role" }, 400);
   }
 
-  const { error } = await userClient
-    .from("company_members")
-    .update({ role, last_edited_by: user.id })
-    .eq("company_id", company_id)
-    .eq("user_id", user_id);
+  const { data: member, error: lookupError } = await userClient.from('company_members')
+    .select('full_name,phone').eq('company_id',company_id).eq('user_id',user_id).single();
+  if (lookupError || !member) return json({ error:'Member not found' },404);
+  const { error } = await userClient.rpc('update_company_member', {
+    p_company:company_id,p_user:user_id,p_name:member.full_name || '',p_phone:member.phone || '',p_role:role,
+  });
 
   if (error) return json({ error: error.message }, 400);
   return json({ ok: true });

@@ -1,0 +1,7 @@
+.controls { width:100%; display:flex; align-items:center; flex-wrap:wrap; justify-content:center; gap:.5rem; margin-bottom:.25rem; }
+.pageButton { display:grid; place-items:center; min-width:36px; min-height:36px; border:1px solid var(--text-secondary); border-radius:8px; background:var(--bg-card); color:var(--text-primary); cursor:pointer; }
+.pageButton:disabled { opacity:.35; cursor:not-allowed; }
+.pageSelect { display:flex; align-items:center; gap:.4rem; color:var(--text-primary); font-size:.75rem; }
+.pageSelect select { font:inherit; min-width:48px; min-height:36px; border:1px solid var(--border-color); background:var(--bg-card); border-radius:8px; color:var(--text-primary); padding:.3rem; }
+.openLink { display:inline-flex; align-items:center; gap:.3rem; padding:.4rem .5rem; color:var(--primary-color); text-decoration:underline; font-size:.72rem; font-weight:600; }
+.pageButton:focus-visible,.pageSelect select:focus-visible,.openLink:focus-visible { outline:3px solid var(--primary-color); outline-offset:2px; }

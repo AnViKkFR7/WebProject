@@ -95,6 +95,25 @@ serve(async (req) => {
       last_edited_by: user.id,
     });
 
+    // Eventos de analítica por defecto: form_open/form_submit, para que el
+    // CTA principal (contacto) ya tenga eventos dados de alta desde el día 1
+    await userClient.from("analytics_event_definitions").insert([
+      {
+        company_id: company.id,
+        key: "form_open",
+        label: "Apertura de formulario de contacto",
+        created_by: user.id,
+        last_edited_by: user.id,
+      },
+      {
+        company_id: company.id,
+        key: "form_submit",
+        label: "Envío de formulario de contacto",
+        created_by: user.id,
+        last_edited_by: user.id,
+      },
+    ]);
+
     return json({ company });
   } catch (error) {
     console.error('[CREATE-USER] Unexpected error:', error)

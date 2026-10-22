@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { itemMediaService } from '../../services/itemMediaService'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useFeedback } from '../../contexts/FeedbackContext'
+import Modal from '../ui/Modal'
+import Icon from '../ui/Icon'
 import '../../styles/ItemMedia.css'
 
 /**
@@ -38,6 +41,7 @@ const compressToWebP = (file, maxPx = 1920, quality = 0.82) =>
 
 const ItemMedia = ({ itemId, canEdit }) => {
   const { t } = useLanguage()
+  const { toast, confirm } = useFeedback()
   const [media, setMedia] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -53,6 +57,8 @@ const ItemMedia = ({ itemId, canEdit }) => {
   const dragItem = useRef(null)
   const reorderGridRef = useRef(null)
   const [showReorderModal, setShowReorderModal] = useState(false)
+  // PDFs elegidos que esperan su descripción antes de subirse
+  const [pendingPdfs, setPendingPdfs] = useState(null)
   const [reorderImages, setReorderImages] = useState([])
 
   const images = media.filter(m => m.file_type === 'image')
@@ -101,6 +107,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
 
   const handleFileUpload = async (e, fileType) => {
     const files = Array.from(e.target.files)
+    e.target.value = null
     if (files.length === 0) return
 
     const maxCount = fileType === 'image' ? 35 : 2
@@ -108,32 +115,33 @@ const ItemMedia = ({ itemId, canEdit }) => {
     const availableSlots = maxCount - currentCount
 
     if (files.length > availableSlots) {
-      alert(t(`itemMedia.max${fileType === 'image' ? 'Images' : 'Pdfs'}Warning`).replace('{max}', maxCount))
+      toast.error(t(`itemMedia.max${fileType === 'image' ? 'Images' : 'Pdfs'}Warning`).replace('{max}', maxCount))
       return
     }
 
+    // 50MB por archivo
+    const tooBig = files.find(file => file.size > 50 * 1024 * 1024)
+    if (tooBig) {
+      toast.error(t('itemMedia.fileSizeError').replace('{name}', tooBig.name))
+      return
+    }
+
+    if (fileType === 'pdf') {
+      // La descripción es lo que ve el visitante en la web: se pide antes de subir
+      setPendingPdfs(files.map(file => ({ file, description: file.name.replace(/\.pdf$/i, '') })))
+      return
+    }
+
+    await uploadFiles(files.map(file => ({ file, description: '' })), fileType)
+  }
+
+  const uploadFiles = async (entries, fileType) => {
     setUploading(true)
     setError(null)
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        
-        // Validate file size (50MB)
-        if (file.size > 50 * 1024 * 1024) {
-          throw new Error(t('itemMedia.fileSizeError').replace('{name}', file.name))
-        }
-
-        // For PDFs, require description
-        let altText = ''
-        if (fileType === 'pdf') {
-          altText = prompt(t('itemMedia.pdfDescriptionPrompt'))
-          if (!altText || altText.trim() === '') {
-            alert(t('itemMedia.pdfDescriptionRequired'))
-            continue
-          }
-        }
-
+      for (let i = 0; i < entries.length; i++) {
+        const { file, description } = entries[i]
         const nextSortOrder = media.filter(m => m.file_type === fileType).length + i
         const isCover = fileType === 'image' && images.length === 0 && i === 0
 
@@ -141,19 +149,33 @@ const ItemMedia = ({ itemId, canEdit }) => {
           file,
           itemId,
           fileType,
-          altText,
+          description,
           isCover,
           nextSortOrder
         )
       }
 
       await loadMedia()
-      e.target.value = null
     } catch (err) {
       setError(err.message)
     } finally {
       setUploading(false)
     }
+  }
+
+  const updatePendingDescription = (index, description) => {
+    setPendingPdfs(prev => prev.map((entry, i) => (i === index ? { ...entry, description } : entry)))
+  }
+
+  const confirmPdfUpload = async (e) => {
+    e.preventDefault()
+    const entries = pendingPdfs.map(entry => ({ file: entry.file, description: entry.description.trim() }))
+    if (entries.some(entry => !entry.description)) {
+      toast.error(t('itemMedia.pdfDescriptionRequired'))
+      return
+    }
+    setPendingPdfs(null)
+    await uploadFiles(entries, 'pdf')
   }
 
   const handleOptimizedUpload = async (e) => {
@@ -162,7 +184,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
 
     const availableSlots = 35 - images.length
     if (files.length > availableSlots) {
-      alert(t('itemMedia.maxImagesWarning').replace('{max}', 35))
+      toast.error(t('itemMedia.maxImagesWarning').replace('{max}', 35))
       return
     }
 
@@ -194,13 +216,14 @@ const ItemMedia = ({ itemId, canEdit }) => {
   }
 
   const handleDelete = async (mediaId, fileType) => {
-    if (!confirm(t('itemMedia.deleteConfirm'))) return
+    const ok = await confirm({ message: t('itemMedia.deleteConfirm'), confirmLabel: t('common.delete'), danger: true })
+    if (!ok) return
 
     try {
       setError(null)
       await itemMediaService.deleteMedia(mediaId)
       await loadMedia()
-      
+
       if (fileType === 'image' && currentImageIndex >= images.length - 1) {
         setCurrentImageIndex(Math.max(0, images.length - 2))
       }
@@ -329,11 +352,14 @@ const ItemMedia = ({ itemId, canEdit }) => {
       <div className="section-header-with-toggle">
         <h2 className="section-title">{t('itemMedia.title')}</h2>
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
           className="collapse-toggle-btn"
           title={collapsed ? t('common.expand') : t('common.collapse')}
+          aria-label={collapsed ? t('common.expand') : t('common.collapse')}
+          aria-expanded={!collapsed}
         >
-          {collapsed ? '▼' : '▲'}
+          <Icon name={collapsed ? 'chevronDown' : 'chevronUp'} size={18} />
         </button>
       </div>
 
@@ -373,7 +399,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
                       disabled={uploading}
                       style={{ display: 'none' }}
                     />
-                    {uploading ? t('itemMedia.uploading') : '✨ Subir imágenes optimizadas'}
+                    {uploading ? t('itemMedia.uploading') : <><Icon name="upload" size={16} />{t('itemMedia.uploadOptimized')}</>}
                   </label>
                 </>
               )}
@@ -383,7 +409,8 @@ const ItemMedia = ({ itemId, canEdit }) => {
                   onClick={openReorderModal}
                   disabled={uploading}
                 >
-                  ⠿ {t('itemMedia.reorderImages')}
+                  <Icon name="move" size={16} />
+                  {t('itemMedia.reorderImages')}
                 </button>
               )}
             </div>
@@ -437,7 +464,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
                 </span>
                 {images[currentImageIndex]?.is_cover && (
                   <span className="cover-badge-inline">
-                    <span className="cover-icon">⭐</span>
+                    <span className="cover-icon"><Icon name="star" size={14} /></span>
                     <span className="cover-text">{t('itemMedia.coverImage')}</span>
                   </span>
                 )}
@@ -453,11 +480,11 @@ const ItemMedia = ({ itemId, canEdit }) => {
                     className="input"
                     autoFocus
                   />
-                  <button onClick={() => saveDescription(images[currentImageIndex].id)} className="save-btn">
-                    ✓
+                  <button type="button" onClick={() => saveDescription(images[currentImageIndex].id)} className="save-btn" aria-label={t('common.save')}>
+                    <Icon name="check" size={18} />
                   </button>
-                  <button onClick={cancelEditDescription} className="cancel-btn">
-                    ✕
+                  <button type="button" onClick={cancelEditDescription} className="cancel-btn" aria-label={t('common.cancel')}>
+                    <Icon name="close" size={18} />
                   </button>
                 </div>
               ) : (
@@ -465,10 +492,12 @@ const ItemMedia = ({ itemId, canEdit }) => {
                   <p>{images[currentImageIndex]?.alt_text || t('itemMedia.noDescription')}</p>
                   {canEdit && (
                     <button
+                      type="button"
                       onClick={() => startEditDescription(images[currentImageIndex].id, images[currentImageIndex].alt_text)}
                       className="edit-btn"
+                      aria-label={t('common.edit')}
                     >
-                      ✏️
+                      <Icon name="edit" size={18} />
                     </button>
                   )}
                 </div>
@@ -476,7 +505,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
 
               {imageDimensions[currentImageIndex] && (
                 <div className="image-dimensions">
-                  <span className="dimensions-label">📐 {t('itemMedia.dimensions')}:</span>
+                  <span className="dimensions-label">{t('itemMedia.dimensions')}:</span>
                   <span className="dimensions-value">
                     {imageDimensions[currentImageIndex].width} × {imageDimensions[currentImageIndex].height} px
                   </span>
@@ -532,7 +561,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
           <div className="pdf-list">
             {pdfs.map((pdf) => (
               <div key={pdf.id} className="pdf-item">
-                <div className="pdf-icon">📄</div>
+                <div className="pdf-icon"><Icon name="file" size={28} strokeWidth={1.5} /></div>
                 <div className="pdf-info">
                   {editingDescriptionId === pdf.id ? (
                     <div className="description-edit">
@@ -544,18 +573,24 @@ const ItemMedia = ({ itemId, canEdit }) => {
                         className="input"
                         autoFocus
                       />
-                      <button onClick={() => saveDescription(pdf.id)} className="save-btn">✓</button>
-                      <button onClick={cancelEditDescription} className="cancel-btn">✕</button>
+                      <button type="button" onClick={() => saveDescription(pdf.id)} className="save-btn" aria-label={t('common.save')}>
+                        <Icon name="check" size={18} />
+                      </button>
+                      <button type="button" onClick={cancelEditDescription} className="cancel-btn" aria-label={t('common.cancel')}>
+                        <Icon name="close" size={18} />
+                      </button>
                     </div>
                   ) : (
                     <div className="description-display">
                       <p>{pdf.alt_text}</p>
                       {canEdit && (
                         <button
+                          type="button"
                           onClick={() => startEditDescription(pdf.id, pdf.alt_text)}
                           className="edit-btn"
+                          aria-label={t('common.edit')}
                         >
-                          ✏️
+                          <Icon name="edit" size={18} />
                         </button>
                       )}
                     </div>
@@ -586,14 +621,24 @@ const ItemMedia = ({ itemId, canEdit }) => {
       )}
 
       {/* Reorder Modal */}
-      {showReorderModal && (
-        <div className="reorder-modal" onClick={closeReorderModal}>
-          <div className="reorder-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="reorder-modal-header">
-              <h3>{t('itemMedia.reorderTitle')}</h3>
-              <button onClick={closeReorderModal} className="modal-close-btn">✕</button>
-            </div>
-            <p className="reorder-hint">{t('itemMedia.reorderHint')}</p>
+      <Modal
+        open={showReorderModal}
+        onClose={closeReorderModal}
+        size="lg"
+        className="reorder-dialog"
+        title={t('itemMedia.reorderTitle')}
+        description={t('itemMedia.reorderHint')}
+        footer={(
+          <>
+            <button type="button" onClick={closeReorderModal} className="ghost-button">
+              {t('common.cancel')}
+            </button>
+            <button type="button" onClick={saveReorder} className="primary-button">
+              {t('itemMedia.saveOrder')}
+            </button>
+          </>
+        )}
+      >
             <div className="reorder-grid" ref={reorderGridRef}>
               {reorderImages.map((img, index) => (
                 <div
@@ -611,30 +656,74 @@ const ItemMedia = ({ itemId, canEdit }) => {
                 >
                   <img src={img.url_externa} alt={img.alt_text || ''} loading="lazy" />
                   <span className="reorder-thumb-num">{index + 1}</span>
-                  {img.is_cover && <span className="reorder-thumb-cover">⭐</span>}
+                  {img.is_cover && <span className="reorder-thumb-cover" title={t('itemMedia.cover')}>{t('itemMedia.cover')}</span>}
                 </div>
               ))}
             </div>
-            <div className="reorder-modal-footer">
-              <button onClick={closeReorderModal} className="action-btn">
-                {t('common.cancel')}
-              </button>
-              <button onClick={saveReorder} className="action-btn primary">
-                {t('itemMedia.saveOrder')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {/* PDF Preview Modal */}
-      {pdfPreview && (
-        <div className="pdf-preview-modal" onClick={closePdfPreview}>
-          <div className="pdf-preview-content" onClick={(e) => e.stopPropagation()}>
-            <div className="pdf-preview-header">
-              <h3>{pdfPreview.alt_text}</h3>
-              <button onClick={closePdfPreview} className="modal-close-btn">✕</button>
+      {/* PDF description before upload */}
+      <Modal
+        open={Boolean(pendingPdfs)}
+        onClose={() => setPendingPdfs(null)}
+        title={t('itemMedia.pdfDescriptionTitle')}
+        description={t('itemMedia.pdfDescriptionPrompt')}
+        footer={(
+          <>
+            <button type="button" className="ghost-button" onClick={() => setPendingPdfs(null)}>
+              {t('common.cancel')}
+            </button>
+            <button type="submit" form="pdf-description-form" className="primary-button">
+              <Icon name="upload" size={16} />
+              {t('itemMedia.uploadPdfs')}
+            </button>
+          </>
+        )}
+      >
+        <form id="pdf-description-form" onSubmit={confirmPdfUpload}>
+          {pendingPdfs?.map((entry, index) => (
+            <div className="field" key={`${entry.file.name}-${index}`}>
+              <label htmlFor={`pdf-description-${index}`} className="field-label">
+                {entry.file.name}
+              </label>
+              <input
+                id={`pdf-description-${index}`}
+                type="text"
+                className="input"
+                value={entry.description}
+                onChange={(e) => updatePendingDescription(index, e.target.value)}
+                placeholder={t('itemMedia.descriptionPlaceholder')}
+                required
+              />
             </div>
+          ))}
+        </form>
+      </Modal>
+
+      {/* PDF Preview Modal */}      {/* PDF Preview Modal */}
+      <Modal
+        open={Boolean(pdfPreview)}
+        onClose={closePdfPreview}
+        size="xl"
+        className="pdf-preview-dialog"
+        title={pdfPreview?.alt_text}
+        footer={pdfPreview && (
+          <>
+            <a
+              href={pdfPreview.url_externa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="primary-button"
+            >
+              {t('itemMedia.openInNewTab')}
+            </a>
+            <button type="button" onClick={closePdfPreview} className="ghost-button">
+              {t('common.close')}
+            </button>
+          </>
+        )}
+      >
+        {pdfPreview && (
             <div className="pdf-preview-body">
               <iframe
                 src={`${pdfPreview.url_externa}#toolbar=0&navpanes=0&scrollbar=0`}
@@ -643,22 +732,8 @@ const ItemMedia = ({ itemId, canEdit }) => {
                 type="application/pdf"
               />
             </div>
-            <div className="pdf-preview-footer">
-              <a
-                href={pdfPreview.url_externa}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="action-btn primary"
-              >
-                {t('itemMedia.openInNewTab')}
-              </a>
-              <button onClick={closePdfPreview} className="action-btn">
-                {t('common.close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

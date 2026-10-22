@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const CompanyTab = ({ selectedCompany, memberProfile }) => {
   const { t } = useLanguage()
@@ -16,7 +17,7 @@ const CompanyTab = ({ selectedCompany, memberProfile }) => {
         <div className="info-banner">
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
             <div style={{ display: 'flex' }}>
-              <span className="icon">⚠️</span>
+              <span className="icon"><Icon name="alert" size={20} /></span>
             </div>
             <div style={{ display: 'flex', paddingLeft: '1rem', height: 'fit-content' }}>
               <p style={{ margin: '0' }}>{t('profile.messages.noCompanySelected')}</p>
@@ -30,7 +31,7 @@ const CompanyTab = ({ selectedCompany, memberProfile }) => {
           <div className="info-banner">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem' }}>
-                <span className="icon">🏢</span>
+                <span className="icon"><Icon name="companies" size={20} /></span>
                 <div>
                   <h4 style={{ margin: 0 }}>{selectedCompany.name}</h4>
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>

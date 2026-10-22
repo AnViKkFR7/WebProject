@@ -1,86 +1,76 @@
-const AttributeDefinitionsForm = ({ 
-  newDefinitions, 
-  handleNewDefinitionChange, 
-  handleRemoveRow 
-}) => {
+import { useLanguage } from '../../contexts/LanguageContext'
+import { ATTRIBUTE_TYPES } from '../../lib/attributeTypes'
+import Icon from '../ui/Icon'
+
+// La lista de opciones necesita definir sus opciones: se crea desde el editor individual
+const BULK_TYPES = ATTRIBUTE_TYPES.filter((type) => type.value !== 'options')
+
+/** Tabla de alta en lote (nuevo tipo de item o importación desde Excel). */
+const AttributeDefinitionsForm = ({ newDefinitions, handleNewDefinitionChange, handleRemoveRow }) => {
+  const { t } = useLanguage()
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ 
-        width: '100%', 
-        borderCollapse: 'collapse',
-        border: '1px solid var(--border-color)',
-        borderRadius: '8px'
-      }}>
+    <div className="bulk-table-wrap">
+      <table className="bulk-table">
         <thead>
-          <tr style={{ backgroundColor: 'var(--bg-table-header)', borderBottom: '2px solid var(--border-color)' }}>
-            <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem' }}>Label *</th>
-            <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem' }}>Data Type *</th>
-            <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, fontSize: '0.875rem' }}>Filtrable</th>
-            <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, fontSize: '0.875rem' }}>Requerido</th>
-            <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, fontSize: '0.875rem', width: '60px' }}></th>
+          <tr>
+            <th scope="col">{t('attributes.labelEs')}</th>
+            <th scope="col">{t('attributes.type')}</th>
+            <th scope="col" className="is-center">{t('attributes.filterable')}</th>
+            <th scope="col" className="is-center">{t('attributes.required')}</th>
+            <th scope="col"><span className="visually-hidden">{t('common.actions')}</span></th>
           </tr>
         </thead>
         <tbody>
           {newDefinitions.map((def, index) => (
-            <tr key={index} style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <td style={{ padding: '0.5rem' }}>
+            <tr key={index}>
+              <td>
                 <input
                   type="text"
                   className="input"
                   value={def.label}
                   onChange={(e) => handleNewDefinitionChange(index, 'label', e.target.value)}
-                  placeholder="Ej: Número de habitaciones"
-                  style={{ width: '100%' }}
+                  placeholder={t('attributes.labelPlaceholder')}
+                  aria-label={`${t('attributes.labelEs')} ${index + 1}`}
                 />
               </td>
-              <td style={{ padding: '0.5rem' }}>
+              <td>
                 <select
                   className="select"
                   value={def.data_type}
                   onChange={(e) => handleNewDefinitionChange(index, 'data_type', e.target.value)}
-                  style={{ width: '100%' }}
+                  aria-label={`${t('attributes.type')} ${index + 1}`}
                 >
-                  <option value="text">text</option>
-                  <option value="longtext">longtext</option>
-                  <option value="integer">integer</option>
-                  <option value="decimal">decimal</option>
-                  <option value="boolean">boolean</option>
-                  <option value="date">date</option>
-                  <option value="text_array">text_array</option>
-                  <option value="number_array">number_array</option>
+                  {BULK_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{t(`attributes.types.${type.value}`)}</option>
+                  ))}
                 </select>
               </td>
-              <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+              <td className="is-center">
                 <input
                   type="checkbox"
                   checked={def.is_filterable}
                   onChange={(e) => handleNewDefinitionChange(index, 'is_filterable', e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  aria-label={`${t('attributes.filterable')} ${index + 1}`}
                 />
               </td>
-              <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+              <td className="is-center">
                 <input
                   type="checkbox"
                   checked={def.is_required}
                   onChange={(e) => handleNewDefinitionChange(index, 'is_required', e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  aria-label={`${t('attributes.required')} ${index + 1}`}
                 />
               </td>
-              <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+              <td className="is-center">
                 <button
+                  type="button"
+                  className="icon-button danger"
                   onClick={() => handleRemoveRow(index)}
                   disabled={newDefinitions.length === 1}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: newDefinitions.length === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '1.2rem',
-                    opacity: newDefinitions.length === 1 ? 0.3 : 1,
-                    color: 'var(--text-secondary)'
-                  }}
-                  title="Eliminar fila"
+                  aria-label={t('attributes.removeRow').replace('{n}', index + 1)}
                 >
-                  ❌
+                  <Icon name="trash" size={16} />
                 </button>
               </td>
             </tr>

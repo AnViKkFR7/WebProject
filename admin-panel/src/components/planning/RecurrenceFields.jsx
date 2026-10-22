@@ -1,7 +1,6 @@
 import { useLanguage } from '../../contexts/LanguageContext';
 import { RECURRENCE_UNIT_KEYS } from '../../lib/recurrence';
-
-const inputStyle = { padding: '9px 12px', borderRadius: 9, border: '1px solid #d1d1d6', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
+import Toggle from '../ui/Toggle';
 
 /**
  * Checkbox "Repetir tarea" + "cada N [unidad]" — reemplaza al select
@@ -32,25 +31,26 @@ export default function RecurrenceFields({ type, value, onChange }) {
 
   return (
     <div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '2px 0' }}>
-        <input type="checkbox" checked={enabled} onChange={(e) => handleToggle(e.target.checked)} />
-        <span style={{ fontWeight: 500 }}>{t('planning.repeatTask')}</span>
-      </label>
+      <Toggle checked={enabled} onChange={handleToggle} label={t('planning.repeatTask')} />
 
       {enabled && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-          <span style={{ fontSize: 14, color: '#3a3a3c', flexShrink: 0 }}>{t('planning.repeatEvery')}</span>
+        <div className="datetime-fields" style={{ alignItems: 'center', marginTop: '0.5rem' }}>
+          <span style={{ flexShrink: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{t('planning.repeatEvery')}</span>
           <input
             type="number"
             min="1"
+            className="input"
+            aria-label={t('planning.repeatEvery')}
             value={currentValue}
             onChange={(e) => onChange({ recurrence_type: type, recurrence_value: Math.max(1, Number(e.target.value) || 1) })}
-            style={{ ...inputStyle, width: 64, flexShrink: 0 }}
+            style={{ width: 70, flex: '0 0 auto', minWidth: 0 }}
           />
           <select
+            className="select"
+            aria-label={t('planning.repeatTask')}
             value={type}
             onChange={(e) => onChange({ recurrence_type: e.target.value, recurrence_value: currentValue })}
-            style={{ ...inputStyle, flex: 1 }}
+            style={{ flex: 1 }}
           >
             <option value="hourly">{unitOption('hourly')}</option>
             <option value="daily">{unitOption('daily')}</option>

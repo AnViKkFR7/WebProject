@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { itemService } from '../services/itemService'
 import { attributeDefinitionService } from '../services/attributeDefinitionService'
 import { supabase } from '../lib/supabaseClient'
@@ -11,16 +11,19 @@ import ItemBasicInfo from '../components/itemDetails/ItemBasicInfo'
 import ItemMedia from '../components/itemDetails/ItemMedia'
 import AttributesList from '../components/itemDetails/AttributesList'
 import ItemDetailFooter from '../components/itemDetails/ItemDetailFooter'
+import Icon from '../components/ui/Icon'
 
 const ItemDetail = () => {
   const { itemId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listUrl = '/items' + (location.state?.fromSearch || '')
   const { t } = useLanguage()
-  
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [accessDenied, setAccessDenied] = useState(false)
-  
+
   const [item, setItem] = useState(null)
   const [itemData, setItemData] = useState({
     title: '',
@@ -30,17 +33,16 @@ const ItemDetail = () => {
   })
   const [attributeValues, setAttributeValues] = useState({})
   const [attributeDefinitions, setAttributeDefinitions] = useState([])
-  const [attributeDefinitionChanges, setAttributeDefinitionChanges] = useState({})
   const [editableFields, setEditableFields] = useState({})
   const [originalItemData, setOriginalItemData] = useState(null)
-  
+
   const [user, setUser] = useState(null)
   const [userRole, setUserRole] = useState(null)
   const [canEdit, setCanEdit] = useState(false)
-  
+
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
-  
+
   const [searchFilter, setSearchFilter] = useState('')
   const [changedFieldsCount, setChangedFieldsCount] = useState(0)
 
@@ -48,18 +50,17 @@ const ItemDetail = () => {
     loadItemData()
   }, [itemId])
 
-  // Count changed fields (including attribute definitions and basic info)
+  // Requerido/Filtrable ya no se editan aquí (afectan a todos los items del tipo): están en /my-data
   useEffect(() => {
     const valueChanges = Object.values(attributeValues).filter(v => v.edited).length
-    const definitionChangesCount = Object.keys(attributeDefinitionChanges).length
     let basicInfoChanges = 0
     if (originalItemData) {
       if (itemData.title !== originalItemData.title) basicInfoChanges++
       if (itemData.summary !== originalItemData.summary) basicInfoChanges++
       if (itemData.status !== originalItemData.status) basicInfoChanges++
     }
-    setChangedFieldsCount(valueChanges + definitionChangesCount + basicInfoChanges)
-  }, [attributeValues, attributeDefinitionChanges, itemData, originalItemData])
+    setChangedFieldsCount(valueChanges + basicInfoChanges)
+  }, [attributeValues, itemData, originalItemData])
 
   const loadItemData = async () => {
     setLoading(true)
@@ -74,7 +75,7 @@ const ItemDetail = () => {
       }
 
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      
+
       if (!currentUser) {
         setAccessDenied(true)
         setLoading(false)
@@ -84,7 +85,7 @@ const ItemDetail = () => {
       setUser(currentUser)
 
       const itemData = await itemService.getItemById(itemId)
-      
+
       if (!itemData) {
         setError(t('itemDetail.error'))
         setLoading(false)
@@ -94,6 +95,7 @@ const ItemDetail = () => {
       const { data: membership, error: membershipError } = await supabase
         .from('company_members')
         .select('role')
+        .eq('is_active', true)
         .eq('user_id', currentUser.id)
         .eq('company_id', itemData.company_id)
         .single()
@@ -151,7 +153,7 @@ const ItemDetail = () => {
             default:
               value = av.value_text
           }
-          
+
           valuesMap[av.attribute_id] = {
             value,
             originalValue: value,
@@ -227,7 +229,7 @@ const ItemDetail = () => {
         if (mediaError) throw mediaError
 
         const hasCover = images && images.some(img => img.is_cover === true)
-        
+
         if (images && images.length > 0 && !hasCover) {
           throw new Error(t('itemMedia.coverRequiredToPublish') || 'Para publicar un item con imágenes, debe tener una imagen de portada.')
         }
@@ -238,11 +240,6 @@ const ItemDetail = () => {
         summary: itemData.summary,
         status: itemData.status
       })
-
-      // Save attribute definition changes (checkboxes)
-      for (const [definitionId, updates] of Object.entries(attributeDefinitionChanges)) {
-        await attributeDefinitionService.updateDefinition(definitionId, updates)
-      }
 
       for (const [attributeId, valueData] of Object.entries(attributeValues)) {
         if (!valueData.edited) continue
@@ -276,8 +273,8 @@ const ItemDetail = () => {
             attributeValueData.value_text_array = Array.isArray(value) ? value : [value]
             break
           case 'number_array':
-            attributeValueData.value_number_array = Array.isArray(value) 
-              ? value.map(v => parseFloat(v)) 
+            attributeValueData.value_number_array = Array.isArray(value)
+              ? value.map(v => parseFloat(v))
               : [parseFloat(value)]
             break
           default:
@@ -291,7 +288,6 @@ const ItemDetail = () => {
       setTimeout(() => setSuccessMessage(''), 3000)
 
       // Clear local changes and reset editable fields
-      setAttributeDefinitionChanges({})
       setEditableFields({})
       await loadItemData()
 
@@ -303,33 +299,15 @@ const ItemDetail = () => {
     }
   }
 
-  const handleAttributeDefinitionUpdate = (definitionId, updates) => {
-    if (!canEdit) return
-
-    // Update local state immediately for UI
-    setAttributeDefinitions(prev => 
-      prev.map(def => def.id === definitionId ? { ...def, ...updates } : def)
-    )
-    
-    // Track changes to save later
-    setAttributeDefinitionChanges(prev => ({
-      ...prev,
-      [definitionId]: {
-        ...(prev[definitionId] || {}),
-        ...updates
-      }
-    }))
-  }
-
   const handleCancel = () => {
-    navigate('/items')
+    navigate(listUrl)
   }
 
   if (loading) {
     return (
       <div className="page-content">
         <ItemDetailHeader loading={true} />
-        <div style={{ 
+        <div style={{
           border: '1px solid var(--border-color)',
           borderRadius: '8px',
           backgroundColor: 'var(--bg-primary)',
@@ -354,12 +332,12 @@ const ItemDetail = () => {
           borderRadius: '8px',
           backgroundColor: 'var(--bg-primary)'
         }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔒</div>
+          <div className="placeholder-icon"><Icon name="lock" size={48} strokeWidth={1.25} /></div>
           <h2 style={{ marginBottom: '1rem', color: 'var(--text-color)' }}>{t('itemDetail.accessDenied')}</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
             {t('itemDetail.accessDeniedMessage')}
           </p>
-          <button 
+          <button
             className="btn-primary"
             onClick={() => navigate('/login')}
           >
@@ -383,9 +361,9 @@ const ItemDetail = () => {
         }}>
           <h3 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>{t('itemDetail.error')}</h3>
           <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
-          <button 
+          <button
             className="btn-secondary"
-            onClick={() => navigate('/items')}
+            onClick={() => navigate(listUrl)}
             style={{ marginTop: '1rem' }}
           >
             {t('itemDetail.backToItems')}
@@ -411,7 +389,7 @@ const ItemDetail = () => {
           gap: '0.5rem',
           border: '1px solid #15803d'
         }}>
-          ✓ {successMessage}
+          <Icon name="check" size={16} /> {successMessage}
         </div>
       )}
 
@@ -451,7 +429,6 @@ const ItemDetail = () => {
         onToggleEditable={toggleFieldEditable}
         onDiscard={discardFieldChanges}
         onUpdate={updateAttributeValue}
-        onUpdateDefinition={handleAttributeDefinitionUpdate}
         onSearchChange={setSearchFilter}
         loading={false}
       />

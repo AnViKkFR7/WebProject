@@ -1,461 +1,434 @@
-import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
-import ItemTypeSelector from '../components/myData/ItemTypeSelector'
-import AttributeDefinitionsTable from '../components/myData/AttributeDefinitionsTable'
+import { useFeedback } from '../contexts/FeedbackContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { useDefinitionDraft } from '../hooks/useDefinitionDraft'
+import { attributeDefinitionService } from '../services/attributeDefinitionService'
+import { displayItemType, moveDefinition, parseLabel, uniqueKey } from '../lib/attributeTypes'
+import { downloadTemplate } from '../components/myData/excelUtils'
+import PageHeader from '../components/ui/PageHeader'
+import EmptyState from '../components/ui/EmptyState'
+import Icon from '../components/ui/Icon'
+import ItemTypeList from '../components/attributes/ItemTypeList'
+import AttributeRow from '../components/attributes/AttributeRow'
+import AttributeEditor from '../components/attributes/AttributeEditor'
+import FormPreview from '../components/attributes/FormPreview'
 import CreateAttributeModal from '../components/myData/CreateAttributeModal'
 import CreateItemTypeModal from '../components/myData/CreateItemTypeModal'
-import { downloadTemplate, importExcel } from '../components/myData/excelUtils'
+
+// PostgREST responde PGRST204 / 42703 cuando falta una columna: sin la migración
+// ATTRIBUTES_SCHEMA.sql no existen sort_order ni validation_rules
+const isMissingColumn = (error) => ['PGRST204', '42703'].includes(error?.code)
 
 const MyData = () => {
   const { selectedCompany } = useCompany()
   const { t } = useLanguage()
-  const [loading, setLoading] = useState(true)
-  const [itemTypes, setItemTypes] = useState([])
-  const [selectedItemType, setSelectedItemType] = useState(null)
-  const [attributeDefinitions, setAttributeDefinitions] = useState([])
-  const [editableFields, setEditableFields] = useState({})
-  const [originalValues, setOriginalValues] = useState({})
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showCreateItemTypeModal, setShowCreateItemTypeModal] = useState(false)
-  const [newItemType, setNewItemType] = useState('')
-  const [itemTypeExists, setItemTypeExists] = useState(false)
-  const [checkingItemType, setCheckingItemType] = useState(false)
-  const [newDefinitions, setNewDefinitions] = useState([{ label: '', data_type: 'text', is_filterable: false, is_required: false }])
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState('')
-  const [savingLabel, setSavingLabel] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  
-  const fileInputRef = useRef(null)
-  const fileInputItemTypeRef = useRef(null)
+  const { toast, confirm } = useFeedback()
+  const { canEdit } = usePermissions()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedType = searchParams.get('type')
 
+  const [types, setTypes] = useState([])
+  const [typesState, setTypesState] = useState('loading') // loading | error | ready
+  const [definitions, setDefinitions] = useState([])
+  const [definitionsState, setDefinitionsState] = useState('idle')
+  const [editor, setEditor] = useState(null) // { definition, valueCount }
+  const [saving, setSaving] = useState(false)
+  const [drag, setDrag] = useState(null)
+  const [showImport, setShowImport] = useState(false)
+  const [showNewType, setShowNewType] = useState(false)
+  const [newTypeName, setNewTypeName] = useState('')
+  const importInputRef = useRef(null)
+  const newTypeInputRef = useRef(null)
+
+  const companyId = selectedCompany?.id
+  const companyName = selectedCompany?.name?.trim() || ''
+
+  const reportError = useCallback((error, fallbackKey) => {
+    console.error(error)
+    toast.error(isMissingColumn(error) ? t('attributes.migrationNeeded') : t(fallbackKey))
+  }, [toast, t])
+
+  const draft = useDefinitionDraft({
+    onImported: (count) => toast.success(t('attributes.imported').replace('{count}', count)),
+    onImportError: (message) => toast.error(message),
+  })
+
+  const selectType = useCallback((itemType, replace = false) => {
+    setSearchParams(itemType ? { type: itemType } : {}, { replace })
+  }, [setSearchParams])
+
+  const loadTypes = useCallback(async () => {
+    if (!companyId) return
+    setTypesState('loading')
+    try {
+      setTypes(await attributeDefinitionService.getItemTypeSummary(companyId))
+      setTypesState('ready')
+    } catch (error) {
+      console.error('Error loading item types:', error)
+      setTypesState('error')
+    }
+  }, [companyId])
+
+  const loadDefinitions = useCallback(async () => {
+    if (!companyId || !selectedType) return
+    setDefinitionsState('loading')
+    try {
+      setDefinitions(await attributeDefinitionService.getDefinitions(companyId, selectedType))
+      setDefinitionsState('ready')
+    } catch (error) {
+      console.error('Error loading definitions:', error)
+      setDefinitionsState('error')
+    }
+  }, [companyId, selectedType])
+
+  useEffect(() => { loadTypes() }, [loadTypes])
+  useEffect(() => { loadDefinitions() }, [loadDefinitions])
+
+  // Sin tipo en la URL (o uno de otra empresa), se abre el primero
   useEffect(() => {
-    if (selectedCompany?.id) {
-      loadData()
-    }
-  }, [selectedCompany?.id])
+    if (typesState !== 'ready' || types.length === 0) return
+    if (!types.some((type) => type.itemType === selectedType)) selectType(types[0].itemType, true)
+  }, [typesState, types, selectedType, selectType])
 
-  const loadData = async () => {
-    if (!selectedCompany?.id) return
+  const existingKeys = useMemo(() => definitions.map((definition) => definition.key), [definitions])
 
+  // --- Acciones sobre un atributo ---
+
+  const handleToggle = async (definition, field, value) => {
+    setDefinitions((prev) => prev.map((d) => (d.id === definition.id ? { ...d, [field]: value } : d)))
     try {
-      setLoading(true)
-      await loadItemTypes(selectedCompany.id)
-    } catch (err) {
-      console.error('Error loading data:', err)
-      setError('Error al cargar los datos')
-    } finally {
-      setLoading(false)
+      await attributeDefinitionService.updateDefinition(definition.id, { [field]: value })
+    } catch (error) {
+      setDefinitions((prev) => prev.map((d) => (d.id === definition.id ? { ...d, [field]: !value } : d)))
+      reportError(error, 'attributes.saveError')
     }
   }
 
-  const loadItemTypes = async (compId) => {
-    try {
-      const { data, error: err } = await supabase
-        .from('attribute_definitions')
-        .select('item_type')
-        .eq('company_id', compId)
-
-      if (err) throw err
-
-      const uniqueTypes = [...new Set(data.map(d => d.item_type))]
-      setItemTypes(uniqueTypes)
-    } catch (err) {
-      console.error('Error loading item types:', err)
-      setError('Error al cargar los tipos de items')
-    }
-  }
-
-  const loadAttributeDefinitions = async (itemType) => {
-    if (!selectedCompany?.id) return
-
-    try {
-      setLoading(true)
-      const { data, error: err } = await supabase
-        .from('attribute_definitions')
-        .select('*')
-        .eq('company_id', selectedCompany.id)
-        .eq('item_type', itemType)
-        .order('created_at', { ascending: true })
-
-      if (err) throw err
-
-      setAttributeDefinitions(data || [])
-      const original = {}
-      data.forEach(def => {
-        original[def.id] = def.label
-      })
-      setOriginalValues(original)
-    } catch (err) {
-      console.error('Error loading definitions:', err)
-      setError('Error al cargar las definiciones de atributos')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSelectItemType = (itemType) => {
-    setSelectedItemType(itemType)
-    setEditableFields({})
-    setError(null)
-    setSuccess('')
-    loadAttributeDefinitions(itemType)
-  }
-
-  const toggleEdit = (id) => {
-    setEditableFields(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }))
-  }
-
-  const handleDiscardLabel = (id) => {
-    setAttributeDefinitions(prev =>
-      prev.map(def => def.id === id ? { ...def, label: originalValues[id] } : def)
-    )
-    toggleEdit(id)
-  }
-
-  const handleSaveLabel = async (id) => {
-    try {
-      setSavingLabel(id)
-      const def = attributeDefinitions.find(d => d.id === id)
-      
-      const { error: err } = await supabase
-        .from('attribute_definitions')
-        .update({ label: def.label })
-        .eq('id', id)
-
-      if (err) throw err
-
-      setOriginalValues(prev => ({ ...prev, [id]: def.label }))
-      toggleEdit(id)
-      setSuccess('Label actualizado correctamente')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      console.error('Error saving label:', err)
-      setError('Error al guardar el label')
-    } finally {
-      setSavingLabel(null)
-    }
-  }
-
-  const handleLabelChange = (id, value) => {
-    setAttributeDefinitions(prev =>
-      prev.map(def => def.id === id ? { ...def, label: value } : def)
-    )
-  }
-
-  const generateKey = (label) => {
-    return label
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-  }
-
-  const handleNewDefinitionChange = (index, field, value) => {
-    const updated = [...newDefinitions]
-    updated[index][field] = value
-    setNewDefinitions(updated)
-
-    // Si la fila actual tiene algún dato y es la última, añadir una nueva fila vacía
-    const currentRow = updated[index]
-    const hasData = currentRow.label || currentRow.data_type !== 'text' || currentRow.is_filterable || currentRow.is_required
-    if (hasData && index === updated.length - 1) {
-      setNewDefinitions([...updated, { label: '', data_type: 'text', is_filterable: false, is_required: false }])
-    }
-  }
-
-  const handleRemoveRow = (index) => {
-    if (newDefinitions.length > 1) {
-      setNewDefinitions(newDefinitions.filter((_, i) => i !== index))
-    }
-  }
-
-  const checkItemTypeExists = async (itemTypeName) => {
-    if (!itemTypeName.trim() || !selectedCompany?.id) {
-      setItemTypeExists(false)
+  const openEditor = async (definition = null) => {
+    if (!definition) {
+      setEditor({ definition: null, valueCount: 0 })
       return
     }
-
-    setCheckingItemType(true)
     try {
-      // Construir el item_type completo como se guardará
-      const companyNameTrimmed = selectedCompany.name.trim()
-      const fullItemType = `${itemTypeName.trim()}_${companyNameTrimmed}`
-
-      const { data, error: err } = await supabase
-        .from('attribute_definitions')
-        .select('item_type')
-        .eq('company_id', selectedCompany.id)
-        .eq('item_type', fullItemType)
-        .limit(1)
-
-      if (err) throw err
-
-      setItemTypeExists(data && data.length > 0)
-    } catch (err) {
-      console.error('Error checking item type:', err)
-    } finally {
-      setCheckingItemType(false)
+      const valueCount = await attributeDefinitionService.countValues(definition.id)
+      setEditor({ definition, valueCount })
+    } catch (error) {
+      // Sin el recuento se puede editar igual; solo se bloquea el cambio de tipo por prudencia
+      console.error(error)
+      setEditor({ definition, valueCount: Infinity })
     }
   }
 
-  const handleItemTypeChange = (value) => {
-    setNewItemType(value)
-    // Debounce check
-    if (value.trim()) {
-      const timeoutId = setTimeout(() => {
-        checkItemTypeExists(value)
-      }, 500)
-      return () => clearTimeout(timeoutId)
-    } else {
-      setItemTypeExists(false)
-    }
-  }
-
-  const handleSaveNewItemType = async () => {
+  const handleSave = async (fields) => {
+    setSaving(true)
     try {
-      setLoading(true)
-      setError(null)
-
-      if (!newItemType.trim()) {
-        setError('Debes proporcionar un nombre para el tipo de ítem')
-        setLoading(false)
-        return
+      if (editor.definition) {
+        const { key: _key, ...updates } = fields
+        await attributeDefinitionService.updateDefinition(editor.definition.id, updates)
+      } else {
+        await attributeDefinitionService.createDefinition({
+          ...fields,
+          company_id: companyId,
+          item_type: selectedType,
+          sort_order: definitions.length,
+        })
       }
-
-      if (itemTypeExists) {
-        setError('Este tipo de ítem ya existe')
-        setLoading(false)
-        return
-      }
-
-      // Filtrar solo las filas que tienen label
-      const validDefinitions = newDefinitions.filter(def => def.label.trim() !== '')
-
-      if (validDefinitions.length === 0) {
-        setError('Debes añadir al menos un atributo con label')
-        setLoading(false)
-        return
-      }
-
-      // Construir el item_type completo
-      const companyNameTrimmed = selectedCompany.name.trim()
-      const fullItemType = `${newItemType.trim()}_${companyNameTrimmed}`
-
-      // Preparar los datos para insertar
-      const definitionsToInsert = validDefinitions.map(def => ({
-        company_id: selectedCompany.id,
-        item_type: fullItemType,
-        key: generateKey(def.label),
-        label: def.label,
-        data_type: def.data_type,
-        is_filterable: def.is_filterable,
-        is_required: def.is_required
-      }))
-
-      const { error: err } = await supabase
-        .from('attribute_definitions')
-        .insert(definitionsToInsert)
-
-      if (err) throw err
-
-      setSuccess(`Tipo de ítem "${fullItemType}" creado con ${validDefinitions.length} atributo(s)`)
-      setShowCreateItemTypeModal(false)
-      setNewItemType('')
-      setItemTypeExists(false)
-      setNewDefinitions([{ label: '', data_type: 'text', is_filterable: false, is_required: false }])
-      await loadItemTypes(selectedCompany.id)
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      console.error('Error creating item type:', err)
-      setError(err.message || 'Error al crear el tipo de ítem')
+      toast.success(t('attributes.saved'))
+      setEditor(null)
+      await Promise.all([loadDefinitions(), loadTypes()])
+    } catch (error) {
+      reportError(error, 'attributes.saveError')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  const handleSaveNewDefinitions = async () => {
+  const handleDelete = async (definition) => {
+    const name = parseLabel(definition.label).es || definition.key
+    let count = 0
     try {
-      setLoading(true)
-      setError(null)
-
-      // Filtrar solo las filas que tienen label
-      const validDefinitions = newDefinitions.filter(def => def.label.trim() !== '')
-
-      if (validDefinitions.length === 0) {
-        setError('Debes añadir al menos un atributo con label')
-        setLoading(false)
-        return
-      }
-
-      // Preparar los datos para insertar
-      const definitionsToInsert = validDefinitions.map(def => ({
-        company_id: selectedCompany.id,
-        item_type: selectedItemType,
-        key: generateKey(def.label),
-        label: def.label,
-        data_type: def.data_type,
-        is_filterable: def.is_filterable,
-        is_required: def.is_required
-      }))
-
-      const { error: err } = await supabase
-        .from('attribute_definitions')
-        .insert(definitionsToInsert)
-
-      if (err) throw err
-
-      setSuccess(`${validDefinitions.length} atributo(s) creado(s) correctamente`)
-      setShowCreateModal(false)
-      setNewDefinitions([{ label: '', data_type: 'text', is_filterable: false, is_required: false }])
-      await loadAttributeDefinitions(selectedItemType)
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      console.error('Error creating definitions:', err)
-      setError(err.message || 'Error al crear los atributos')
-    } finally {
-      setLoading(false)
+      count = await attributeDefinitionService.countValues(definition.id)
+    } catch (error) {
+      console.error(error)
+    }
+    const ok = await confirm({
+      title: t('attributes.deleteTitle').replace('{name}', name),
+      message: count > 0
+        ? t('attributes.deleteImpact').replace('{count}', count)
+        : t('attributes.deleteNoImpact'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await attributeDefinitionService.deleteDefinition(definition.id)
+      toast.success(t('attributes.deleted'))
+      await Promise.all([loadDefinitions(), loadTypes()])
+    } catch (error) {
+      reportError(error, 'attributes.deleteError')
     }
   }
 
-  const handleImportExcel = (event) => {
-    const file = event.target.files[0]
-    if (!file) return
+  const handleMove = async (from, to) => {
+    const previous = definitions
+    const next = moveDefinition(definitions, from, to)
+    if (next === definitions) return
+    setDefinitions(next)
+    const changed = next.filter((d) => previous.find((p) => p.id === d.id)?.sort_order !== d.sort_order)
+    try {
+      await attributeDefinitionService.saveOrder(changed.map(({ id, sort_order }) => ({ id, sort_order })))
+    } catch (error) {
+      setDefinitions(previous)
+      reportError(error, 'attributes.orderError')
+    }
+  }
 
-    importExcel(
-      file,
-      (importedDefinitions) => {
-        // Añadir una fila vacía al final para poder seguir añadiendo
-        setNewDefinitions([...importedDefinitions, { label: '', data_type: 'text', is_filterable: false, is_required: false }])
-        setSuccess(`${importedDefinitions.length} atributo(s) importado(s) correctamente`)
-        setTimeout(() => setSuccess(''), 3000)
-      },
-      (errorMessage) => {
-        setError(errorMessage)
+  const dragHandlers = {
+    dragState: drag,
+    onDragStart: (index) => setDrag({ from: index, over: index }),
+    onDragEnter: (index) => setDrag((prev) => (prev ? { ...prev, over: index } : prev)),
+    onDragEnd: () => {
+      if (drag && drag.over !== drag.from) handleMove(drag.from, drag.over)
+      setDrag(null)
+    },
+  }
+
+  // --- Creación en lote: importar Excel o nuevo tipo de item ---
+
+  const insertDraft = async (itemType, startOrder) => {
+    const keys = [...(itemType === selectedType ? existingKeys : [])]
+    const rows = draft.validRows.map((row, index) => {
+      const key = uniqueKey(row.label, keys)
+      keys.push(key)
+      return {
+        company_id: companyId,
+        item_type: itemType,
+        key,
+        label: row.label.trim(),
+        data_type: row.data_type,
+        is_filterable: row.is_filterable,
+        is_required: row.is_required,
+        sort_order: startOrder + index,
       }
-    )
-    
-    // Reset input para permitir reimportar el mismo archivo
-    event.target.value = ''
+    })
+    await attributeDefinitionService.createDefinitions(rows)
+    return rows.length
   }
 
-  const handleCloseCreateModal = () => {
-    setShowCreateModal(false)
-    setNewDefinitions([{ label: '', data_type: 'text', is_filterable: false, is_required: false }])
+  const handleImportSave = async () => {
+    if (draft.validRows.length === 0) {
+      toast.error(t('attributes.atLeastOne'))
+      return
+    }
+    setSaving(true)
+    try {
+      const count = await insertDraft(selectedType, definitions.length)
+      toast.success(t('attributes.created').replace('{count}', count))
+      setShowImport(false)
+      draft.reset()
+      await Promise.all([loadDefinitions(), loadTypes()])
+    } catch (error) {
+      reportError(error, 'attributes.saveError')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleCloseCreateItemTypeModal = () => {
-    setShowCreateItemTypeModal(false)
-    setNewItemType('')
-    setItemTypeExists(false)
-    setNewDefinitions([{ label: '', data_type: 'text', is_filterable: false, is_required: false }])
+  const fullNewType = newTypeName.trim() ? `${newTypeName.trim()}_${companyName}` : ''
+  const newTypeExists = Boolean(fullNewType) && types.some((type) => type.itemType === fullNewType)
+
+  const handleNewTypeSave = async () => {
+    if (!newTypeName.trim() || newTypeExists) return
+    if (draft.validRows.length === 0) {
+      toast.error(t('attributes.atLeastOne'))
+      return
+    }
+    setSaving(true)
+    try {
+      const count = await insertDraft(fullNewType, 0)
+      toast.success(t('attributes.typeCreated').replace('{name}', newTypeName.trim()).replace('{count}', count))
+      closeNewType()
+      await loadTypes()
+      selectType(fullNewType)
+    } catch (error) {
+      reportError(error, 'attributes.saveError')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  if (loading && !selectedCompany?.id) {
-    return (
-      <div className="page">
-        <div className="page-content">
-          <p>{t('common.loading')}</p>
+  const closeImport = () => {
+    setShowImport(false)
+    draft.reset()
+  }
+
+  const closeNewType = () => {
+    setShowNewType(false)
+    setNewTypeName('')
+    draft.reset()
+  }
+
+  // --- Render ---
+
+  const newTypeButton = canEdit && (
+    <button type="button" className="primary-button" onClick={() => setShowNewType(true)}>
+      <Icon name="plus" size={16} />
+      {t('attributes.newItemType')}
+    </button>
+  )
+
+  const renderDefinitions = () => {
+    if (definitionsState === 'loading' && definitions.length === 0) {
+      return <p className="attr-status">{t('common.loading')}</p>
+    }
+    if (definitionsState === 'error') {
+      return (
+        <div className="error-state" role="alert">
+          <span>{t('attributes.loadError')}</span>
+          <button type="button" onClick={loadDefinitions}>{t('feedback.retry')}</button>
         </div>
+      )
+    }
+    if (definitions.length === 0) {
+      return (
+        <EmptyState
+          compact
+          icon="data"
+          title={t('attributes.noAttributes')}
+          description={t('attributes.noAttributesHint')}
+          action={canEdit && (
+            <button type="button" className="primary-button" onClick={() => openEditor()}>
+              <Icon name="plus" size={16} />{t('attributes.newAttribute')}
+            </button>
+          )}
+        />
+      )
+    }
+    return (
+      <ol className="attr-list">
+        {definitions.map((definition, index) => (
+          <AttributeRow
+            key={definition.id}
+            definition={definition}
+            index={index}
+            total={definitions.length}
+            canEdit={canEdit}
+            onMove={handleMove}
+            onToggle={handleToggle}
+            onEdit={openEditor}
+            onDelete={handleDelete}
+            {...dragHandlers}
+          />
+        ))}
+      </ol>
+    )
+  }
+
+  const renderBody = () => {
+    if (typesState === 'loading') return <p className="attr-status">{t('common.loading')}</p>
+    if (typesState === 'error') {
+      return (
+        <div className="error-state" role="alert">
+          <span>{t('attributes.loadError')}</span>
+          <button type="button" onClick={loadTypes}>{t('feedback.retry')}</button>
+        </div>
+      )
+    }
+    if (types.length === 0) {
+      return (
+        <div className="card">
+          <EmptyState
+            icon="items"
+            title={t('attributes.noTypes')}
+            description={t('attributes.noTypesHint')}
+            action={newTypeButton}
+          />
+        </div>
+      )
+    }
+
+    return (
+      <div className="attr-builder">
+        <ItemTypeList types={types} selected={selectedType} companyName={companyName} onSelect={selectType} />
+
+        <section className="card attr-panel" aria-labelledby="attr-panel-title">
+          <header className="attr-panel-header">
+            <div>
+              <h3 id="attr-panel-title">{displayItemType(selectedType, companyName)}</h3>
+              <p>{t('attributes.panelHelp')}</p>
+            </div>
+            {canEdit && (
+              <div className="header-actions">
+                <button type="button" className="ghost-button" onClick={() => setShowImport(true)}>
+                  <Icon name="upload" size={16} />{t('attributes.importExcel')}
+                </button>
+                <button type="button" className="primary-button" onClick={() => openEditor()}>
+                  <Icon name="plus" size={16} />{t('attributes.newAttribute')}
+                </button>
+              </div>
+            )}
+          </header>
+          {renderDefinitions()}
+        </section>
+
+        {definitions.length > 0 && <FormPreview definitions={definitions} />}
       </div>
     )
   }
 
   return (
-    <div className="page">
-      <div className="page-content">
-        <div className="page-header">
-          <div>
-            <h2>{t('myData.pageTitle')}</h2>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: '0.5rem', maxWidth: '800px' }}>
-              {t('myData.description')}
-            </p>
-          </div>
-          <div className="header-actions">
-            <button 
-              className="primary-button"
-              onClick={() => setShowCreateItemTypeModal(true)}
-            >
-              {t('myData.createItemType')}
-            </button>
-          </div>
-        </div>
+    <div className="page-content page-content-wide">
+      <PageHeader title={t('myData.pageTitle')} description={t('attributes.description')} actions={types.length > 0 && newTypeButton} />
 
-        {error && (
-          <div className="alert error" style={{ marginBottom: '1.5rem' }}>
-            {error}
-          </div>
-        )}
+      {renderBody()}
 
-        {success && (
-          <div className="alert success" style={{ marginBottom: '1.5rem' }}>
-            {success}
-          </div>
-        )}
-
-        {/* Lista de tipos de items */}
-        <ItemTypeSelector
-          itemTypes={itemTypes}
-          selectedItemType={selectedItemType}
-          onSelectItemType={handleSelectItemType}
+      {editor && (
+        <AttributeEditor
+          key={editor.definition?.id || 'new'}
+          open
+          definition={editor.definition}
+          existingKeys={existingKeys}
+          valueCount={editor.valueCount}
+          saving={saving}
+          onSave={handleSave}
+          onClose={() => setEditor(null)}
         />
+      )}
 
-        {/* Lista de attribute definitions */}
-        <AttributeDefinitionsTable
-          selectedItemType={selectedItemType}
-          loading={loading}
-          attributeDefinitions={attributeDefinitions}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          editableFields={editableFields}
-          handleLabelChange={handleLabelChange}
-          toggleEdit={toggleEdit}
-          handleSaveLabel={handleSaveLabel}
-          handleDiscardLabel={handleDiscardLabel}
-          savingLabel={savingLabel}
-          onCreateNew={() => setShowCreateModal(true)}
-        />
+      <CreateAttributeModal
+        show={showImport}
+        selectedItemType={displayItemType(selectedType, companyName)}
+        newDefinitions={draft.rows}
+        loading={saving}
+        fileInputRef={importInputRef}
+        handleNewDefinitionChange={draft.change}
+        handleRemoveRow={draft.remove}
+        onClose={closeImport}
+        onSave={handleImportSave}
+        onImport={draft.importFile}
+        onDownloadTemplate={downloadTemplate}
+      />
 
-        {/* Modal para crear nuevos attribute definitions */}
-        <CreateAttributeModal
-          show={showCreateModal}
-          selectedItemType={selectedItemType}
-          newDefinitions={newDefinitions}
-          loading={loading}
-          fileInputRef={fileInputRef}
-          handleNewDefinitionChange={handleNewDefinitionChange}
-          handleRemoveRow={handleRemoveRow}
-          onClose={handleCloseCreateModal}
-          onSave={handleSaveNewDefinitions}
-          onImport={handleImportExcel}
-          onDownloadTemplate={downloadTemplate}
-        />
-
-        {/* Modal para crear nuevo tipo de ítem */}
-        <CreateItemTypeModal
-          show={showCreateItemTypeModal}
-          newItemType={newItemType}
-          itemTypeExists={itemTypeExists}
-          checkingItemType={checkingItemType}
-          selectedCompany={selectedCompany}
-          newDefinitions={newDefinitions}
-          loading={loading}
-          fileInputRef={fileInputItemTypeRef}
-          handleItemTypeChange={handleItemTypeChange}
-          handleNewDefinitionChange={handleNewDefinitionChange}
-          handleRemoveRow={handleRemoveRow}
-          onClose={handleCloseCreateItemTypeModal}
-          onSave={handleSaveNewItemType}
-          onImport={handleImportExcel}
-          onDownloadTemplate={downloadTemplate}
-        />
-      </div>
+      <CreateItemTypeModal
+        show={showNewType}
+        newItemType={newTypeName}
+        itemTypeExists={newTypeExists}
+        checkingItemType={false}
+        selectedCompany={selectedCompany}
+        newDefinitions={draft.rows}
+        loading={saving}
+        fileInputRef={newTypeInputRef}
+        handleItemTypeChange={setNewTypeName}
+        handleNewDefinitionChange={draft.change}
+        handleRemoveRow={draft.remove}
+        onClose={closeNewType}
+        onSave={handleNewTypeSave}
+        onImport={draft.importFile}
+        onDownloadTemplate={downloadTemplate}
+      />
     </div>
   )
 }

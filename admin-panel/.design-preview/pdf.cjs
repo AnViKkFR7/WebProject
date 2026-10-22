@@ -1,0 +1,467 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/lib/invoicingPdf.js
+var invoicingPdf_exports = {};
+__export(invoicingPdf_exports, {
+  createDocumentPdf: () => createDocumentPdf,
+  downloadInvoice: () => downloadInvoice
+});
+module.exports = __toCommonJS(invoicingPdf_exports);
+var import_jspdf = require("jspdf");
+
+// src/lib/billingAppearance.js
+var paletteRoles = ["accent", "ink", "muted", "paper", "surface"];
+var validHex = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+var luminance = (hex) => {
+  const rgb = [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255);
+  return rgb.reduce((sum, value, index) => sum + [0.2126, 0.7152, 0.0722][index] * (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4), 0);
+};
+function contrastRatio(first, second) {
+  if (!validHex(first) || !validHex(second)) return 0;
+  const a = luminance(first), b = luminance(second);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+function validBillingPalette(palette) {
+  return Boolean(palette && typeof palette === "object" && !Array.isArray(palette) && ["graphite", "ocean", "olive", "custom"].includes(palette.id) && Object.keys(palette).length === 6 && paletteRoles.every((role) => validHex(palette[role])) && ["ink", "muted"].every((role) => ["paper", "surface"].every((background) => contrastRatio(palette[role], palette[background]) >= 4.5)) && contrastRatio(palette.accent, palette.paper) >= 4.5);
+}
+function documentPalette(issuer) {
+  if (validBillingPalette(issuer?.palette)) return issuer.palette;
+  return { id: "legacy", accent: validHex(issuer?.color) ? issuer.color : "#334155", ink: "#20252b", muted: "#62686b", paper: "#ffffff", surface: "#f3f4f5" };
+}
+
+// src/lib/invoicing.js
+var scaled = (value, precision) => {
+  const number = Number(value);
+  return Number.isFinite(number) && Math.abs(number) <= 1e12 ? BigInt(number.toFixed(precision).replace(".", "")) : 0n;
+};
+var divideRounded = (value, divisor) => value < 0n ? -((-value + divisor / 2n) / divisor) : (value + divisor / 2n) / divisor;
+var euros = (cents) => Number(cents) / 100;
+function invoiceTotals(lines, withholding = 0) {
+  let baseCents = 0n;
+  let taxCents = 0n;
+  const rows = lines.map((line) => {
+    const base = divideRounded(scaled(line.quantity, 3) * scaled(line.price, 2) * (10000n - scaled(line.discount || 0, 2)), 10000000n);
+    const tax = divideRounded(base * scaled(line.tax, 2), 10000n);
+    baseCents += base;
+    taxCents += tax;
+    const original = divideRounded(scaled(line.quantity, 3) * scaled(line.price, 2), 1000n);
+    return { original: euros(original), discount: euros(original - base), base: euros(base), tax: euros(tax), total: euros(base + tax) };
+  });
+  const retained = divideRounded(baseCents * scaled(withholding || 0, 2), 10000n);
+  return { rows, base: euros(baseCents), tax: euros(taxCents), retained: euros(retained), total: euros(baseCents + taxCents - retained) };
+}
+
+// src/lib/invoicingPdf.js
+function createDocumentPdf(invoice, t, language = "es", kind = "invoice") {
+  const doc = invoice.document;
+  const pdf = new import_jspdf.jsPDF({ unit: "mm", format: "a4" });
+  const previewPages = [[]];
+  let previewPage = 0;
+  const record = (item) => previewPages[previewPage].push(item);
+  const quote = kind === "quote";
+  const es = language.startsWith("es");
+  const word = (spanish, english) => es ? spanish : english;
+  const label = (key) => {
+    const quoteKey = `quotes.${key}`;
+    const keyName = quote && t(quoteKey) !== quoteKey ? quoteKey : `invoicing.${key}`;
+    return t(keyName);
+  };
+  const money = (value) => new Intl.NumberFormat(language, { style: "currency", currency: "EUR" }).format(value);
+  const date = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value.split("-").reverse().join("/") : value || "";
+  const totals = invoiceTotals(doc.lines, doc.withholding);
+  const palette = documentPalette(doc.issuer);
+  const branded = validBillingPalette(doc.issuer.palette);
+  const ink = branded ? palette.ink : "#172326";
+  const surface = branded ? palette.surface : "#f3f4f5";
+  const brandColor = /^#[0-9a-f]{6}$/i.test(doc.issuer.color || "") ? doc.issuer.color : quote ? "#175b55" : "#111111";
+  const accent = branded ? palette.accent : "#20252b";
+  const gray = palette.muted;
+  let y = 0;
+  const font = (size = 9, bold = false, color = ink) => {
+    pdf.setFont("helvetica", bold ? "bold" : "normal");
+    pdf.setFontSize(size);
+    pdf.setTextColor(color);
+  };
+  const text = (value, x, at, size = 9, bold = false, color = ink, align = "left") => {
+    font(size, bold, color);
+    pdf.text(String(value || ""), x, at, { align });
+    record({ type: "text", value: String(value || ""), x, y: at, size: size / 2.83464567, bold, color, align });
+  };
+  const amount = (value, x, at, size = 9, bold = false, color = accent, width = 22) => {
+    font(size, bold);
+    text(value, x, at, Math.min(size, size * width / Math.max(pdf.getTextWidth(value), width)), bold, color, "right");
+  };
+  const rule = (at, color = "#dce1e1") => {
+    pdf.setDrawColor(color);
+    pdf.setLineWidth(0.25);
+    pdf.line(14, at, 196, at);
+    record({ type: "line", x1: 14, y1: at, x2: 196, y2: at, color });
+  };
+  const fill = (x, at, w, h, color) => {
+    pdf.setFillColor(color);
+    pdf.rect(x, at, w, h, "F");
+    record({ type: "rect", x, y: at, width: w, height: h, fill: color });
+  };
+  const wrap = (value, width, size = 9, bold = false) => {
+    font(size, bold);
+    return pdf.splitTextToSize(String(value || ""), width);
+  };
+  const logo = (x, at, w, h) => {
+    if (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(doc.issuer.logo || "")) return false;
+    let image;
+    try {
+      image = pdf.getImageProperties(doc.issuer.logo);
+    } catch {
+      return false;
+    }
+    if (!Number.isFinite(image.width) || !Number.isFinite(image.height) || image.width <= 0 || image.height <= 0) return false;
+    const scale = Math.min(w / image.width, h / image.height);
+    pdf.addImage(doc.issuer.logo, image.fileType, x + (w - image.width * scale) / 2, at + (h - image.height * scale) / 2, image.width * scale, image.height * scale);
+    record({ type: "image", href: doc.issuer.logo, x: x + (w - image.width * scale) / 2, y: at + (h - image.height * scale) / 2, width: image.width * scale, height: image.height * scale });
+    return true;
+  };
+  const quoteBand = () => {
+    const hasLogo = logo(14, 8, 17, 15);
+    const title = wrap(doc.issuer.name, hasLogo ? 105 : 120, 12, true).slice(0, 2);
+    title.forEach((line, i) => text(line, hasLogo ? 36 : 14, 13 + i * 5, 12, true, accent));
+    const contact = [doc.issuer.phone, doc.issuer.email].filter(Boolean).flatMap((value) => wrap(value, 47, 7)).slice(0, 3);
+    contact.forEach((line, i) => text(line, 196, 10 + i * 4, 7, false, gray, "right"));
+    fill(14, 25, 182, 0.5, branded ? palette.accent : brandColor);
+    y = 31;
+  };
+  const newPage = () => {
+    pdf.addPage();
+    previewPages.push([]);
+    previewPage = previewPages.length - 1;
+    if (branded) fill(0, 0, 210, 297, palette.paper);
+    if (quote) quoteBand();
+    else {
+      text(`${word("Factura", "Invoice")} \xB7 ${invoice.number}`, 14, 17, 11, true);
+      rule(23);
+      y = 31;
+    }
+  };
+  const ensure = (height) => {
+    if (y + height > 271) newPage();
+  };
+  const flow = (value, width = 182, size = 9, bold = false, color = ink, x = 14, leading = 4.8) => {
+    for (const line of wrap(value, width, size, bold)) {
+      ensure(leading);
+      text(line, x, y, size, bold, color);
+      y += leading;
+    }
+  };
+  const space = (amount2) => {
+    y += amount2;
+  };
+  const heading = (value) => {
+    ensure(16);
+    flow(value, 182, 14, true, accent);
+    space(3);
+  };
+  const totalsBlock = () => {
+    const taxRates = [...new Set(doc.lines.map((line) => Number(line.tax)))].sort((a, b) => a - b);
+    const rows = [];
+    const reduction = totals.rows.reduce((sum, row) => sum + Math.round(row.discount * 100), 0) / 100;
+    if (reduction) rows.push([word("ANTES DEL DESCUENTO", "BEFORE DISCOUNT"), totals.rows.reduce((sum, row) => sum + Math.round(row.original * 100), 0) / 100], [word("DESCUENTO", "DISCOUNT"), -reduction]);
+    rows.push([word("BASE IMPONIBLE", "TAXABLE BASE"), totals.base]);
+    taxRates.forEach((rate) => {
+      rows.push([`${word("IVA", "VAT")} (${rate}%)`, Math.round(totals.rows.reduce((sum, row, index) => sum + (Number(doc.lines[index].tax) === rate ? Math.round(row.tax * 100) : 0), 0)) / 100]);
+    });
+    if (Number(doc.withholding)) rows.push([`${word("RETENCI\xD3N", "WITHHOLDING")} (${doc.withholding}%)`, -totals.retained]);
+    rows.push([word("TOTAL", "TOTAL"), totals.total]);
+    ensure(Math.min(rows.length * 7 + 20, 220));
+    rule(y);
+    space(9);
+    const placement = { page: pdf.getNumberOfPages(), top: y };
+    rows.forEach(([name, amount2], i) => {
+      ensure(8);
+      text(name, 132, y, 7, i === rows.length - 1, accent);
+      text(money(amount2), 196, y, 9, i === rows.length - 1, accent, "right");
+      space(7);
+    });
+    rule(y);
+    space(11);
+    return placement;
+  };
+  const paymentNotes = (width = 182) => {
+    for (const [key, title] of [["payment", word("FORMA DE PAGO", "PAYMENT METHOD")], ["iban", "IBAN"], ["notes", word("NOTAS", "NOTES")]]) {
+      if (doc[key]) {
+        ensure(12);
+        flow(title, width, 7, true, accent, 14, 3.8);
+        flow(doc[key], width, 8, false, gray, 14, 4);
+        space(3);
+      }
+    }
+  };
+  if (branded) fill(0, 0, 210, 297, palette.paper);
+  if (!quote) {
+    const hasLogo = logo(14, 18, 25, 22);
+    const issuerX = hasLogo ? 49 : 14;
+    y = 25;
+    const issuerLines = wrap(doc.issuer.name, 94, 17);
+    issuerLines.forEach((line) => {
+      ensure(7);
+      text(line, issuerX, y, 17);
+      y += 7;
+    });
+    ["taxId", "address", "phone", "email"].forEach((key) => {
+      if (doc.issuer[key]) flow(doc.issuer[key], 92, 7, false, gray, issuerX, 4);
+    });
+    text(word("Factura", "Invoice"), 196, 25, 20, false, branded ? accent : "#111111", "right");
+    const metadata = [[word("N\xDAMERO #", "NUMBER #"), invoice.number], [word("FECHA", "DATE"), date(doc.date)], [word("VENCIMIENTO", "DUE DATE"), date(doc.dueDate)], [word("ESTADO", "STATUS"), label(invoice.status)]];
+    let metaY = 34;
+    metadata.forEach(([name, value]) => {
+      text(name, 141, metaY, 6.5, true);
+      for (const part of wrap(value, 27, 7)) {
+        text(part, 196, metaY, 7, false, gray, "right");
+        metaY += 4;
+      }
+      ;
+      metaY += 1;
+    });
+    y = Math.max(y + 4, metaY + 4, 61);
+    rule(y);
+    space(10);
+    text(word("CLIENTE", "CLIENT"), 14, y, 7, true);
+    text(word("TOTAL", "TOTAL"), 196, y, 7, true, branded ? accent : "#111111", "right");
+    space(7);
+    text(money(totals.total), 196, y + 5, 19, false, branded ? accent : "#111111", "right");
+    ["name", "address", "taxId", "email"].forEach((key) => {
+      if (doc.customer[key]) flow(doc.customer[key], 113, 8, key === "name", gray);
+    });
+    space(4);
+    rule(y);
+    space(10);
+    const tableHead = () => {
+      ensure(18);
+      const cols = [[word("CONCEPTO", "DESCRIPTION"), 17], [word("PRECIO", "PRICE"), 125], [word("UNIDADES", "UNITS"), 146], [word("ANTES DTO.", "BEFORE DISC."), 172], [word("DESPU\xC9S DTO.", "AFTER DISC."), 193]];
+      cols.forEach(([name, x], i) => text(name, x, y, 6.5, true, branded ? accent : "#111111", i ? "right" : "left"));
+      space(6);
+    };
+    tableHead();
+    doc.lines.forEach((line, index) => {
+      const description = [...line.chapter ? [line.chapter] : [], line.description];
+      if (line.details) description.push(line.details);
+      if (Number(line.discount)) description.push(`${word("Descuento", "Discount")} ${line.discount}%: -${money(totals.rows[index].discount)}`);
+      if (new Set(doc.lines.map((row) => Number(row.tax))).size > 1) description.push(`${word("IVA", "VAT")}: ${line.tax}%`);
+      let fragments = wrap(description.join("\n"), 85, 8);
+      let first = true;
+      while (fragments.length) {
+        if (y + 13 > 271) {
+          newPage();
+          tableHead();
+        }
+        const count = Math.max(1, Math.floor((271 - y - 5) / 4));
+        const chunk = fragments.splice(0, count);
+        const height = Math.max(10, chunk.length * 4 + 5);
+        fill(14, y, 182, height, branded ? surface : "#eeeeee");
+        chunk.forEach((part, i) => text(part, 17, y + 5 + i * 4, 8, false, branded ? ink : "#202629"));
+        if (first) {
+          amount(money(line.price), 125, y + 5, 8, false, gray, 22);
+          text(String(line.quantity), 146, y + 5, 8, false, gray, "right");
+          amount(money(totals.rows[index].original), 172, y + 5, 8, false, gray, 22);
+          amount(money(totals.rows[index].base), 193, y + 5, 8, true, ink, 19);
+        }
+        y += height + 1.2;
+        first = false;
+      }
+    });
+    space(3);
+    flow(word("Importes de las partidas antes y despu\xE9s del descuento, sin IVA.", "Line amounts before and after discount, excluding VAT."), 182, 7, false, gray);
+    space(4);
+    const placement = totalsBlock();
+    const bottom = y;
+    const notesHeight = ["payment", "iban", "notes"].reduce((height, key) => height + (doc[key] ? 6.8 + wrap(doc[key], 100, 8).length * 4 : 0), 0);
+    if (branded && placement.page === pdf.getNumberOfPages() && placement.top + notesHeight + 12 <= 271 && notesHeight <= bottom - placement.top - 10) {
+      y = placement.top;
+      paymentNotes(100);
+      y = Math.max(y, bottom);
+    } else paymentNotes();
+  } else {
+    quoteBand();
+    const presentation = doc.presentation || {};
+    flow(word("PROPUESTA DE TRABAJOS", "WORK PROPOSAL"), 182, 9, true, accent);
+    space(3);
+    flow(presentation.title || word("Presupuesto de trabajos", "Work quotation"), 160, 24, true, accent, 14, 10);
+    space(2);
+    if (presentation.site) {
+      flow(presentation.site, 182, 11, false, gray);
+      space(4);
+    }
+    flow(`${invoice.number} \xB7 ${date(doc.date)} \xB7 ${label(invoice.status)}`, 182, 8, false, gray);
+    if (doc.dueDate) flow(`${word("V\xE1lido hasta", "Valid until")}: ${date(doc.dueDate)}`, 182, 8, false, gray);
+    space(7);
+    if (presentation.introduction) {
+      flow(presentation.introduction, 182, 10, false, gray, 14, 5.5);
+      space(7);
+    }
+    ensure(40);
+    text(word("EMPRESA", "COMPANY"), 14, y, 7, true, accent);
+    text(word("CLIENTE / OBRA", "CLIENT / SITE"), 112, y, 7, true, accent);
+    space(6);
+    const left = [doc.issuer.name, doc.issuer.taxId, doc.issuer.address].filter(Boolean).flatMap((value) => wrap(value, 85, 9));
+    const right = [doc.customer.name, doc.customer.taxId, doc.customer.address, doc.customer.email].filter(Boolean).flatMap((value) => wrap(value, 84, 9));
+    for (let i = 0; i < Math.max(left.length, right.length); i++) {
+      ensure(5);
+      text(left[i], 14, y, 9);
+      text(right[i], 112, y, 9);
+      y += 5;
+    }
+    space(10);
+    const groups = /* @__PURE__ */ new Map();
+    doc.lines.forEach((line, index) => {
+      const chapter = line.chapter?.trim() || word("Trabajos incluidos", "Included work");
+      if (!groups.has(chapter)) groups.set(chapter, []);
+      groups.get(chapter).push({ line, index });
+    });
+    const chapterAmount = (rows) => rows.reduce((sum, { index }) => sum + Math.round(totals.rows[index].base * 100), 0) / 100;
+    const summaryHead = () => {
+      ensure(17);
+      fill(14, y, 182, 10, surface);
+      text(word("TRABAJOS INCLUIDOS", "INCLUDED WORK"), 17, y + 6.5, 8, true, accent);
+      text(word("IMPORTE", "AMOUNT"), 193, y + 6.5, 8, true, accent, "right");
+      y += 10;
+    };
+    summaryHead();
+    for (const [chapter, rows] of groups) {
+      const lines = wrap(chapter, 140, 10, true);
+      for (let i = 0; i < lines.length; i++) {
+        if (y + 7 > 271) {
+          newPage();
+          summaryHead();
+        }
+        ;
+        text(lines[i], 17, y + 5.5, 10, true);
+        if (i === 0) text(money(chapterAmount(rows)), 193, y + 5.5, 10, true, accent, "right");
+        y += 7;
+      }
+      rule(y);
+      space(1.8);
+    }
+    space(7);
+    const summaryRows = [];
+    const reduction = totals.rows.reduce((sum, row) => sum + Math.round(row.discount * 100), 0) / 100;
+    if (reduction) summaryRows.push([word("Antes del descuento", "Before discount"), totals.rows.reduce((sum, row) => sum + Math.round(row.original * 100), 0) / 100], [word("Descuento", "Discount"), -reduction]);
+    summaryRows.push([word("Base imponible", "Taxable base"), totals.base], [word("IVA", "VAT"), totals.tax]);
+    if (Number(doc.withholding)) summaryRows.push([`${word("Retenci\xF3n", "Withholding")} (${doc.withholding}%)`, -totals.retained]);
+    const summaryHeight = Math.max(26, summaryRows.length * 6 + 10);
+    const pageBeforeSummary = pdf.getNumberOfPages();
+    ensure(summaryHeight + 2);
+    fill(14, y, 182, summaryHeight, surface);
+    text(money(totals.total), 19, y + 12, 20, true, accent);
+    text(word("TOTAL PRESUPUESTO", "QUOTATION TOTAL"), 19, y + 20, 7, true, accent);
+    summaryRows.forEach(([name, amount2], index) => {
+      text(name, 132, y + 8 + index * 6, 8, false, gray);
+      text(money(amount2), 193, y + 8 + index * 6, 9, true, accent, "right");
+    });
+    y += summaryHeight + 6;
+    if (pdf.getNumberOfPages() === pageBeforeSummary) newPage();
+    else space(8);
+    heading(word("Detalle de trabajos incluidos", "Included work details"));
+    for (const [chapter, rows] of groups) {
+      ensure(30);
+      const chapterTitle = wrap(chapter, 172, 12, true);
+      for (const part of chapterTitle) {
+        ensure(9);
+        fill(14, y, 182, 9, surface);
+        text(part, 18, y + 6, 11, true, accent);
+        y += 9;
+      }
+      space(4);
+      for (const { line, index } of rows) {
+        ensure(15);
+        const parts = wrap(line.description, 140, 10, true);
+        parts.forEach((part, i) => {
+          ensure(6);
+          text(part, 17, y, 10, true);
+          if (i === 0) text(money(totals.rows[index].base), 193, y, 10, true, accent, "right");
+          y += 5.5;
+        });
+        flow(`${line.quantity} \xD7 ${money(line.price)}${Number(line.discount) ? ` \xB7 ${word("Dto.", "Discount")} ${line.discount}%` : ""} \xB7 ${word("IVA", "VAT")} ${line.tax}%`, 174, 8, false, gray, 17);
+        if (Number(line.discount)) {
+          flow(`${word("Antes del descuento", "Before discount")}: ${money(totals.rows[index].original)} \xB7 ${word("Descuento", "Discount")} ${line.discount}%: -${money(totals.rows[index].discount)}`, 174, 8, false, gray, 17);
+          flow(`${word("Despu\xE9s del descuento (sin IVA)", "After discount (before VAT)")}: ${money(totals.rows[index].base)}`, 174, 9, true, accent, 17);
+        }
+        if (line.details) flow(line.details, 174, 9, false, gray, 17);
+        space(2);
+        rule(y);
+        space(4);
+      }
+      ensure(12);
+      text(word("TOTAL CAP\xCDTULO", "CHAPTER TOTAL"), 17, y, 8, true, accent);
+      text(money(chapterAmount(rows)), 193, y, 10, true, accent, "right");
+      space(9);
+    }
+    if (presentation.conditions) {
+      heading(word("Condiciones y exclusiones", "Conditions and exclusions"));
+      flow(presentation.conditions, 182, 9, false, gray);
+      space(7);
+    }
+    paymentNotes();
+    if (presentation.signatures !== false) {
+      ensure(39);
+      space(4);
+      for (const [x, name] of [[14, doc.issuer.name], [111, doc.customer.name]]) {
+        pdf.setDrawColor("#dce1e1");
+        pdf.rect(x, y, 85, 30);
+        record({ type: "rect", x, y, width: 85, height: 30, fill: "none", stroke: "#dce1e1" });
+        text(word("CONFORMIDAD", "ACCEPTANCE"), x + 4, y + 6, 7, true, accent);
+        wrap(name, 77, 8).slice(0, 2).forEach((part, i) => text(part, x + 4, y + 11 + i * 4, 8));
+        text(word("Firma y fecha:", "Signature and date:"), x + 4, y + 26, 7, false, gray);
+      }
+      y += 34;
+    }
+  }
+  const pages = pdf.getNumberOfPages();
+  for (let page = 1; page <= pages; page++) {
+    pdf.setPage(page);
+    previewPage = page - 1;
+    rule(282);
+    const reference = `${invoice.number} \xB7 ${money(totals.total)}${doc.dueDate ? ` \xB7 ${date(doc.dueDate)}` : ""}`;
+    text(reference, 14, 288, 6, false, gray);
+    text(`${word("P\xE1g.", "Page")} ${page} ${word("de", "of")} ${pages}`, 196, 288, 6, false, gray, "right");
+  }
+  pdf.setProperties({ title: `${word(quote ? "Presupuesto" : "Factura", quote ? "Quotation" : "Invoice")} ${invoice.number}`, author: doc.issuer.name });
+  pdf.previewPages = previewPages;
+  return pdf;
+}
+function downloadInvoice(invoice, t, language, kind = "invoice") {
+  const pdf = createDocumentPdf(invoice, t, language, kind);
+  const blob = pdf.output("blob");
+  const filename = `${invoice.number.replace(/[^a-z0-9_-]/gi, "_")}.pdf`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.append(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 6e4);
+  }
+  return { blob, filename };
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  createDocumentPdf,
+  downloadInvoice
+});

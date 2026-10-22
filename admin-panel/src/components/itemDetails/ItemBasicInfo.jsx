@@ -1,4 +1,5 @@
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const ItemBasicInfo = ({ 
   itemData, 
@@ -100,7 +101,7 @@ const ItemBasicInfo = ({
                 }}
                 title={editableFields?.['basic-title'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
-                ✏️
+                <Icon name="edit" size={16} />
               </button>
             )}
           </div>
@@ -144,7 +145,7 @@ const ItemBasicInfo = ({
                 }}
                 title={editableFields?.['basic-summary'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
-                ✏️
+                <Icon name="edit" size={16} />
               </button>
             )}
           </div>
@@ -190,7 +191,7 @@ const ItemBasicInfo = ({
                 }}
                 title={editableFields?.['basic-status'] ? t('itemDetail.lockField') : t('itemDetail.editField')}
               >
-                ✏️
+                <Icon name="edit" size={16} />
               </button>
             )}
           </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { authService } from '../../services/authService'
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const SecurityTab = () => {
   const { t } = useLanguage()
@@ -150,7 +151,7 @@ const SecurityTab = () => {
                   justifyContent: 'center'
                 }}
               >
-                {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showNewPassword ? 'eyeOff' : 'eye'} size={18} />
               </button>
             </div>
           </label>
@@ -184,7 +185,7 @@ const SecurityTab = () => {
                   justifyContent: 'center'
                 }}
               >
-                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} size={18} />
               </button>
             </div>
           </label>

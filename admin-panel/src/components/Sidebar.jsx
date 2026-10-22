@@ -1,152 +1,84 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { useCompany } from '../contexts/CompanyContext'
+import { NavLink } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { visibleNavGroups } from '../lib/navigation'
+import CompanySwitcher from './CompanySwitcher'
+import Icon from './ui/Icon'
 
-const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed, user }) => {
-  const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE === 'true'
-  const navigate = useNavigate()
-  const { selectedCompany } = useCompany()
+const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed }) => {
   const { t } = useLanguage()
-  
-  // Theme State
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+  const permissions = usePermissions()
+  const closeMobile = () => setIsMobileMenuOpen(false)
 
-  const navItems = [
-    { to: '/', label: t('nav.dashboard'), icon: '📊' },
-    { to: '/items', label: t('nav.items'), icon: '🧩' },
-    { to: '/analytics', label: t('nav.analytics'), icon: '📈' },
-    { to: '/my-data', label: t('nav.myData'), icon: '⚡' },
-    { to: '/companies', label: t('nav.companies'), icon: '🏢' },
-    { to: '/users', label: t('nav.users'), icon: '👥' },
-    { to: '/blog', label: t('nav.blog'), icon: '✍️' },
-    { to: '/planning', label: t('nav.planning'), icon: '🗓️' },
-  ]
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light')
-  }
+  const renderLink = (item) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.to === '/'}
+      onClick={closeMobile}
+      className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+      title={isTabletCollapsed ? t(`nav.${item.key}`) : undefined}
+    >
+      <span className="nav-icon" aria-hidden="true">
+        <Icon name={item.icon} />
+      </span>
+      <span className="nav-label">{t(`nav.${item.key}`)}</span>
+    </NavLink>
+  )
 
   return (
-    <>
-      <aside className={`sidebar ${isTabletCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-visible' : ''}`}>
-        
-        {/* Mobile Close Button */}
-        <button 
-          className="mobile-close-btn"
-          onClick={() => setIsMobileMenuOpen(false)}
-          title={t('sidebar.closeMenuTitle')}
-        >
-          <span style={{ fontSize: '1.5rem' }}>↑</span>
-        </button>
-        
-        <div className="sidebar-brand">
-          <span 
-            className="brand-mark" 
-            style={{
-              background: selectedCompany ? 'var(--primary-color)' : '#475569',
-              color: 'white'
-            }}
-          >
-            {selectedCompany ? selectedCompany.name.charAt(0).toUpperCase() : 'X'}
-          </span>
-          <div className="brand-info">
-            <div className="brand-title">{selectedCompany ? selectedCompany.name : t('nav.noCompany')}</div>
-            <div className="brand-subtitle">{t('sidebar.adminPanel')}</div>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `nav-link${isActive ? ' active' : ''}`
-              }
-              title={isTabletCollapsed ? item.label : ''}
-            >
-              <span className="nav-icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
+    <aside className={`sidebar ${isTabletCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-visible' : ''}`}>
+      <button
+        type="button"
+        className="mobile-close-btn"
+        onClick={closeMobile}
+        title={t('sidebar.closeMenuTitle')}
+        aria-label={t('sidebar.closeMenuTitle')}
+      >
+        <Icon name="close" size={22} />
+      </button>
 
-        {/* Mobile Menu Footer (Profile) */}
-        <div className="sidebar-mobile-footer">
-          <div className="divider"></div>
-          {/* Create New Removed */}
-          
-          {user && (
-            <div className="user-chip-mobile" onClick={() => {
-              navigate('/profile')
-              setIsMobileMenuOpen(false)
-            }}>
-              <div className="user-avatar">{user.email?.[0]?.toUpperCase() || 'U'}</div>
-              <div className="user-info">
-                <div className="user-name">{user.email?.split('@')[0] || t('sidebar.userFallbackName')}</div>
-                <div className="user-role">{t('nav.profile')}</div>
-              </div>
+      <CompanySwitcher onSwitch={closeMobile} />
+
+      <nav className="sidebar-nav" aria-label={t('sidebar.navLabel')}>
+        {visibleNavGroups(permissions).map((group) => (
+          group.key === 'main' ? (
+            <div key={group.key} className="nav-group">{group.items.map(renderLink)}</div>
+          ) : (
+            <div key={group.key} className="nav-group" role="group" aria-labelledby={`nav-group-${group.key}`}>
+              <span id={`nav-group-${group.key}`} className="nav-group-title">{t(`nav.groups.${group.key}`)}</span>
+              {group.items.map(renderLink)}
             </div>
-          )}
-        </div>
+          )
+        ))}
+      </nav>
 
-        {/* Desktop/Tablet Footer */}
-        <div className="sidebar-footer">
-          {/* Profile Button - Mobile Only */}
-          {user && (
-            <button 
-              className="theme-switch mobile-only"
-              onClick={() => {
-                navigate('/profile')
-                setIsMobileMenuOpen(false)
-              }}
-              title={t('nav.profile')}
-            >
-              <span className="theme-switch-icon">{user.email?.[0]?.toUpperCase() || '👤'}</span>
-              <span className="theme-switch-label">{t('nav.profile')}</span>
-            </button>
-          )}
+      <div className="sidebar-footer">
+        <NavLink
+          to="/profile"
+          onClick={closeMobile}
+          className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+          title={isTabletCollapsed ? t('nav.myAccount') : undefined}
+        >
+          <span className="nav-icon" aria-hidden="true"><Icon name="user" /></span>
+          <span className="nav-label">{t('nav.myAccount')}</span>
+        </NavLink>
 
-          {/* Menu Toggle - Mobile Only */}
-          <button 
-            className="theme-switch mobile-only"
-            onClick={() => setIsMobileMenuOpen(false)}
-            title={t('sidebar.closeMenuTitle')}
-          >
-            <span className="theme-switch-icon">✕</span>
-            <span className="theme-switch-label">{t('sidebar.closeMenuLabel')}</span>
-          </button>
-
-          {/* Collapse Toggle (Desktop Only) */}
-          <button 
-            className="nav-link desktop-only" 
-            onClick={() => setIsTabletCollapsed(!isTabletCollapsed)}
-            style={{ width: '100%', justifyContent: isTabletCollapsed ? 'center' : 'flex-start', background: 'transparent', border: 'none', cursor: 'pointer' }}
-          >
-             <span className="nav-icon" style={{color: 'var(--primary-color)', filter: 'none'}}>
-               {isTabletCollapsed ? '▶' : '◀'}
-             </span>
-             <span className="nav-label">{isTabletCollapsed ? '' : t('sidebar.collapseMenu')}</span>
-          </button>
-
-          {/* Theme Switcher */}
-          <button className="theme-switch" onClick={toggleTheme} title={t('sidebar.changeTheme')}>
-            <span className="theme-switch-icon">{theme === 'light' ? '🌙' : '☀️'}</span>
-            <span className="theme-switch-label">{theme === 'light' ? t('sidebar.darkMode') : t('sidebar.lightMode')}</span>
-          </button>
-        </div>
-      </aside>
-    </>
+        <button
+          type="button"
+          className="nav-link sidebar-collapse desktop-only"
+          onClick={() => setIsTabletCollapsed(!isTabletCollapsed)}
+          aria-expanded={!isTabletCollapsed}
+          aria-label={isTabletCollapsed ? t('sidebar.expandMenu') : t('sidebar.collapseMenu')}
+          title={isTabletCollapsed ? t('sidebar.expandMenu') : undefined}
+        >
+          <span className="nav-icon">
+            <Icon name={isTabletCollapsed ? 'chevronRight' : 'chevronLeft'} />
+          </span>
+          <span className="nav-label">{t('sidebar.collapseMenu')}</span>
+        </button>
+      </div>
+    </aside>
   )
 }
 

@@ -6,7 +6,8 @@ export async function getClientCompaniesByUserCompanies(userId) {
   const { data: companyMemberships, error: companyError } = await supabase
     .from('company_members')
     .select('company_id')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('is_active', true);
   if (companyError) throw companyError;
   const companyIds = companyMemberships.map(m => m.company_id);
   if (!companyIds.length) return [];

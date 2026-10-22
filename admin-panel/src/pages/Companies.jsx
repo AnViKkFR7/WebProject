@@ -1,368 +1,264 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  getClientCompaniesByCompany, createClientCompany, updateClientCompany,
+  deleteClientCompany, getClientCompanyUsage,
+} from '../services/clientCompanyService'
 import { supabase } from '../lib/supabaseClient'
-import { formatPhoneNumber } from '../lib/phoneUtils'
+import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getClientCompaniesFlexible } from '../services/clientCompanyService'
+import { useFeedback } from '../contexts/FeedbackContext'
+import { usePermissions } from '../hooks/usePermissions'
+import { getCompanyColor } from '../lib/planningColors'
+import { formatPhoneNumber } from '../lib/phoneUtils'
+import PageHeader from '../components/ui/PageHeader'
+import EmptyState from '../components/ui/EmptyState'
+import Icon from '../components/ui/Icon'
+import ClientCompanyModal from '../components/planning/ClientCompanyModal'
+import '../styles/planning.css'
 
+const emptyForm = { name: '', phone: '', email: '', responsible: '', color: '#1976d2' }
+
+/**
+ * Empresas cliente de la empresa seleccionada: las que se planifican y
+ * facturan en Planning. No confundir con la empresa del panel, cuyo resumen
+ * está en el Dashboard.
+ */
 const Companies = () => {
+  const { selectedCompany } = useCompany()
   const { t } = useLanguage()
+  const { toast, confirm } = useFeedback()
+  const { canEdit } = usePermissions()
+  const companyId = selectedCompany?.id
+
   const [companies, setCompanies] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState('')
-  const [editableCompanies, setEditableCompanies] = useState({})
-  const [originalValues, setOriginalValues] = useState({})
-  const [savingCompany, setSavingCompany] = useState(null)
-  const [itemCounts, setItemCounts] = useState({})
-  const [userCounts, setUserCounts] = useState({})
+  const [state, setState] = useState('loading') // loading | error | ready
+  const [search, setSearch] = useState('')
+  const [modal, setModal] = useState(null) // { editing } | null
+  const [form, setForm] = useState(emptyForm)
+  const [formError, setFormError] = useState('')
+  const [saving, setSaving] = useState(false)
 
+  const load = useCallback(() => {
+    if (!companyId) return
+    setState('loading')
+    getClientCompaniesByCompany(companyId)
+      .then((data) => { setCompanies(data); setState('ready') })
+      .catch((error) => { console.error('Error cargando empresas cliente:', error); setState('error') })
+  }, [companyId])
 
-  useEffect(() => {
-    loadClientCompanies()
-  }, [])
+  useEffect(() => { load() }, [load])
 
-  const loadClientCompanies = async () => {
+  const openCreate = () => {
+    setForm(emptyForm)
+    setFormError('')
+    setModal({ editing: null })
+  }
+
+  const openEdit = (company) => {
+    setForm({
+      name: company.name || '',
+      phone: company.phone || '',
+      email: company.email || '',
+      responsible: company.responsible || '',
+      color: company.color || '#1976d2',
+    })
+    setFormError('')
+    setModal({ editing: company })
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setFormError('')
     try {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Si eres admin, muestra todas las empresas cliente; si no, solo las tuyas
-      const isAdmin = user.app_metadata?.role === 'admin' || user.app_metadata?.is_admin
-      const clientCompanies = await getClientCompaniesFlexible(user.id, isAdmin)
-      setCompanies(clientCompanies)
-
-      // Guardar valores originales
-      const original = {}
-      clientCompanies.forEach(company => {
-        original[company.id] = {
-          description: company.description || '',
-          email: company.email || '',
-          phone: company.phone || '',
-          responsible: company.responsible || '',
-          color: company.color || ''
-        }
-      })
-      setOriginalValues(original)
-    } catch (err) {
-      console.error('Error loading client companies:', err)
-      setError(t('errors.loadingCompanies'))
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim() || null,
+        email: form.email.trim() || null,
+        responsible: form.responsible.trim() || null,
+        color: form.color,
+      }
+      if (modal.editing) {
+        await updateClientCompany(modal.editing.id, payload)
+      } else {
+        const { data: { user } } = await supabase.auth.getUser()
+        await createClientCompany({ ...payload, user_id: user?.id, company_id: companyId })
+      }
+      setModal(null)
+      toast.success(t('companies.saved'))
+      load()
+    } catch (error) {
+      console.error(error)
+      setFormError(t('companies.saveError'))
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-
-
-
-  const toggleEdit = (companyId) => {
-    setEditableCompanies(prev => ({
-      ...prev,
-      [companyId]: !prev[companyId]
-    }))
-  }
-
-  const handleFieldChange = (companyId, field, value) => {
-    setCompanies(prev =>
-      prev.map(company =>
-        company.id === companyId ? { ...company, [field]: value } : company
-      )
-    )
-  }
-
-  const handleDiscard = (companyId) => {
-    setCompanies(prev =>
-      prev.map(company =>
-        company.id === companyId
-          ? { ...company, ...originalValues[companyId] }
-          : company
-      )
-    )
-    toggleEdit(companyId)
-  }
-
-  const handleSave = async (companyId) => {
+  const handleDelete = async (company) => {
+    let usage = { tasks: 0, bills: 0 }
     try {
-      setSavingCompany(companyId)
-      const company = companies.find(c => c.id === companyId)
-
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update({
-          description: company.description,
-          contact_email: company.contact_email,
-          contact_phone: company.contact_phone,
-          website_url: company.website_url
-        })
-        .eq('id', companyId)
-
-      if (updateError) throw updateError
-
-      // Actualizar valores originales
-      setOriginalValues(prev => ({
-        ...prev,
-        [companyId]: {
-          description: company.description,
-          contact_email: company.contact_email,
-          contact_phone: company.contact_phone,
-          website_url: company.website_url
-        }
-      }))
-
-      toggleEdit(companyId)
-      setSuccess('Empresa actualizada correctamente')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      console.error('Error saving company:', err)
-      setError('Error al guardar los cambios')
-    } finally {
-      setSavingCompany(null)
+      usage = await getClientCompanyUsage(company.id)
+    } catch (error) {
+      console.error(error)
+    }
+    const inUse = usage.tasks + usage.bills > 0
+    const ok = await confirm({
+      title: t('companies.deleteTitle').replace('{name}', company.name),
+      message: inUse
+        ? t('companies.deleteInUse').replace('{tasks}', usage.tasks).replace('{bills}', usage.bills)
+        : t('companies.deleteMessage'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await deleteClientCompany(company.id)
+      toast.success(t('companies.deleted'))
+      load()
+    } catch (error) {
+      console.error(error)
+      // La base de datos rechaza el borrado si quedan tareas o facturas apuntando
+      toast.error(inUse ? t('companies.deleteBlocked') : t('feedback.deleteError'))
     }
   }
 
-  const canEdit = (company) => {
-    return company.userRole === 'admin' || company.userRole === 'editor'
+  if (!selectedCompany) {
+    return <div className="page-content"><p>{t('dashboard.selectCompanyDescription')}</p></div>
   }
 
-  if (loading) {
-    return (
-      <div className="page">
-        <div className="page-content">
-          <p>{t('common.loading')}</p>
-        </div>
-      </div>
-    )
-  }
+  const visible = companies.filter(c => c.name.toLowerCase().includes(search.trim().toLowerCase()))
+
+  const newButton = canEdit && (
+    <button type="button" className="primary-button" onClick={openCreate}>
+      <Icon name="plus" size={16} />{t('companies.newClient')}
+    </button>
+  )
 
   return (
-    <div className="page">
-      <div className="page-content">
-        <div className="page-header">
-          <div>
-            <h2>{t('companies.title')}</h2>
-            <p>{t('companies.description')}</p>
-          </div>
+    <div className="page-content page-content-wide">
+      <PageHeader
+        title={t('companies.title')}
+        description={t('companies.description')}
+        actions={companies.length > 0 && newButton}
+      />
+
+      {state === 'loading' && <p className="attr-status">{t('common.loading')}</p>}
+
+      {state === 'error' && (
+        <div className="error-state" role="alert">
+          <span>{t('errors.loadingCompanies')}</span>
+          <button type="button" onClick={load}>{t('feedback.retry')}</button>
         </div>
+      )}
 
-        {error && (
-          <div className="alert error" style={{ marginBottom: '1.5rem' }}>
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="alert success" style={{ marginBottom: '1.5rem' }}>
-            {success}
-          </div>
-        )}
-
-        <div className="companies-grid" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: '1fr 1fr' }}>
-          {companies.map(company => (
-            <div
-              key={company.id}
-              className="card"
-              style={{
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
-                position: 'relative'
-              }}
-            >
-              {/* Botón de editar */}
-              {canEdit(company) && (
-                <button
-                  onClick={() => editableCompanies[company.id] ? handleDiscard(company.id) : toggleEdit(company.id)}
-                  style={{
-                    position: 'absolute',
-                    top: '1rem',
-                    right: '1rem',
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '1.2rem',
-                    cursor: 'pointer',
-                    padding: '0.5rem',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s',
-                    color: 'var(--text-secondary)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                  }}
-                >
-                  {editableCompanies[company.id] ? '✕' : '✏️'}
-                </button>
-              )}
-
-              {/* Nombre de la empresa */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Círculo de color */}
-                <span style={{
-                  display: 'inline-block',
-                  width: '1.5rem',
-                  height: '1.5rem',
-                  borderRadius: '50%',
-                  background: company.color || '#ccc',
-                  border: '2px solid #eee',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
-                }} title={company.color || 'Sin color'} />
-                <h3 className="company-card-name" style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  margin: 0,
-                  color: 'var(--text-primary)',
-                  paddingRight: '3rem'
-                }}>
-                  {company.name}
-                </h3>
-              </div>
-
-              {/* Responsable */}
-              <div>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                  Responsable
-                </label>
-                <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                  {company.responsible || 'Sin responsable'}
-                </p>
-              </div>
-
-              {/* Contacto */}
-              <div className="company-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    Email
-                  </label>
-                  <p style={{ margin: 0, color: company.email ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
-                    {company.email || 'Sin email'}
-                  </p>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    Teléfono
-                  </label>
-                  <p style={{ margin: 0, color: company.phone ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '0.9rem' }}>
-                    {company.phone ? formatPhoneNumber(company.phone) : 'Sin teléfono'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats: Items y Usuarios */}
-              <div className="company-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    {t('companies.itemsPublished')}
-                  </label>
-                  <p style={{ margin: 0, color: 'var(--primary-color)', fontSize: '1.5rem', fontWeight: 700 }}>
-                    {itemCounts[company.id] || 0}
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                    {t('companies.users')}
-                  </label>
-                  <p style={{ margin: 0, color: 'var(--primary-color)', fontSize: '1.5rem', fontWeight: 700 }}>
-                    {userCounts[company.id] || 0}
-                  </p>
-                </div>
-              </div>
-
-              {/* Website */}
-              <div>
-                {editableCompanies[company.id] ? (
-                  <>
-                    <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
-                      {t('companies.website')}
-                    </label>
-                    <input
-                      type="url"
-                      className="input"
-                      value={company.website_url || ''}
-                      onChange={(e) => handleFieldChange(company.id, 'website_url', e.target.value)}
-                      placeholder="https://ejemplo.com"
-                    />
-                  </>
-                ) : company.website_url ? (
-                  <a
-                    href={company.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1.25rem',
-                      background: 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))',
-                      color: 'white',
-                      borderRadius: '8px',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 102, 241, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)'
-                    }}
-                  >
-                    {t('companies.visitWebsite')}
-                    <span style={{ fontSize: '0.9rem' }}>↗</span>
-                  </a>
-                ) : (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem 1.25rem',
-                    background: 'var(--bg-hover)',
-                    color: 'var(--text-tertiary)',
-                    borderRadius: '8px',
-                    fontWeight: 500,
-                    fontSize: '0.95rem',
-                    border: '2px dashed var(--border-color)'
-                  }}>
-                    {t('companies.websiteUnderConstruction')}
-                  </div>
-                )}
-              </div>
-
-              {/* Botón de guardar cambios */}
-              {editableCompanies[company.id] && (
-                <button
-                  className="button button-primary button-medium"
-                  onClick={() => handleSave(company.id)}
-                  disabled={savingCompany === company.id}
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  {savingCompany === company.id ? t('companies.savingChanges') : `💾 ${t('common.saveChanges')}`}
-                </button>
-              )}
-            </div>
-          ))}
+      {state === 'ready' && companies.length === 0 && (
+        <div className="card">
+          <EmptyState
+            icon="companies"
+            title={t('companies.noClients')}
+            description={t('companies.noClientsHint')}
+            action={newButton}
+          />
         </div>
+      )}
 
-        {companies.length === 0 && (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: '1.1rem' }}>
-              {t('dashboard.noCompanies')}
-            </p>
+      {state === 'ready' && companies.length > 0 && (
+        <>
+          <div className="card" style={{ marginBottom: '1.25rem' }}>
+            <label htmlFor="client-search" className="field-label">{t('companies.searchLabel')}</label>
+            <input
+              id="client-search"
+              type="search"
+              className="input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t('planning.searchPlaceholder')}
+              style={{ maxWidth: 400 }}
+            />
           </div>
-        )}
-      </div>
+
+          {visible.length === 0 ? (
+            <EmptyState compact icon="search" title={t('companies.noMatches')} />
+          ) : (
+            <ul className="client-grid">
+              {visible.map((company, idx) => {
+                const color = getCompanyColor(company, idx)
+                return (
+                  <li key={company.id} className="client-card" style={{ '--company-color': color }}>
+                    <div className="client-card-head">
+                      <span className="company-dot" style={{ '--company-color': color }} />
+                      <h3 className="client-card-name">{company.name}</h3>
+                      {canEdit && (
+                        <span className="client-card-actions">
+                          <button
+                            type="button"
+                            className="icon-button"
+                            onClick={() => openEdit(company)}
+                            aria-label={t('companies.editNamed').replace('{name}', company.name)}
+                          >
+                            <Icon name="edit" size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-button danger"
+                            onClick={() => handleDelete(company)}
+                            aria-label={t('companies.deleteNamed').replace('{name}', company.name)}
+                          >
+                            <Icon name="trash" size={16} />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+
+                    <dl className="client-card-fields">
+                      <div className="detail-row">
+                        <dt>{t('companies.responsible')}</dt>
+                        <dd>{company.responsible || <span className="text-muted">{t('companies.notSet')}</span>}</dd>
+                      </div>
+                      <div className="detail-row">
+                        <dt>{t('companies.email')}</dt>
+                        <dd>
+                          {company.email
+                            ? <a href={`mailto:${company.email}`}>{company.email}</a>
+                            : <span className="text-muted">{t('companies.notSet')}</span>}
+                        </dd>
+                      </div>
+                      <div className="detail-row">
+                        <dt>{t('companies.phone')}</dt>
+                        <dd>
+                          {company.phone
+                            ? <a href={`tel:${company.phone}`}>{formatPhoneNumber(company.phone)}</a>
+                            : <span className="text-muted">{t('companies.notSet')}</span>}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <Link className="stat-card-cta" to="/planning">
+                      {t('companies.seeInPlanning')}
+                      <Icon name="chevronRight" size={14} />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </>
+      )}
+
+      <ClientCompanyModal
+        open={Boolean(modal)}
+        editing={modal?.editing}
+        form={form}
+        setForm={setForm}
+        error={formError}
+        saving={saving}
+        onSubmit={handleSubmit}
+        onClose={() => setModal(null)}
+      />
     </div>
   )
 }
 
 export default Companies
-

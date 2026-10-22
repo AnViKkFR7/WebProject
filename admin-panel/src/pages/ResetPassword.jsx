@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { useLanguage } from '../contexts/LanguageContext'
+import Icon from '../components/ui/Icon'
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('')
@@ -92,7 +93,7 @@ const ResetPassword = () => {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <div className="logo-placeholder">🔐</div>
+            <div className="logo-placeholder"><Icon name="lock" size={28} /></div>
             <h2>{t('resetPassword.verifying')}</h2>
           </div>
         </div>
@@ -106,7 +107,7 @@ const ResetPassword = () => {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <div className="logo-placeholder">⚠️</div>
+            <div className="logo-placeholder"><Icon name="alert" size={28} /></div>
             <h2>{t('resetPassword.invalidLink')}</h2>
           </div>
           
@@ -133,7 +134,7 @@ const ResetPassword = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="logo-placeholder">🔐</div>
+          <div className="logo-placeholder"><Icon name="lock" size={28} /></div>
           <h2>{t('resetPassword.title')}</h2>
           <p>{t('resetPassword.subtitle')}</p>
         </div>
@@ -192,7 +193,7 @@ const ResetPassword = () => {
                   justifyContent: 'center'
                 }}
               >
-                {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showNewPassword ? 'eyeOff' : 'eye'} size={18} />
               </button>
             </div>
           </div>
@@ -230,7 +231,7 @@ const ResetPassword = () => {
                   justifyContent: 'center'
                 }}
               >
-                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} size={18} />
               </button>
             </div>
           </div>

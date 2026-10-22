@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns';
-import DayView   from './DayView';
-import WeekView  from './WeekView';
+import DayView from './DayView';
+import WeekView from './WeekView';
 import MonthView from './MonthView';
+import { visibleRange } from '../../lib/planningRange';
 import { useLanguage } from '../../contexts/LanguageContext';
+import Icon from '../ui/Icon';
 
-export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask, onSelectSlot }) {
+const VIEWS = ['day', 'week', 'month'];
+
+export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask, onSelectSlot, onRangeChange }) {
   const { t } = useLanguage();
-  const [view, setView]       = useState(defaultView);
+  const [fullDay,setFullDay]=useState(false);
+  const [view, setView] = useState(defaultView);
   const [current, setCurrent] = useState(new Date());
 
   const months = t('planning.months');
   const weekdaysLong = t('planning.weekdaysLong');
+
+  // El padre pide a la base de datos solo el tramo que se está viendo
+  const { from, to } = visibleRange(view, current);
+  useEffect(() => { onRangeChange?.({ from, to }); }, [from, to, onRangeChange]);
 
   const goBack = () => {
     if (view === 'month') setCurrent(d => subMonths(d, 1));
@@ -24,74 +33,60 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
     else setCurrent(d => addDays(d, 1));
   };
 
-  // Título según vista
   const title = (() => {
     if (view === 'month') return `${months[current.getMonth()]} ${current.getFullYear()}`;
     if (view === 'week') {
       const ws = new Date(current);
-      const day = (ws.getDay() + 6) % 7;
-      ws.setDate(ws.getDate() - day);
-      const we = new Date(ws); we.setDate(we.getDate() + 6);
-      if (ws.getMonth() === we.getMonth())
-        return `${months[ws.getMonth()]} ${ws.getFullYear()}`;
+      ws.setDate(ws.getDate() - ((ws.getDay() + 6) % 7));
+      const we = new Date(ws);
+      we.setDate(we.getDate() + 6);
+      if (ws.getMonth() === we.getMonth()) return `${months[ws.getMonth()]} ${ws.getFullYear()}`;
       return `${months[ws.getMonth()]} – ${months[we.getMonth()]} ${we.getFullYear()}`;
     }
     return `${weekdaysLong[current.getDay()]}, ${current.getDate()} ${months[current.getMonth()]} ${current.getFullYear()}`;
   })();
 
+  const viewProps = { date: current, tasks, onDelete: onDeleteTask, onEdit: onEditTask, onSelectSlot,fullDay };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e5e5ea', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif' }}>
-
-      {/* ── Barra superior ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #e5e5ea', flexShrink: 0 }}>
-
-        {/* Navegación */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <NavBtn onClick={goBack}>‹</NavBtn>
-          <button
-            onClick={() => setCurrent(new Date())}
-            style={{ all: 'unset', cursor: 'pointer', padding: '4px 11px', fontSize: 12, fontWeight: 500, color: '#1c1c1e', border: '1px solid #d1d1d6', borderRadius: 8, background: '#fff' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#f2f2f7'}
-            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-          >{t('planning.today')}</button>
-          <NavBtn onClick={goFwd}>›</NavBtn>
+    <div className="calendar-shell">
+      <div className="calendar-toolbar">
+        <div className="calendar-nav">
+          <button type="button" className="icon-button" onClick={goBack} aria-label={t('planning.previous')}>
+            <Icon name="chevronLeft" size={18} />
+          </button>
+          <button type="button" className="ghost-button small" onClick={() => setCurrent(new Date())}>
+            {t('planning.today')}
+          </button>
+          <button type="button" className="icon-button" onClick={goFwd} aria-label={t('planning.next')}>
+            <Icon name="chevronRight" size={18} />
+          </button>
         </div>
 
-        {/* Título */}
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.2, textTransform: 'capitalize', userSelect: 'none' }}>
-          {title}
-        </span>
+        {view!=='month' && <button type="button" className="ghost-button small calendar-hours-toggle" aria-pressed={fullDay} onClick={()=>setFullDay(value=>!value)}>{t(fullDay ? 'planning.businessHours' : 'planning.fullSchedule')}</button>}
+        <span className="calendar-title">{title}</span>
 
-        {/* Segmented control */}
-        <div style={{ display: 'flex', background: '#f2f2f7', borderRadius: 9, padding: 2 }}>
-          {[{ k: 'day', l: t('planning.viewDay') }, { k: 'week', l: t('planning.viewWeek') }, { k: 'month', l: t('planning.viewMonth') }].map(v => (
+        <div className="segmented" role="group" aria-label={t('planning.viewMode')}>
+          {VIEWS.map(key => (
             <button
-              key={v.k}
-              onClick={() => setView(v.k)}
-              style={{ all: 'unset', cursor: 'pointer', padding: '4px 13px', borderRadius: 7, fontSize: 12, fontWeight: view === v.k ? 600 : 400, color: '#1c1c1e', background: view === v.k ? '#fff' : 'transparent', boxShadow: view === v.k ? '0 1px 4px rgba(0,0,0,0.14)' : 'none', transition: 'all 0.12s' }}
-            >{v.l}</button>
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              aria-pressed={view === key}
+              style={{ width: 'auto', padding: '0 0.75rem', fontSize: '0.75rem' }}
+            >
+              {t(`planning.view${key[0].toUpperCase()}${key.slice(1)}`)}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* ── Cuerpo ── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {view === 'day'   && <DayView   date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
-        {view === 'week'  && <WeekView  date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
-        {view === 'month' && <MonthView date={current} tasks={tasks} onDelete={onDeleteTask} onEdit={onEditTask} onSelectSlot={onSelectSlot} />}
+      {view!=='month' && !fullDay && tasks.some(task=>!task.is_all_day && task.start_datetime && (new Date(task.start_datetime).getHours()<8 || new Date(task.start_datetime).getHours()>=20 || (task.end_datetime && new Date(task.end_datetime).getHours()>19))) && <button type="button" className="calendar-outside-hours" onClick={()=>setFullDay(true)}>{t('planning.outsideHours')}</button>}
+      <div className="calendar-body">
+        {view === 'day' && <DayView {...viewProps} />}
+        {view === 'week' && <WeekView {...viewProps} />}
+        {view === 'month' && <MonthView {...viewProps} />}
       </div>
     </div>
-  );
-}
-
-function NavBtn({ onClick, children }) {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{ all: 'unset', cursor: 'pointer', width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#1c1c1e', borderRadius: 7, background: hover ? '#f2f2f7' : 'transparent' }}
-    >{children}</button>
   );
 }

@@ -5,10 +5,16 @@ import {
   BarChart, Bar, Legend
 } from 'recharts'
 import { analyticsService, summarizeDailyRows, toChartData } from '../services/analyticsService'
+import { isReservedEventKey } from '../lib/analyticsEvents'
+import ConversionsCard from '../components/analytics/ConversionsCard'
+import ScrollDepthCard from '../components/analytics/ScrollDepthCard'
+import TimeOnPageCard from '../components/analytics/TimeOnPageCard'
+import NotFoundCard from '../components/analytics/NotFoundCard'
 import CreateEventDefinitionModal from '../components/analytics/CreateEventDefinitionModal'
 import Button from '../components/Button'
 import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
+import Icon from '../components/ui/Icon'
 
 const RANGE_PRESETS = [
   { days: 7, key: 'last7' },
@@ -127,7 +133,12 @@ const Analytics = () => {
   }))
   const topPaths = toChartData(summary.byPath, 8)
   const eventCounts = toChartData(summary.byEvent)
-  const labelForKey = (key) => eventDefinitions.find((d) => d.key === key)?.label || key
+  const topSources = toChartData(summary.bySource, 8)
+  const topLangs = toChartData(summary.byLang, 6)
+  // Las claves reservadas (teléfono, email, formulario) no están en las definiciones
+  const labelForKey = (key) => (isReservedEventKey(key)
+    ? t(`analytics.reserved.${key}`)
+    : eventDefinitions.find((d) => d.key === key)?.label || key)
 
   return (
     <div className="page">
@@ -159,7 +170,7 @@ const Analytics = () => {
 
           {canManageEvents && (
             <Button variant="ghost" size="medium" onClick={handleAggregateNow} disabled={aggregating}>
-              {aggregating ? t('analytics.aggregating') : `🔄 ${t('analytics.aggregateNow')}`}
+              {aggregating ? t('analytics.aggregating') : <><Icon name="repeat" size={16} />{t('analytics.aggregateNow')}</>}
             </Button>
           )}
         </div>
@@ -238,6 +249,60 @@ const Analytics = () => {
               )}
             </div>
 
+            <div className="analytics-two-cols">
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  {t('analytics.sourcesTitle')}
+                </h3>
+                <p className="field-help" style={{ marginTop: 0, marginBottom: '1rem' }}>
+                  {t('analytics.sourcesHelp')}
+                </p>
+                {topSources.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)' }}>{t('analytics.noData')}</p>
+                ) : (
+                  <ul className="rank-list">
+                    {topSources.map(row => (
+                      <li key={row.name}>
+                        <span className="rank-name">{row.name}</span>
+                        <span className="rank-value">{row.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  {t('analytics.langsTitle')}
+                </h3>
+                <p className="field-help" style={{ marginTop: 0, marginBottom: '1rem' }}>
+                  {t('analytics.langsHelp')}
+                </p>
+                {topLangs.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)' }}>{t('analytics.noData')}</p>
+                ) : (
+                  <ul className="rank-list">
+                    {topLangs.map(row => (
+                      <li key={row.name}>
+                        <span className="rank-name">{row.name}</span>
+                        <span className="rank-value">{row.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="analytics-two-cols">
+              <ConversionsCard byEvent={summary.byEvent} visitors={summary.uniqueVisitors} />
+              <TimeOnPageCard byEngagement={summary.byEngagement} />
+            </div>
+
+            <div className="analytics-two-cols analytics-two-cols-wide">
+              <ScrollDepthCard byScroll={summary.byScroll} byPath={summary.byPath} />
+              <NotFoundCard byNotFound={summary.byNotFound} />
+            </div>
+
             <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '1rem' }}>
                 {t('analytics.eventsTitle')}
@@ -272,6 +337,10 @@ const Analytics = () => {
               </Button>
             )}
           </div>
+
+          <p className="field-help" style={{ marginTop: 0, marginBottom: '1rem' }}>
+            {t('analytics.reservedInfo')}
+          </p>
 
           {eventDefinitions.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)' }}>{t('analytics.noEvents')}</p>

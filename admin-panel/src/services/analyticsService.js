@@ -81,12 +81,25 @@ export function summarizeDailyRows(rows) {
     byPath: {},
     byDevice: {},
     byCountry: {},
-    byEvent: {}
+    byEvent: {},
+    bySource: {},
+    byLang: {},
+    byScroll: {},
+    byEngagement: {},
+    byNotFound: {}
   }
 
   const mergeInto = (target, source) => {
     for (const [key, count] of Object.entries(source || {})) {
       target[key] = (target[key] || 0) + count
+    }
+  }
+
+  // by_scroll es { página: { umbral: n } }: hay que fusionar un nivel más
+  const mergeNested = (target, source) => {
+    for (const [path, depths] of Object.entries(source || {})) {
+      target[path] = target[path] || {}
+      mergeInto(target[path], depths)
     }
   }
 
@@ -97,6 +110,11 @@ export function summarizeDailyRows(rows) {
     mergeInto(summary.byDevice, row.by_device)
     mergeInto(summary.byCountry, row.by_country)
     mergeInto(summary.byEvent, row.by_event)
+    mergeInto(summary.bySource, row.by_source)
+    mergeInto(summary.byLang, row.by_lang)
+    mergeNested(summary.byScroll, row.by_scroll)
+    mergeInto(summary.byEngagement, row.by_engagement)
+    mergeInto(summary.byNotFound, row.by_not_found)
   }
 
   return summary

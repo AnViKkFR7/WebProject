@@ -1,6 +1,9 @@
-import * as XLSX from 'xlsx'
+// xlsx pesa ~430 KB: se descarga solo cuando alguien importa o pide la
+// plantilla, no al abrir la pestaña de Atributos.
+const loadXLSX = () => import('xlsx')
 
-export const downloadTemplate = () => {
+export const downloadTemplate = async () => {
+  const XLSX = await loadXLSX()
   // Crear plantilla Excel con headers
   const headers = [['Label', 'Data Type', 'Filtrable', 'Requerido']]
   const examples = [
@@ -55,7 +58,14 @@ export const downloadTemplate = () => {
   XLSX.writeFile(wb, 'plantilla_atributos.xlsx')
 }
 
-export const importExcel = (file, onSuccess, onError) => {
+export const importExcel = async (file, onSuccess, onError) => {
+  let XLSX
+  try {
+    XLSX = await loadXLSX()
+  } catch {
+    onError('No se pudo cargar el lector de Excel. Comprueba la conexión.')
+    return
+  }
   const reader = new FileReader()
   reader.onload = (e) => {
     try {

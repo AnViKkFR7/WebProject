@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { companyService } from '../../services/companyService'
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const PersonalTab = ({ selectedCompany, currentUser }) => {
   const { t } = useLanguage()
@@ -63,7 +64,7 @@ const PersonalTab = ({ selectedCompany, currentUser }) => {
         <div className="info-banner" style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'left', alignItems: 'center', width: '100%' }}>
             <div style={{ display: 'flex' }}>
-              <span className="icon">⚠️</span>
+              <span className="icon"><Icon name="alert" size={20} /></span>
             </div>
             <div style={{ display: 'flex', paddingLeft: '1rem', height: 'fit-content' }}>
               <p style={{ margin: '0' }}>{t('profile.messages.noCompanySelected')}</p>

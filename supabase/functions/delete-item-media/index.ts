@@ -84,11 +84,12 @@ serve(async (req) => {
       const { data: membership } = await supabaseAdmin
         .from('company_members')
         .select('role')
+        .eq('is_active', true)
         .eq('company_id', media.items.company_id)
         .eq('user_id', user.id)
         .single()
 
-      if (!membership || membership.role !== 'editor') {
+      if (!membership || !['admin','editor'].includes(membership.role)) {
         return new Response(
           JSON.stringify({ error: 'Forbidden: Only admin or company editor can delete media' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -96,16 +97,26 @@ serve(async (req) => {
       }
     }
 
-    // 5. Extraer el path del Storage desde la URL
-    // URL format: https://[project].supabase.co/storage/v1/object/public/items-media/[path]
-    const urlParts = media.url_externa.split('/items-media/')
-    if (urlParts.length !== 2) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid storage URL format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // 5. Extraer el path del Storage desde la URL.
+    // Formatos que puede tener url_externa según cómo se subió/migró la
+    // imagen: pública (".../object/public/items-media/<path>"), firmada
+    // (".../object/sign/items-media/<path>?token=...") o con el nombre del
+    // path URL-encoded. Nunca bloqueamos el borrado del registro solo
+    // porque no reconozcamos el formato — como mucho, se queda un archivo
+    // huérfano en Storage, que es preferible a que el usuario no pueda
+    // borrar la imagen desde el admin.
+    let storagePath = null
+    const marker = '/items-media/'
+    const markerIndex = media.url_externa.indexOf(marker)
+    if (markerIndex !== -1) {
+      const rawPath = media.url_externa.slice(markerIndex + marker.length)
+      const withoutQuery = rawPath.split('?')[0]
+      try {
+        storagePath = decodeURIComponent(withoutQuery)
+      } catch {
+        storagePath = withoutQuery
+      }
     }
-    const storagePath = urlParts[1]
 
     // 6. Borrar el registro de la base de datos
     // El trigger validate_item_media verificará que si es portada y hay más imágenes,
@@ -122,7 +133,20 @@ serve(async (req) => {
       )
     }
 
-    // 7. Borrar el archivo del Storage
+    // 7. Borrar el archivo del Storage — solo si se pudo determinar el path.
+    // Si no (URL en un formato irreconocible), el registro ya está borrado
+    // igualmente y solo queda un archivo huérfano en el bucket.
+    if (!storagePath) {
+      console.error('Could not determine storage path from url_externa:', media.url_externa)
+      return new Response(
+        JSON.stringify({
+          success: true,
+          warning: 'Record deleted but storage cleanup was skipped (unrecognized URL format)'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { error: storageError } = await supabaseAdmin.storage
       .from('items-media')
       .remove([storagePath])
@@ -130,12 +154,12 @@ serve(async (req) => {
     if (storageError) {
       // Log pero no fallar la operación (el registro ya fue borrado)
       console.error('Failed to delete from storage:', storageError)
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           warning: 'Record deleted but storage cleanup failed',
-          storage_error: storageError.message 
+          storage_error: storageError.message
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )

@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "supabase": "^2.72.8"
+  },
+  "scripts": {
+    "check:functions": "node supabase/check-functions.mjs"
   }
 }

@@ -1,10 +1,14 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import Button from '../Button'
 import { useLanguage } from '../../contexts/LanguageContext'
+import Icon from '../ui/Icon'
 
 const ItemDetailHeader = ({ item, loading }) => {
   const navigate = useNavigate()
+  const location = useLocation()
+  // Vuelve al listado con los mismos filtros y página con los que se salió
+  const backToList = () => navigate('/items' + (location.state?.fromSearch || ''))
   const { t } = useLanguage()
   const [copySuccess, setCopySuccess] = useState(false)
 
@@ -70,7 +74,7 @@ const ItemDetailHeader = ({ item, loading }) => {
             color: 'var(--success-color)',
             fontWeight: 500
           }}>
-            ✓ {t('common.urlCopied')}
+            <Icon name="check" size={16} /> {t('common.urlCopied')}
           </span>
         )}
         <Button 
@@ -78,10 +82,11 @@ const ItemDetailHeader = ({ item, loading }) => {
           variant="ghost"
           size="small"
         >
-          🔗 {t('common.share')}
+          <Icon name="link" size={16} />
+          {t('common.share')}
         </Button>
         <Button 
-          onClick={() => navigate('/items')}
+          onClick={backToList}
           variant="ghost"
           size="small"
         >

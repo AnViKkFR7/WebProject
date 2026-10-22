@@ -131,6 +131,7 @@ export const companyService = {
         companies (*)
       `)
       .eq('user_id', userId)
+      .eq('is_active', true)
     
     if (error) throw error
     return data
@@ -200,13 +201,18 @@ export const companyService = {
     return data
   },
 
-  async removeMember(companyId, userId) {
-    const { error } = await supabase
-      .from('company_members')
-      .delete()
-      .match({ company_id: companyId, user_id: userId })
-
+  async manageMemberAccess(companyId, userId, action) {
+    const { error } = await supabase.rpc('manage_company_member', { p_company:companyId, p_user:userId, p_action:action })
     if (error) throw error
+  },
+
+  async updateMember(companyId, userId, fullName, phone, role = null) {
+    const { error } = await supabase.rpc('update_company_member', { p_company:companyId, p_user:userId, p_name:fullName, p_phone:phone, p_role:role })
+    if (error) throw error
+  },
+
+  async removeMember(companyId, userId) {
+    return this.manageMemberAccess(companyId,userId,'remove')
   },
 
   // --- Current User Member Profile ---
