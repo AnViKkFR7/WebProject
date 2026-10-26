@@ -1,7 +1,8 @@
 .panel { display:grid; gap:.65rem; margin-bottom:1rem; padding:.8rem; border:1px solid var(--form-border); border-radius:9px; background:color-mix(in srgb,var(--primary-color) 3%,var(--bg-card)); }
 .toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem; align-items:end; }
 .panel .toolbar :global(.field) { margin:0; }
-.results { display:grid; gap:.35rem; max-height:220px; overflow:auto; }
+.toolbar :global(.input),.toolbar > button { box-sizing:border-box; height:2.75rem; min-height:2.75rem; }
+.results { display:grid; gap:.35rem; max-height:220px; overflow:auto; padding:.4rem; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card); box-shadow:0 5px 14px rgb(15 23 42 / 8%); }
 .result { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.35rem; }
 .result button:first-child { display:flex; justify-content:space-between; gap:1rem; width:100%; padding:.6rem .7rem; border:1px solid var(--border-color); border-radius:7px; background:var(--bg-card); color:var(--text-primary); text-align:left; cursor:pointer; }
 .archive { border:1px solid var(--danger-color); border-radius:7px; background:transparent; color:var(--danger-color); padding:.35rem .55rem; cursor:pointer; }

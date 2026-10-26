@@ -1,0 +1,14 @@
+.approvals { margin:0 0 1.25rem; padding:1rem; border:1px solid color-mix(in srgb,var(--primary-color) 38%,var(--border-color)); border-left:5px solid var(--primary-color); border-radius:var(--radius-lg); background:color-mix(in srgb,var(--primary-color) 7%,var(--bg-card)); }
+.approvals header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; color:var(--primary-color); }
+.approvals h2 { margin:0; color:var(--text-primary); font-size:1.05rem; }
+.approvals header p { margin:.25rem 0 0; color:var(--text-secondary); font-size:.9rem; }
+.approvals ul { display:grid; gap:.5rem; margin:.8rem 0 0; padding:0; list-style:none; }
+.approvals li { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:.75rem; padding:.65rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-card); }
+.decision { width:max-content; padding:.2rem .55rem; border:1px solid var(--border-color); border-radius:999px; font-size:.8rem; font-weight:700; }
+.decision[data-decision="accepted"] { border-color:var(--success-color); color:var(--success-color); }
+.decision[data-decision="rejected"] { border-color:var(--danger-color); color:var(--danger-color); }
+.approvals li div { display:grid; min-width:0; gap:.15rem; }
+.approvals li div span { color:var(--text-secondary); font-size:.84rem; }
+.approvals li a { padding:.45rem .65rem; border:1px solid var(--primary-color); border-radius:7px; color:var(--primary-color); font-weight:650; text-decoration:none; }
+.approvals li a:focus-visible { outline:3px solid var(--primary-color); outline-offset:2px; }
+@media(max-width:600px) { .approvals li { grid-template-columns:auto 1fr; } .approvals li a { grid-column:1/-1; justify-self:start; } }

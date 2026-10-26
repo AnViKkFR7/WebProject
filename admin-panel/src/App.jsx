@@ -12,6 +12,7 @@ import { CompanyProvider } from './contexts/CompanyContext.jsx'
 import { CompanyModulesProvider } from './contexts/CompanyModulesContext.jsx'
 import { FeedbackProvider } from './contexts/FeedbackContext.jsx'
 import RequireModule from './components/RequireModule.jsx'
+import ButtonTooltipManager from './components/ButtonTooltipManager.jsx'
 
 // El resto de páginas se descargan al entrar en ellas. Analítica (gráficas),
 // Planning (calendario) y Atributos (Excel) son las que más pesan, y antes se
@@ -27,6 +28,7 @@ const Leads = lazy(() => import('./pages/Leads.jsx'))
 const Contacts = lazy(() => import('./pages/Contacts.jsx'))
 const ModuleSettings = lazy(() => import('./pages/ModuleSettings.jsx'))
 const CrmPrivacy = lazy(() => import('./pages/CrmPrivacy.jsx'))
+const CustomerEmailSettings = lazy(() => import('./pages/CustomerEmailSettings.jsx'))
 const Blog = lazy(() => import('./pages/Blog.jsx'))
 const Invoicing = lazy(() => import('./pages/Invoicing.jsx'))
 const QuoteApproval = lazy(() => import('./pages/QuoteApproval.jsx'))
@@ -39,7 +41,7 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 const DeveloperGallery = import.meta.env.DEV ? lazy(() => import('./pages/DeveloperGallery.jsx')) : null
 
 const router = createBrowserRouter(createRoutesFromElements(
-  <Route errorElement={<RouteErrorView/>} element={<FeedbackProvider><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></FeedbackProvider>}>
+  <Route errorElement={<RouteErrorView/>} element={<FeedbackProvider><ButtonTooltipManager/><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></FeedbackProvider>}>
             <Route path="/login" element={<Login />} />
             <Route path="/quotes/respond" element={<QuoteApproval />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -60,6 +62,7 @@ const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings/modules" element={<ModuleSettings />} />
                 <Route path="/settings/privacy" element={<CrmPrivacy />} />
+                <Route path="/settings/emails" element={<RequireModule module="billing"><CustomerEmailSettings /></RequireModule>} />
                 <Route path="/leads" element={<RequireModule module="crm"><Leads /></RequireModule>} />
                 <Route path="/contacts" element={<RequireModule module="crm"><Contacts /></RequireModule>} />
                 <Route path="/blog" element={<RequireModule module="blog"><Blog /></RequireModule>} />

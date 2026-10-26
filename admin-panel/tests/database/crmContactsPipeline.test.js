@@ -23,6 +23,11 @@ beforeAll(async()=>{
   const migration=await sqlFile('migrations/CRM_CONTACTS_PIPELINE.sql')
   await db.exec(migration)
   await db.exec(migration)
+  const itemAttribution=await sqlFile('migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql')
+  await db.exec(itemAttribution)
+  await db.exec(itemAttribution)
+  const itemPreflight=await sqlFile('maintenance/CRM_LEAD_ITEM_ATTRIBUTION_PREFLIGHT.sql')
+  expect((await db.query(itemPreflight)).rows[0]).toEqual({lead_source_item_present:true,contact_source_item_present:true,source_item_sync_trigger_present:true,source_item_sync_function_is_security_definer:true})
   const resolvedActivity=await sqlFile('migrations/CRM_REVIEW_ACTIVITY_LINK.sql')
   await db.exec(resolvedActivity)
   await db.exec(resolvedActivity)
@@ -43,10 +48,10 @@ afterAll(async()=>db?.close())
 
 const insertLead=async(company_id,values={})=>{
   await db.exec('reset role')
-  const {rows:[lead]}=await db.query(`insert into public.lead(company_id,name,email,phone,message,source_path,source_campaign,source_utm_source,consent_given,consent_text_version,consent_source)
-    values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,[
+  const {rows:[lead]}=await db.query(`insert into public.lead(company_id,name,email,phone,message,source_path,source_item,source_campaign,source_utm_source,consent_given,consent_text_version,consent_source)
+    values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,[
     company_id,values.name||'Persona',values.email??null,values.phone??null,values.message??null,
-    values.path??'/contacto',values.campaign??null,values.utm??null,values.consent??false,
+    values.path??'/contacto',values.item??null,values.campaign??null,values.utm??null,values.consent??false,
     values.consentVersion??null,values.consent? 'public_contact_form':null,
   ])
   const {rows:[processed]}=await db.query('select * from public.lead where id=$1',[lead.id])
@@ -55,11 +60,11 @@ const insertLead=async(company_id,values={})=>{
 }
 
 it('creates a contact and form activity automatically with company-scoped pipeline/source/consent',async()=>{
-  const lead=await insertLead(ids.a,{name:'Ana',email:' Ana@Example.test ',phone:'+34 600 100 200',message:'Quiero información',campaign:'verano',utm:'web',consent:true,consentVersion:'privacy-3'})
+  const lead=await insertLead(ids.a,{name:'Ana',email:' Ana@Example.test ',phone:'+34 600 100 200',message:'Quiero información',item:'Casa del Mar · listing-42',campaign:'verano',utm:'web',consent:true,consentVersion:'privacy-3'})
   expect(lead.crm_match_state).toBe('linked')
   expect(lead.crm_contact_id).toBeTruthy()
   const {rows:[contact]}=await db.query('select * from public.crm_contacts where id=$1',[lead.crm_contact_id])
-  expect(contact).toMatchObject({company_id:ids.a,name:'Ana',email:' Ana@Example.test ',source_path:'/contacto',source_utm_campaign:'verano',source_utm_source:'web',consent_given:true,consent_text_version:'privacy-3',consent_source:'public_contact_form'})
+  expect(contact).toMatchObject({company_id:ids.a,name:'Ana',email:' Ana@Example.test ',source_path:'/contacto',source_item:'Casa del Mar · listing-42',source_utm_campaign:'verano',source_utm_source:'web',consent_given:true,consent_text_version:'privacy-3',consent_source:'public_contact_form'})
   expect(contact.email_normalized).toBe('ana@example.test')
   expect(contact.phone_normalized).toBe('34600100200')
   const {rows:[stage]}=await db.query('select stage_key from public.crm_pipeline_stages where id=$1',[lead.crm_stage_id])
@@ -121,10 +126,11 @@ it('prevents authenticated users from forging the system-managed lead contact li
 it('resolves ambiguous leads explicitly and preserves their original request on the selected contact timeline',async()=>{
   const one=await insertLead(ids.a,{email:'resolve-a@example.test',phone:'600010001'})
   const two=await insertLead(ids.a,{email:'resolve-b@example.test',phone:'600010002'})
-  const review=await insertLead(ids.a,{email:'resolve-a@example.test',phone:'600010002',message:'Necesito una visita esta semana'})
+  const review=await insertLead(ids.a,{email:'resolve-a@example.test',phone:'600010002',message:'Necesito una visita esta semana',item:'Vivienda-42'})
   await login(db,'editor')
   const {rows:[linked]}=await db.query('select public.resolve_crm_lead_contact($1,$2,$3,false) as id',[ids.a,review.id,one.crm_contact_id])
   expect(linked.id).toBe(one.crm_contact_id)
+  expect((await db.query('select source_item from public.crm_contacts where id=$1',[one.crm_contact_id])).rows[0].source_item).toBe('Vivienda-42')
   const preserved=(await db.query("select kind,title,details,contact_id,lead_id from public.crm_activities where lead_id=$1 and contact_id=$2 and kind='form'",[review.id,one.crm_contact_id])).rows
   expect(preserved).toEqual([expect.objectContaining({kind:'form',title:'Solicitud recibida',details:'Necesito una visita esta semana',contact_id:one.crm_contact_id,lead_id:review.id})])
   await db.exec('reset role')
@@ -141,7 +147,7 @@ it('resolves ambiguous leads explicitly and preserves their original request on 
 })
 
 it('exports CRM records, restricts privacy actions to company admins, then anonymizes without altering invoices',async()=>{
-  const lead=await insertLead(ids.a,{name:'Privacy Subject',email:'privacy@example.test',phone:'600123456',message:'Sensitive request',campaign:'private-campaign',consent:true,consentVersion:'privacy-v1'})
+  const lead=await insertLead(ids.a,{name:'Privacy Subject',email:'privacy@example.test',phone:'600123456',message:'Sensitive request',item:'Personal listing request',campaign:'private-campaign',consent:true,consentVersion:'privacy-v1'})
   await db.exec('reset role')
   await db.query("insert into public.crm_activities(company_id,contact_id,lead_id,kind,title,details) values($1,$2,$3,'note','Sensitive note','Private details')",[ids.a,lead.crm_contact_id,lead.id])
   const savedInvoice=await save(db,ids.a,document(),'issued')
@@ -165,8 +171,8 @@ it('exports CRM records, restricts privacy actions to company admins, then anony
   expect(erased).toMatchObject({anonymized:true,already_applied:false,lead_count:1,activity_count:2})
   const retried=(await db.query('select public.anonymize_crm_contact($1,$2,$3) as result',[ids.a,lead.crm_contact_id,request])).rows[0].result
   expect(retried).toMatchObject({anonymized:true,already_applied:true})
-  const after=(await db.query('select name,email,phone,message,notes,source_campaign,consent_given,crm_contact_id,crm_match_state from public.lead where id=$1',[lead.id])).rows[0]
-  expect(after).toMatchObject({name:'Contacto anonimizado',email:null,phone:null,message:null,notes:null,source_campaign:null,consent_given:false,crm_contact_id:null,crm_match_state:'anonymized'})
+  const after=(await db.query('select name,email,phone,message,notes,source_campaign,source_item,consent_given,crm_contact_id,crm_match_state from public.lead where id=$1',[lead.id])).rows[0]
+  expect(after).toMatchObject({name:'Contacto anonimizado',email:null,phone:null,message:null,notes:null,source_campaign:null,source_item:null,consent_given:false,crm_contact_id:null,crm_match_state:'anonymized'})
   expect((await db.query('select id from public.crm_contacts where id=$1',[lead.crm_contact_id])).rows).toHaveLength(0)
   expect((await db.query('select id from public.crm_activities where contact_id=$1',[lead.crm_contact_id])).rows).toHaveLength(0)
   expect((await db.query('select id,document from public.invoices where id=$1',[savedInvoice.id])).rows[0].document.customer.name).toBe('Client')

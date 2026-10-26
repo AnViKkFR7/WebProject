@@ -134,6 +134,8 @@ const SecurityTab = () => {
               />
               <button
                 type="button"
+                aria-label={t(showNewPassword ? 'profile.security.hidePassword' : 'profile.security.showPassword')}
+                title={t(showNewPassword ? 'profile.security.hidePassword' : 'profile.security.showPassword')}
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 style={{
                   position: 'absolute',
@@ -168,6 +170,8 @@ const SecurityTab = () => {
               />
               <button
                 type="button"
+                aria-label={t(showConfirmPassword ? 'profile.security.hidePassword' : 'profile.security.showPassword')}
+                title={t(showConfirmPassword ? 'profile.security.hidePassword' : 'profile.security.showPassword')}
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 style={{
                   position: 'absolute',

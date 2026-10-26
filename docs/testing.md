@@ -1,5 +1,31 @@
 # Verificación de la evolución de documentos
 
+## Aprobación de presupuestos · compilación Edge local · 26/10/2026
+
+- `npm run check:functions`: **13/13 Edge Functions compilan**, incluidas `send-quote-approval-link` y `notify-quote-approval-response` con el renderer de emails compartido.
+- El usuario ejecutó el preflight actualizado `database/maintenance/BILLING_QUOTE_APPROVAL_PREFLIGHT.sql` en Supabase y confirma que todos sus indicadores devolvieron `true`. Esto confirma el esquema/permisos comprobados por ese preflight; no confirma despliegue. Sigue pendiente desplegar ambas funciones y hacer un envío/respuesta controlados en Vercel/Resend.
+- No se hizo ningún envío real ni hubo despliegues. El preflight remoto fue ejecutado por el usuario; este cambio local no ejecutó SQL.
+
+## Emails al cliente · idioma de envío · 26/10/2026
+
+- Se añade una selección común por empresa para usar el HTML ES o EN en aprobaciones de presupuesto y avisos automáticos de vencimiento. Las configuraciones antiguas y valores inválidos usan español. No requiere SQL: la propiedad opcional se guarda dentro del JSON de configuración aceptado por las RPC y el emisor solo admite EN explícitamente; cualquier otro valor cae a ES.
+- Pruebas del renderer/resolvedor y del selector del panel; una prueba PGlite confirma que `emailLanguage:'en'` se guarda y recupera desde las RPC existentes. Suite completa: **538 pruebas en 95 archivos**. `npm run check:functions` confirma la compilación de ambos emisores Edge (13/13 funciones en total); lint y build también pasan.
+- Pendiente despliegue conjunto para comprobar la entrega real por idioma; no se envió correo ni se desplegó.
+
+## Accesibilidad · foco visible en campos · 26/10/2026
+
+- Se detectaron reglas de `.input`, `.select`, formularios, búsqueda y atributos que anulaban `outline` durante el foco. Se añade un contorno explícito al estado `:focus-visible` y una regresión en `tests/accessibility/focusIndicators.test.js`.
+- El editor de descripción de Items tenía una regla `.description-edit .input:focus` más específica, que el selector global no alcanzaba. El estado `:focus-visible` tiene ahora contorno propio; la prueba accesible cubre ese caso además de los campos globales.
+- El color del contorno global de foco usa el token primario. La prueba de tokens comprueba explícitamente su contraste mínimo 3:1 con las superficies de panel de los temas claro y oscuro.
+- `npm test -- --run`: **539 pruebas en 95 archivos**; lint y build correctos. El build mantiene el aviso de chunk principal de 683,38 KB.
+- La revisión es estática; Computer Use en Windows se detuvo porque no pudo determinar con suficiente confianza la URL activa. La captura visual autenticada sigue pendiente. No requiere SQL.
+
+## Accesibilidad · nombres y tooltips de botones de icono · 26/10/2026
+
+- La auditoría estática identificó botones solo-icono de limpieza de búsquedas, edición de usuario y visibilidad de contraseña. Se añadieron `aria-label` y `title` con traducciones ES/EN y etiquetas de acción dinámicas. El gestor global también obtiene nombre y tooltip de las etiquetas HTML asociadas a interruptores.
+- `ButtonTooltipManager.test.jsx`: 1 prueba correcta. Suite completa: **535 pruebas en 95 archivos**. `npm run lint` y `npm run build` correctos; Vite conserva el aviso del chunk principal de 682,84 KB.
+- No hubo SQL, commits ni despliegues. La auditoría visual autenticada y la revisión de contraste por pantalla/viewport siguen pendientes.
+
 ## Fase 4 · aprobación de presupuestos por enlace · 26/10/2026
 
 - `BILLING_QUOTE_APPROVAL.sql` aplicada dos veces en PGlite. 4 pruebas PostgreSQL validan emisión solo sobre presupuesto enviado, denegación de viewer y empresa ajena, aceptación/rechazo de un solo uso, retry idempotente, reemisión, expiración y revocación cuando cambia o se cierra el documento.
@@ -353,9 +379,102 @@ Sin SQL, commits ni despliegues.
 - `QuoteApproval.test.jsx`: enlace inválido no llama al servicio; un fallo de respuesta conserva nombre/email; el reintento muestra la decisión final y elimina el token del fragmento URL. Suite focalizada: **2 pruebas correctas**; ESLint del archivo correcto.
 - Campos, radios, confirmación y botón tienen mínimo 44 px; el layout cambia a una columna en móvil. `npm run build` correcto; continúa aviso de bundle principal de 669,44 KB. La prueba de navegador local acabó en `ERR_CONNECTION_TIMED_OUT` y el entorno denegó el socket, así que queda pendiente la inspección visual autenticada.
 
+## Verificación secuencial 2 · aprobación de presupuestos · 26/10/2026
+
+- La suite dirigida previa pasó **9 pruebas** (PGlite, servicio y componente); cubre seguridad del token, roles/tenant, expiración, revocación, aceptación/rechazo, identidad declarada y reintento.
+- Se añade `BILLING_QUOTE_APPROVAL_PREFLIGHT.sql`, que devuelve solo indicadores booleanos de tablas/columnas/índices/trigger/RPC/RLS/grants y no consulta contenido de presupuestos ni datos declarados.
+- Prueba nueva PGlite ejecuta el preflight tras aplicar dos veces la migración y valida todos los indicadores: `npm test -- --run tests/database/billingQuoteApproval.test.js tests/database/migrationRunbook.test.js` — **10 pruebas correctas**.
+- Actualización remota: el usuario ejecutó el preflight en Supabase; los 13 resultados son `true`. Quedan confirmados RPC, trigger, RLS, grants y objetos. No repetir `BILLING_QUOTE_APPROVAL.sql`. La ruta Vercel sigue sin verificarse; falta una prueba real de la ruta y de la traza con un presupuesto de prueba dedicado.
+
 ## Accesibilidad transversal · corrección de formularios · 26/10/2026
 
 - En CSS Modules, `.field` se estaba interpretando como una clase local aunque los componentes reciben la clase global `field`. Se corrigió con `:global(.field)` en facturación reutilizable, plantillas, CRM, privacidad, aprobación pública y enlace de aprobación.
 - Esto restablece el margen previsto en los campos de formulario y evita que el margen global desplace verticalmente los botones alineados al borde inferior; también restablece `min-width:0` y altura mínima en los controles correspondientes.
 - Verificación del panel: `npm test` **493 pruebas correctas en 87 archivos**, `npm run lint` correcto y `npm run build` correcto. Algunas pruebas intentan conectar con `pakbxfdewswzkipeddhr.supabase.co` y muestran `ENOTFOUND`; no son una verificación del estado remoto. Vite mantiene el aviso del chunk principal de **669,44 KB**, superior al objetivo de 500 KB.
 - No hubo sesión de navegador autenticada en los anchos 375/768/1024/1280 px; esta corrección no marca completa la auditoría visual/responsive.
+
+## Alta de cliente desde presupuesto · 26/10/2026
+
+- El panel de reutilización estaba renderizando un `<form>` dentro del formulario del editor. El evento `submit` del alta de cliente burbujeaba y ejecutaba también el guardado del presupuesto.
+- El formulario interno se sustituyó por un grupo de controles; el guardado valida los campos y el botón es `type="button"`. Enter en un campo ejecuta el alta sin enviar el presupuesto.
+- `npm test -- --run src/components/BillingReusePanel.test.jsx src/services/billingReuseService.test.js src/components/QuoteLinesEditor.test.jsx`: **6 pruebas correctas**. ESLint focalizado de `BillingReusePanel.jsx` y su test: correcto.
+- No se guardaron datos en Supabase ni se hizo prueba visual autenticada. Sin cambios SQL, commit ni despliegue.
+
+## Aprobación de presupuestos, respuestas sucesivas y notificaciones · 26/10/2026
+
+- La migración nueva `BILLING_QUOTE_APPROVAL_REVISIONS.sql` se aplica después de `BILLING_QUOTE_APPROVAL.sql`. PGlite aplica ambas dos veces, prueba rechazo → guardar versión revisada/enviar → aceptar, verifica estado final e historial de dos decisiones, valida destinatarios autorizados de Resend y permiso service-role para notificar.
+- `BILLING_QUOTE_APPROVAL_PREFLIGHT.sql` se actualiza para revisar las nuevas columnas/RPC y sus grants. El usuario debe volver a ejecutarlo tras la migración de revisiones; el resultado anterior solo cubre la versión previa.
+- Comprobación dirigida: `npm test -- --run tests/database/billingQuoteApproval.test.js src/components/BillingReusePanel.test.jsx src/services/quoteApprovalService.test.js src/pages/QuoteApproval.test.jsx` — **16 pruebas correctas**. Tras actualizar preflight y añadir la prueba de color: suite puntual **14 pruebas correctas** entre aprobación/migration-runbook/contraste.
+- `npx eslint` en los componentes/servicios modificados: correcto. `npm run check:functions`: **13/13 Edge Functions compilan**. `npm run build`: correcto; chunk principal **673,77 KB**, conserva aviso de Vite (>500 KB).
+- Prueba de tokens comunes en claro/oscuro (`tests/accessibility/colorTokens.test.js`) verifica texto, botones, estados y bordes contra límites WCAG AA/contraste no textual; no sustituye un escaneo completo de todos los estilos.
+- No se probó el correo real ni se desplegaron las funciones. No se pudo completar la revisión visual autenticada en navegador; siguen pendientes los anchos 375/768/1024/1280 y la interacción real en Vercel.
+
+## Verificación secuencial 1 · Blog · 26/10/2026
+
+- Suite dirigida: `npm test -- --run tests/database/contentSeoFields.test.js src/lib/contentSeo.test.js` — **7 pruebas correctas**. Comprueba restricciones/índices/trigger en PGlite y helpers de slug/preview; no prueba el panel en navegador ni consulta Supabase.
+- La copia `database/local/DatabaseSQL.sql` incluye las columnas SEO de `items` y `blog_posts`, pero no refleja los checks, índices únicos y trigger añadidos por `CONTENT_SEO_FIELDS.sql`; no usarla como prueba de despliegue completo.
+- Contrato cliente: `company-site-snippet/BLOG_INTEGRATION.md`. No hay proyecto de web cliente en este repositorio para verificar rutas públicas, prerender, OG/canonical o sitemap.
+- La captura de producción mostró botones de filtro de texto afectados por la regla global `.segmented button { width:2.5rem }` y un `<span class="sr-only">` visible porque la clase no estaba definida. Blog fija ahora ancho al contenido, mínimo táctil 44 px y scroll horizontal accesible; el grupo se apila antes de 1040 px. Se añadió la utilidad global `.sr-only`, también usada por etiquetas de búsqueda CRM.
+- `npm run lint`, `npm run build` y las 7 pruebas SEO dirigidas pasan; Vite aún advierte que el chunk principal es 669,44 KB (>500 KB). Cambios solo locales; la captura de producción no se repitió porque no se desplegó a Vercel.
+
+## Marca y edición de emails para clientes · 26/10/2026
+
+- La prueba PGlite ejecuta `COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql`, confirma denegación de lectura directa y de RPC a editor/otra empresa, permite guardar/leer como admin de empresa y plataforma, rechaza contraste insuficiente e imagen PNG falsificada, y verifica autor, restauración y tope de diez versiones. Ejecuta también el preflight y espera todos los indicadores en `true`.
+- El renderizador cubre email de presupuesto/factura, ES/EN, placeholders, escapado, lista permitida HTML/enlaces, rechazo de placeholders desconocidos/malformados, texto plano, logo CID, dos layouts y contraste del rótulo sobre acento claro. La vista UI verifica el límite admin, la previsualización sin envío y guardado en la misma pantalla.
+- `npm test -- --run src/lib/customerEmailTemplate.test.js src/pages/CustomerEmailSettings.test.jsx tests/database/migrationRunbook.test.js tests/database/customerEmailSettings.test.js`: **24 pruebas correctas en 4 archivos**. `npm run lint` correcto. `npm run build` correcto; Vite mantiene aviso de chunk principal **681,48 KB** (>500 KB). `npm run check:functions`: **13/13** funciones Edge compilan. `git diff --check` correcto (avisos informativos LF/CRLF).
+- Solo verificación local. No se aplicó la migración en Supabase, no se desplegó Vercel/Edge ni se enviaron correos. No se probó visualmente en Gmail/Outlook/Apple Mail; esa QA queda pendiente.
+- Orden para activar: `database/migrations/COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql`, después `database/maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql`, y luego despliegue conjunto del panel y las funciones `send-quote-approval-link` y `send-billing-due-reminders`. Ejecutar solo después de sus dependencias ya instaladas y según `database/README.md`.
+
+## Indicadores de foco de teclado · 26/10/2026
+
+- El `outline:none` del input de búsqueda dentro del selector múltiple eliminaba el indicador global de foco. Se resalta ahora su contenedor con `:has(input:focus-visible)`; tarjetas con enlaces extendidos ya exponen un borde al recibir foco y tienen una regresión para mantenerlo.
+- `npm test -- --run tests/accessibility/focusIndicators.test.js`: **2 pruebas correctas**. Revisión estática; no se midió el contraste del anillo en captura ni se recorrió todo el panel en teclado/navegador.
+
+## Suite global reproducible · 26/10/2026
+
+- La suite completa `npm test -- --run` pasa **523 pruebas en 93 archivos**. En una ejecución inicial, dos casos de `Invoicing.test.jsx` llamaban sin querer la RPC real de auditoría de presupuestos; se añadieron dobles del servicio de aprobación para aislarlos. La segunda ejecución pasa sin consultas DNS a Supabase.
+- `npm run lint` y `git diff --check` pasan. No se cambió configuración, datos ni servicios remotos.
+
+## Alineación del enlace de aprobación · 26/10/2026
+
+- Se fijan la altura del campo y del botón «Copiar enlace» a 44 px y una altura de línea explícita para la etiqueta. Esto evita que estilos globales de input y botón creen alturas diferentes en esa fila.
+- `npm test -- --run src/pages/QuoteApproval.test.jsx src/pages/Contacts.test.jsx src/pages/CrmPrivacy.test.jsx src/components/BillingChapterTemplates.test.jsx src/components/BillingFinancePanel.test.jsx src/components/BillingReusePanel.test.jsx`: **13 pruebas correctas en 6 archivos**. `npm run lint` y `npm run build` correctos; Vite conserva la advertencia previa de chunk principal de **681,48 KB** (>500 KB).\n- No se capturó navegador en esta corrección. La inspección de alineación a 375/768/1024/1280 px sigue pendiente; no se marca cerrada la fase transversal.
+
+## Alineación de formularios · 26/10/2026
+
+- Se fijan a 44 px las alturas de controles vecinos (input y botón) en filas de aprobación de presupuestos, reuso y plantillas de billing, búsqueda de privacidad CRM, contactos/etapas y reversión de cobros. La etiqueta del enlace privado usa una altura de línea explícita.
+- Es una corrección por inspección estática de CSS/JSX. No se ejecutaron pruebas ni se capturó navegador en esta entrega; la revisión visual a 375/768/1024/1280 px sigue pendiente. No hay migración SQL asociada.
+
+## Acceso para auditoría visual · 26/10/2026
+
+- El navegador integrado abre http://localhost:5173/settings/emails, pero React Router redirige a /login. La ventana Chrome existente no está disponible para automatización. No se intentó iniciar sesión ni usar credenciales.
+- Se conserva la pestaña local en /login para que el usuario pueda autenticarse si quiere que continúe la comprobación visual; la fase sigue abierta hasta inspeccionar las pantallas protegidas en 375/768/1024/1280 px.
+
+## Endpoint público de solicitudes CRM · 26/10/2026
+
+- `company-site-snippet/api/lead.test.ts` cubre tenant fijado por despliegue, configuración ausente, consentimiento con/sin versión, atribución completa, módulo CRM desactivado y honeypot sin acceso a Supabase.
+- `npm test -- --run ../company-site-snippet/api/lead.test.ts`: **7 pruebas correctas**. Esto valida el contrato compartido, no prueba los formularios desplegados de los proyectos cliente ni Supabase remoto.
+
+## Avisos de vencimiento · 26/10/2026
+
+- `npm test -- --run tests/database/billingDueReminders.test.js`: **5 pruebas correctas**. PGlite comprueba autorización, offsets, deduplicación de cola, baja por factura, revalidación del módulo/saldo, payload mínimo, marcador idempotente y pausa/reanudación.
+- La Edge Function compila con `npm run check:functions`, pero no hay prueba automatizada que simule Resend/HTTP. La prueba PGlite no acredita el despliegue remoto, la ejecución del cron ni un email real.
+
+## Emails al cliente · logo, paletas y CTA · 26/10/2026
+
+- `npm test -- --run src/lib/customerEmailTemplate.test.js src/pages/CustomerEmailSettings.test.jsx` en `admin-panel`: **13 pruebas correctas**. Verifica preview con logo embebido, adjunto CID al enviar, paleta guardada, pie enlazado, no duplicación visible del nombre, layouts distintos y CTA estilizado.
+- No se necesita SQL adicional para estos ajustes; se reutiliza la biblioteca existente de paletas. `COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql` sigue siendo la migración inicial pendiente de aplicación remota según la secuencia documentada.
+- El navegador local permanece sin sesión y no permite una verificación visual autenticada del panel; el resultado se verificó mediante renderer y pruebas de componente.
+- Ajuste visual posterior: logo a escala compacta, en línea con la identidad de empresa y sin bloque aislado. Tests focalizados (13), lint, build y `npm run check:functions` (13/13) correctos; el chunk principal sigue en 681,96 kB.
+
+## CRM · atribución visible · 26/10/2026
+
+- `npm test -- --run src/pages/Contacts.test.jsx src/services/globalSearchService.test.js tests/database/crmContactsPipeline.test.js` en `admin-panel`: **14 pruebas correctas**. La ficha confirma que presenta la ruta, referrer, campaña y los cuatro parámetros UTM; el conjunto de regresión también cubre aislamiento por empresa y permisos en el pipeline.
+- Esto solo valida datos que ya llegan al backend. Los tres sitios cliente todavía requieren la integración descrita en `docs/crm-client-form-audit.md`; no se comprobó ningún flujo desplegado ni Supabase remoto.
+- Verificación posterior en `admin-panel`: **529 pruebas en 93 archivos**, `npm run lint` y `npm run build` correctos. Sigue el aviso de Vite por el chunk principal de **681,92 kB** (límite informativo 500 kB); no se cambió el code-splitting en esta fase.
+
+## CRM · atribución del item y anonimización · 26/10/2026
+
+- `npm test -- --run tests/database/crmContactsPipeline.test.js ../company-site-snippet/api/lead.test.ts tests/database/migrationRunbook.test.js src/pages/Contacts.test.jsx` en `admin-panel`: **26 pruebas correctas**. La prueba PGlite aplica la migración dos veces, comprueba el preflight, crea el contacto automáticamente, vincula un caso ambiguo y anonimiza una solicitud borrando `source_item`.
+- `CRM_LEAD_ITEM_ATTRIBUTION.sql` es una migración nueva; el preflight es de solo lectura. Ambos están pendientes de ejecución en Supabase remoto. No se desplegó ninguna web cliente.
+- Suite completa: **530 pruebas en 93 archivos**, ESLint y build correctos; Vite informa el chunk principal de 681,96 kB (>500 kB).

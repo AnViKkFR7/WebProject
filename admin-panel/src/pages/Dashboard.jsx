@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { usePermissions } from '../hooks/usePermissions'
-import { fetchCompanyOverview } from '../services/companyOverviewService'
+import { fetchCompanyOverview,fetchRecentQuoteApprovalResponses } from '../services/companyOverviewService'
 import { formatDateTime } from '../lib/dates'
 import { ITEM_STATUSES, MEMBER_ROLES } from '../lib/companyOverview'
 import PageHeader from '../components/ui/PageHeader'
@@ -11,6 +12,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
 import StatCard from '../components/dashboard/StatCard'
 import StatBreakdown from '../components/dashboard/StatBreakdown'
+import styles from './Dashboard.module.css'
 
 const STATUS_TONE = {
   draft: 'var(--text-tertiary)',
@@ -47,6 +49,16 @@ const Dashboard = () => {
       })
     return () => { cancelled = true }
   }, [companyId, reloadKey])
+
+  useEffect(()=>{
+    if(!companyId)return undefined
+    let active=true
+    const refresh=async()=>{
+      try{const quoteApprovals=await fetchRecentQuoteApprovalResponses(companyId);if(active)setOverview(previous=>previous?{...previous,quoteApprovals}:previous)}catch{return}
+    }
+    const timer=window.setInterval(()=>void refresh(),30000)
+    return()=>{active=false;window.clearInterval(timer)}
+  },[companyId])
 
   const retry = () => { setState('loading'); setReloadKey(k => k + 1) }
 
@@ -101,6 +113,15 @@ const Dashboard = () => {
       )}
 
       {state === 'ready' && overview && (
+        <>
+        {overview.quoteApprovals?.length>0 && <section className={styles.approvals} aria-labelledby="dashboard-approvals-title">
+          <header><div><h2 id="dashboard-approvals-title">{t('dashboard.approvalsTitle')}</h2><p>{t('dashboard.approvalsHelp')}</p></div><Icon name="file" size={20}/></header>
+          <ul>{overview.quoteApprovals.map(response=><li key={`${response.quote_id}-${response.responded_at}`}>
+            <span className={styles.decision} data-decision={response.decision}>{t(`quotes.${response.decision}`)}</span>
+            <div><strong>{response.customer_name}</strong><span>{t('dashboard.approvalQuote').replace('{number}',response.quote_number)} · {formatDateTime(response.responded_at)}</span></div>
+            <Link to={`/quotes/${encodeURIComponent(response.quote_id)}`} title={t('dashboard.openApprovalQuote')}>{t('dashboard.openApprovalQuote')}</Link>
+          </li>)}</ul>
+        </section>}
         <div className="stat-grid">
           <StatCard
             icon="items"
@@ -218,6 +239,7 @@ const Dashboard = () => {
             </StatCard>
           )}
         </div>
+        </>
       )}
 
       {companies.length > 1 && (

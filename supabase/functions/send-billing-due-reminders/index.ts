@@ -3,7 +3,8 @@
 // Deploy with --no-verify-jwt; only BILLING_REMINDERS_CRON_SECRET authorizes cron.
 import {serve} from 'https://deno.land/std@0.168.0/http/server.ts'
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2'
-import {buildBillingDueReminder,type BillingDueReminderPayload} from '../_shared/billingDueReminder.ts'
+import type {BillingDueReminderPayload} from '../_shared/billingDueReminder.ts'
+import {renderCustomerBillingEmail,resolveCustomerEmailLanguage} from '../../../admin-panel/src/lib/customerEmailTemplate.js'
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}})
 const safeCode=(value:unknown)=>typeof value==='string'&&/^[A-Z0-9_]{3,12}$/.test(value)?value:undefined
@@ -43,8 +44,24 @@ serve(async req=>{
       const payload=(Array.isArray(data)?data[0]:data) as BillingDueReminderPayload|undefined
       if(!payload)continue // SQL marked the job skipped after a final gate check.
       if(!payload.recipient_email){await fail('recipient_unavailable',false);continue}
-      const message=buildBillingDueReminder(payload)
-      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json','Idempotency-Key':`billing-due/${job.queue_id}/${job.delivery_generation}`},body:JSON.stringify({from,to:payload.recipient_email,subject:message.subject,html:message.html,text:message.text})})
+      const{data:settingsData,error:settingsError}=await admin.rpc('get_company_customer_email_template',{p_company:payload.company_id,p_template:'invoice_due',p_language:'es'})
+      if(settingsError)report('template','settings_unavailable')
+      let settings=(Array.isArray(settingsData)?settingsData[0]:settingsData) as {company_name?:string;brand?:Record<string,unknown>;template?:Record<string,string>}|null
+      const emailLanguage=resolveCustomerEmailLanguage(settings?.brand)
+      if(emailLanguage==='en'){
+        const{data:englishData,error:englishError}=await admin.rpc('get_company_customer_email_template',{p_company:payload.company_id,p_template:'invoice_due',p_language:'en'})
+        if(englishError){report('template','settings_unavailable');settings={...settings,template:undefined}}
+        else settings=(Array.isArray(englishData)?englishData[0]:englishData) as typeof settings
+      }
+      let companyName=settings?.company_name||''
+      if(!companyName){const{data:company}=await admin.from('companies').select('name').eq('id',payload.company_id).maybeSingle();companyName=company?.name||'La empresa'}
+      const locale=emailLanguage==='en'?'en-GB':'es-ES'
+      const dateLabel=new Intl.DateTimeFormat(locale,{timeZone:'Europe/Madrid',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${payload.due_date}T00:00:00Z`))
+      const messageData={kind:'invoice_due',language:emailLanguage,companyName,data:{invoice_number:payload.invoice_number,due_date:dateLabel,balance:new Intl.NumberFormat(locale,{style:'currency',currency:'EUR'}).format(Number(payload.balance))},brand:settings?.brand||{}}
+      let safeMessage
+      try{safeMessage=renderCustomerBillingEmail({...messageData,template:settingsError?undefined:settings?.template})}
+      catch{report('template','invalid_template');safeMessage=renderCustomerBillingEmail(messageData)}
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json','Idempotency-Key':`billing-due/${job.queue_id}/${job.delivery_generation}`},body:JSON.stringify({from,to:payload.recipient_email,subject:safeMessage.subject,html:safeMessage.html,text:safeMessage.text,...('attachments' in safeMessage&&safeMessage.attachments.length?{attachments:safeMessage.attachments}:{})})})
       if(!response.ok){const retryable=response.status>=500||response.status===409||response.status===429;await fail(retryable?'provider_unavailable':'provider_rejected',retryable);continue}
       providerAccepted=true
       const responseBody=await response.json().catch(()=>({})) as {id?:string};providerId=responseBody.id??null

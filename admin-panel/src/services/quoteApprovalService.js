@@ -45,4 +45,16 @@ export const quoteApprovalService = {
     if (error) throw error
     return data
   },
+
+  async emailLink(companyId,quoteId,token){
+    const{data,error}=await supabase.functions.invoke('send-quote-approval-link',{body:{company_id:companyId,quote_id:quoteId,token}})
+    if(error||data?.error||!data?.sent)throw error||new Error(data?.error||'Quote email could not be sent')
+    return data
+  },
+
+  async notifyResponse(token){
+    const{data,error}=await supabase.functions.invoke('notify-quote-approval-response',{body:{token}})
+    if(error||data?.error)throw error||new Error(data?.error||'Company email could not be sent')
+    return data
+  },
 }

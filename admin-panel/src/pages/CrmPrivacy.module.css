@@ -41,7 +41,8 @@
 
 .search { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .65rem; width: min(100%, 640px); margin: 1rem 0; }
 .search :global(.field) { min-width: 0; margin: 0; }
-.search > button { min-height: 2.75rem; white-space: nowrap; }
+.search :global(.input),.search > button { box-sizing:border-box; height:2.75rem; min-height:2.75rem; }
+.search > button { white-space: nowrap; }
 
 .success { margin: 1rem 0; padding: .8rem 1rem; border: 1px solid color-mix(in srgb, var(--success-color) 35%, var(--border-color)); border-radius: var(--radius-md); background: color-mix(in srgb, var(--success-color) 8%, var(--bg-card)); }
 .results { padding: 1rem; }

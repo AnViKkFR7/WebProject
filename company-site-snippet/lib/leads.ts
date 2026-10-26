@@ -14,6 +14,8 @@ export interface LeadInput {
   email?: string
   phone?: string
   message?: string
+  /** Optional public listing/item label, slug, or stable ID that prompted the request. */
+  source_item?: string
   /** Explicit consent for the privacy text displayed by the form. */
   consent_given?: boolean
   consent_text_version?: string

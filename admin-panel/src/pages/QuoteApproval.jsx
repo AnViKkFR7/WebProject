@@ -18,6 +18,9 @@ export default function QuoteApproval() {
   const [confirmed, setConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [submitError, setSubmitError] = useState(false)
+  const [notificationError,setNotificationError]=useState(false)
+  const [notificationWarning,setNotificationWarning]=useState(false)
+  const [notificationBusy,setNotificationBusy]=useState(false)
 
   useEffect(() => {
     const secret = window.location.hash.slice(1)
@@ -38,9 +41,17 @@ export default function QuoteApproval() {
       const result = await quoteApprovalService.respond(token, decision, name.trim(), email.trim(), reason.trim())
       setDetails(current => ({ ...current, decision: result.decision, responded_at: result.responded_at }))
       setState('answered')
+      setNotificationError(false);setNotificationWarning(false)
+      void quoteApprovalService.notifyResponse(token).then(result=>{setNotificationError(false);setNotificationWarning(Boolean(result.warning))}).catch(()=>setNotificationError(true))
       window.history.replaceState(null, '', window.location.pathname)
     } catch { setSubmitError(true) }
     finally { setBusy(false) }
+  }
+
+  const retryNotification=async()=>{
+    setNotificationBusy(true)
+    try{const result=await quoteApprovalService.notifyResponse(token);setNotificationError(false);setNotificationWarning(Boolean(result.warning))}catch{setNotificationError(true)}
+    finally{setNotificationBusy(false)}
   }
 
   return <main className={styles.page}>
@@ -56,6 +67,8 @@ export default function QuoteApproval() {
         <h2>{details.decision === 'accepted' ? t('quoteApproval.accepted') : t('quoteApproval.rejected')}</h2>
         {details.responded_at && <p>{t('quoteApproval.respondedAt')}: <time dateTime={details.responded_at}>{new Date(details.responded_at).toLocaleString(language === 'en' ? 'en-GB' : 'es-ES')}</time></p>}
         <p>{t('quoteApproval.alreadyAnsweredHelp')}</p>
+        {notificationError && <p role="status">{t('quoteApproval.notificationFailed')} <button type="button" title={t('quoteApproval.retryNotification')} onClick={retryNotification} disabled={notificationBusy}>{notificationBusy?t('common.loading'):t('quoteApproval.retryNotification')}</button></p>}
+        {notificationWarning && <p role="status">{t('quoteApproval.notificationUncertain')}</p>}
       </section> : <section className={styles.formPanel}>
         <p className={styles.expiry}>{t('quoteApproval.expires')} <time dateTime={details.expires_at}>{new Date(details.expires_at).toLocaleDateString(language === 'en' ? 'en-GB' : 'es-ES')}</time></p>
         <form onSubmit={submit}>

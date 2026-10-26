@@ -7,7 +7,7 @@ import { es } from '../locales/es'
 import { emptyProfile } from '../lib/invoicing'
 import { billingPalettes } from '../lib/billingAppearance'
 import {clearDraftRecovery} from '../lib/documentDrafts'
-const mocks = vi.hoisted(() => ({ company:null,canEdit:true,readLogo:vi.fn(),download:vi.fn(),load:vi.fn(),saveProfile:vi.fn(),saveInvoice:vi.fn(),convert:vi.fn(),confirm:vi.fn(),toast:{ success:vi.fn(),error:vi.fn() } }))
+const mocks = vi.hoisted(() => ({ company:null,canEdit:true,readLogo:vi.fn(),download:vi.fn(),load:vi.fn(),saveProfile:vi.fn(),saveInvoice:vi.fn(),convert:vi.fn(),confirm:vi.fn(),quoteAudit:vi.fn(),quoteIssue:vi.fn(),quoteEmail:vi.fn(),toast:{ success:vi.fn(),error:vi.fn() } }))
 const paletteMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn()}))
 const draftMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),remove:vi.fn()}))
 const templateMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),archive:vi.fn()}))
@@ -24,6 +24,7 @@ vi.mock('../hooks/usePermissions',()=>({ usePermissions:()=>({ canEdit:mocks.can
 vi.mock('../contexts/FeedbackContext',()=>({ useFeedback:()=>({ toast:mocks.toast,confirm:mocks.confirm }) }))
 vi.mock('../contexts/LanguageContext',()=>({ useLanguage:()=>({ language:'es',t:key=>key.split('.').reduce((value,k)=>value?.[k],es) || key }) }))
 vi.mock('../services/invoicingService',()=>({ loadInvoicing:(...args)=>mocks.load(...args),saveProfile:(...args)=>mocks.saveProfile(...args),saveInvoice:(...args)=>mocks.saveInvoice(...args),convertQuote:(...args)=>mocks.convert(...args) }))
+vi.mock('../services/quoteApprovalService',()=>({createQuoteApprovalToken:()=> 'a'.repeat(64),quoteApprovalService:{audit:(...args)=>mocks.quoteAudit(...args),issue:(...args)=>mocks.quoteIssue(...args),emailLink:(...args)=>mocks.quoteEmail(...args)}}))
 vi.mock('../components/ui/Modal',()=>({ default:({ open,title,footer,children })=>open ? <div role="dialog"><h3>{title}</h3>{children}<footer>{footer}</footer></div> : null }))
 import Invoicing from './Invoicing'
 let container; let root; let router; let currentKind; let refresh
@@ -50,7 +51,7 @@ beforeEach(()=>{
   mocks.company={ id:'company-a',name:'Company A' }; mocks.canEdit=true
   mocks.load.mockReset().mockResolvedValue({ invoices:[],profile:savedProfile,profileVersion:3 })
   mocks.download.mockReset();mocks.readLogo.mockReset()
-  mocks.saveProfile.mockReset().mockResolvedValue(4); mocks.saveInvoice.mockReset(); mocks.convert.mockReset(); mocks.confirm.mockReset()
+  mocks.saveProfile.mockReset().mockResolvedValue(4); mocks.saveInvoice.mockReset(); mocks.convert.mockReset(); mocks.confirm.mockReset();mocks.quoteAudit.mockReset().mockResolvedValue({});mocks.quoteIssue.mockReset();mocks.quoteEmail.mockReset()
   container=document.createElement('div'); document.body.append(container); root=createRoot(container)
 })
 afterEach(async()=>{ await act(async()=>root.unmount());container.remove();sessionStorage.clear();vi.restoreAllMocks();vi.unstubAllGlobals() })
@@ -153,6 +154,21 @@ describe('full page document navigation',()=>{
     expect(container.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('#invoice-editor')).toBeTruthy()
   })
+  it('keeps a newly saved document open and replaces the new route with its document URL',async()=>{
+    mocks.saveInvoice.mockImplementation(async(companyId,document,status)=>({...record(),id:'created-id',number:'F260002',status,document,version:1}))
+    await render()
+    await click(button('Nueva factura'))
+    await input(container.querySelector('[data-field="name"] input'),'New client')
+    await input(container.querySelector('[data-field="taxId"] input'),'C123')
+    await input(container.querySelector('[data-field="address"] input'),'Madrid')
+    await input(container.querySelector('[data-field="descriptionLine"] input'),'Consulting')
+    container.querySelectorAll('input[type=number]').forEach(control=>{control.step='any'})
+    await submit()
+    expect(router.state.location.pathname).toBe('/invoicing/created-id')
+    expect(container.querySelector('#invoice-editor')).toBeTruthy()
+    expect(container.querySelector('h1').textContent).toBe('F260002')
+    expect(container.querySelector('[data-field="name"] input').value).toBe('New client')
+  })
   it('does not expose another company document through a guessed URL',async()=>{
     await render('invoice','/invoicing/foreign-id')
     expect(container.querySelector('#invoice-editor')).toBeNull()
@@ -202,7 +218,7 @@ describe('full page document navigation',()=>{
     expect(router.state.location.pathname).toBe('/invoicing/new')
     expect(mocks.confirm).toHaveBeenCalledTimes(2)
   })
-  it('preserves input on save failure and returns without a discard prompt after a successful retry',async()=>{
+  it('preserves input on save failure and stays in the document after a successful retry',async()=>{
     mocks.load.mockResolvedValue({invoices:[record()],profile:savedProfile,profileVersion:1})
     await render('invoice','/invoicing/i1')
     await input(container.querySelector('[data-field="quantity"] input'),'2')
@@ -215,7 +231,9 @@ describe('full page document navigation',()=>{
     expect(container.textContent).toContain(es.invoicing.saveError)
     mocks.saveInvoice.mockResolvedValue({...record(),version:2})
     await submit()
-    expect(router.state.location.pathname).toBe('/invoicing')
+    expect(router.state.location.pathname).toBe('/invoicing/i1')
+    expect(container.querySelector('#invoice-editor')).toBeTruthy()
+    expect(container.querySelector('[data-field="quantity"] input').value).toBe('1')
     expect(mocks.confirm).not.toHaveBeenCalled()
   })
   it('shows field errors, focuses the first invalid field and never submits an incomplete document',async()=>{

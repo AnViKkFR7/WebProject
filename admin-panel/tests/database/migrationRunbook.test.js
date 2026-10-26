@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 const migrationsDirectory = new URL('../../../database/migrations/', import.meta.url)
 const readme = readFileSync(new URL('../../../database/README.md', import.meta.url), 'utf8')
 const retentionPreflight = readFileSync(new URL('../../../database/maintenance/CRM_RETENTION_REVIEW_PREFLIGHT.sql', import.meta.url), 'utf8')
+const quoteApprovalPreflight = readFileSync(new URL('../../../database/maintenance/BILLING_QUOTE_APPROVAL_PREFLIGHT.sql', import.meta.url), 'utf8')
+const customerEmailPreflight = readFileSync(new URL('../../../database/maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql', import.meta.url), 'utf8')
 const orderedSection = readme.split('## Orden de ejecución en una base de datos nueva')[1]?.split('## Migraciones')[0] || ''
 
 describe('database migration runbook', () => {
@@ -19,6 +21,7 @@ describe('database migration runbook', () => {
       'PLANNING_TASK_MOVE_UNDO.sql',
       'PLANNING_EMAIL_QUEUE.sql',
       'CRM_CONTACTS_PIPELINE.sql',
+      'CRM_LEAD_ITEM_ATTRIBUTION.sql',
       'CRM_REVIEW_ACTIVITY_LINK.sql',
       'CRM_PRIVACY_CONTROLS.sql',
       'INVOICING.sql',
@@ -31,6 +34,7 @@ describe('database migration runbook', () => {
       'COMPANY_MODULES.sql',
       'COMPANY_MODULES_PLATFORM_ADMIN.sql',
       'BILLING_DUE_REMINDERS.sql',
+      'COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql',
       'WEEKLY_SUMMARY_EMAIL.sql',
       'WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql',
       'BILLING_DUE_REMINDERS_CRON.sql',
@@ -38,6 +42,14 @@ describe('database migration runbook', () => {
 
     expect(ordered.every(index => index >= 0)).toBe(true)
     expect(ordered).toEqual([...ordered].sort((a, b) => a - b))
+  })
+
+  it('places quote approval response revisions after the original approval schema and before module gates',()=>{
+    const position=file=>orderedSection.indexOf(`migrations/${file}`)
+    expect(position('QUOTES.sql')).toBeGreaterThanOrEqual(0)
+    expect(position('BILLING_QUOTE_APPROVAL.sql')).toBeGreaterThan(position('QUOTES.sql'))
+    expect(position('BILLING_QUOTE_APPROVAL_REVISIONS.sql')).toBeGreaterThan(position('BILLING_QUOTE_APPROVAL.sql'))
+    expect(position('COMPANY_MODULES.sql')).toBeGreaterThan(position('BILLING_QUOTE_APPROVAL_REVISIONS.sql'))
   })
 
   it('keeps the Planning cron step after deployment guidance', () => {
@@ -51,5 +63,16 @@ describe('database migration runbook', () => {
     expect(retentionPreflight).not.toMatch(/\b(insert\s+into|update\s+\w|delete\s+from|truncate|drop\s+|alter\s+table)\b/i)
     expect(retentionPreflight).not.toMatch(/email|phone|customer_name|message\s*,/i)
     expect(readme).toContain('maintenance/CRM_RETENTION_REVIEW_PREFLIGHT.sql')
+  })
+
+  it('keeps the quote approval preflight read-only and documented', () => {
+    expect(quoteApprovalPreflight).not.toMatch(/\b(insert\s+into|update\s+\w|delete\s+from|truncate|drop\s+|alter\s+table)\b/i)
+    expect(readme).toContain('maintenance/BILLING_QUOTE_APPROVAL_PREFLIGHT.sql')
+  })
+
+  it('keeps the customer email template preflight read-only and ordered after billing reminders',()=>{
+    expect(customerEmailPreflight).not.toMatch(/\b(insert\s+into|update\s+\w|delete\s+from|truncate|drop\s+|alter\s+table)\b/i)
+    expect(readme).toContain('maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql')
+    expect(orderedSection.indexOf('migrations/COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql')).toBeGreaterThan(orderedSection.indexOf('migrations/BILLING_DUE_REMINDERS.sql'))
   })
 })

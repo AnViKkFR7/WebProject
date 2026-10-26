@@ -223,6 +223,8 @@ const CreateUserTab = ({ companies }) => {
               {companySearch && (
                 <button
                   type="button"
+                  aria-label={t('profile.createUser.clearCompanySearch')}
+                  title={t('profile.createUser.clearCompanySearch')}
                   onClick={() => {
                     setCompanySearch('')
                     setNewUser(prev => ({ ...prev, company_id: '' }))

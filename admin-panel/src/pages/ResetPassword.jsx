@@ -175,6 +175,8 @@ const ResetPassword = () => {
               />
               <button
                 type="button"
+                aria-label={t(showNewPassword ? 'resetPassword.hidePassword' : 'resetPassword.showPassword')}
+                title={t(showNewPassword ? 'resetPassword.hidePassword' : 'resetPassword.showPassword')}
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 disabled={loading}
                 style={{
@@ -213,6 +215,8 @@ const ResetPassword = () => {
               />
               <button
                 type="button"
+                aria-label={t(showConfirmPassword ? 'resetPassword.hidePassword' : 'resetPassword.showPassword')}
+                title={t(showConfirmPassword ? 'resetPassword.hidePassword' : 'resetPassword.showPassword')}
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={loading}
                 style={{

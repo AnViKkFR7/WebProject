@@ -321,6 +321,9 @@ const Users = () => {
               />
               {searchQuery && (
                 <button
+                  type="button"
+                  aria-label={t('users.clearSearch')}
+                  title={t('users.clearSearch')}
                   onClick={() => setSearchQuery('')}
                   style={{
                     position: 'absolute',
@@ -371,6 +374,9 @@ const Users = () => {
               {/* Edit button */}
               {canEdit() && (
                 <button
+                  type="button"
+                  aria-label={t(editingUsers[user.userId] ? 'users.cancelEdit' : 'users.editUser')}
+                  title={t(editingUsers[user.userId] ? 'users.cancelEdit' : 'users.editUser')}
                   onClick={() => editingUsers[user.userId] ? cancelEdit(user.userId) : startEdit(user.userId)}
                   style={{
                     position: 'absolute',

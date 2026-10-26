@@ -2,8 +2,9 @@
   /* --- PALETTE SYSTEM --- */
   
   /* Brand */
-  --primary-color: #6366f1; /* Indigo 500 */
-  --primary-hover: #4f46e5; /* Indigo 600 */
+  --primary-color: #4f46e5; /* AA contrast on white surfaces */
+  --primary-button-bg: #4f46e5;
+  --primary-hover: #4338ca;
   --primary-light: #e0e7ff; /* Indigo 100 */
 
   /* DEFAULT = LIGHT MODE */
@@ -17,10 +18,10 @@
   
   --text-primary: #0f172a;    /* Slate 900 */
   --text-secondary: #475569;  /* Slate 600 - Darker for better contrast */
-  --text-tertiary: #94a3b8;
+  --text-tertiary: #5f6b7a;
   --sidebar-text: #334155;    /* Slate 700 - Specifically for sidebar readability */
   
-  --border-color: #cbd5e1;    /* Slate 300 - Slightly darker for better visibility in Light Mode */
+  --border-color: #748197;    /* Controls and boundaries meet 3:1 on white and page gray */
   --border-info: #7dd3fc;     /* Sky 300 - Info border */
   
   --sidebar-active-bg: #eff6ff; /* Very clear blue for active tab */
@@ -37,7 +38,7 @@
   --transition-fast: 150ms ease;
 
   /* Estado — se usaban (--danger-color, --error-*) sin estar definidos */
-  --danger-color: #dc2626;
+  --danger-color: #b91c1c;
   --danger-bg: #fef2f2;
   --success-color: #15803d;
   --success-bg: #f0fdf4;
@@ -46,6 +47,8 @@
 }
 
 [data-theme='dark'] {
+  --primary-color: #a5b4fc;
+  --primary-button-bg: #4f46e5;
   --bg-body: #0f172a;         /* Slate 900 */
   --bg-sidebar: #1e293b;      /* Slate 800 */
   --bg-card: #1e293b;
@@ -56,16 +59,16 @@
   
   --text-primary: #f8fafc;    /* Slate 50 */
   --text-secondary: #cbd5e1;  /* Slate 300 */
-  --text-tertiary: #64748b;
+  --text-tertiary: #94a3b8;
   --sidebar-text: #cbd5e1;
   
-  --border-color: #334155;    /* Slate 700 */
+  --border-color: #64748b;
   --border-info: #075985;     /* Sky 800 - Info border dark */
   
   --sidebar-active-bg: #1e293b;
   --sidebar-active-text: #818cf8;
 
-  --danger-color: #f87171;
+  --danger-color: #fca5a5;
   --danger-bg: #3b1219;
   --success-color: #4ade80;
   --success-bg: #0f2e1d;
@@ -123,7 +126,7 @@ body {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: white;
   border: none;
   border-radius: 50%;
@@ -158,7 +161,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: white;
   display: flex;
   align-items: center;
@@ -591,7 +594,7 @@ button {
 
 /* Button Variants */
 .button-primary {
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: white;
   border: 2px solid var(--primary-color);
   box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
@@ -649,7 +652,7 @@ button {
 
 /* Legacy button classes for backwards compatibility */
 .primary-button {
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: white;
   border: none;
   padding: 0.65rem 1.25rem;
@@ -1104,7 +1107,7 @@ button {
 }
 
 .tablet-toggle:hover {
-  background-color: var(--primary-color);
+  background-color: var(--primary-button-bg);
   color: white;
   border-color: var(--primary-color);
 }
@@ -1414,9 +1417,8 @@ button {
   }
 
   /* CARD VIEW for Tables (Mobile Transformation) */
-  /* Target both div-based and table-based structures */
+  /* The card layout applies only to the div-based Items list. */
   
-  .table-container,
   .table {
     box-shadow: none;
     background: transparent;
@@ -1427,14 +1429,12 @@ button {
   }
 
   /* Hide Headers */
-  .table-header,
-  thead {
+  .table-header {
     display: none !important; 
   }
 
   /* Row -> Card */
-  .table-row,
-  tr {
+  .table-row {
     display: flex !important;
     flex-direction: column;
     background: var(--bg-card);
@@ -1448,8 +1448,7 @@ button {
   }
 
   /* Cell/Item Styling */
-  .table-row > span,
-  td {
+  .table-row > span {
     display: flex;
     width: 100%;
     justify-content: space-between;
@@ -1460,8 +1459,7 @@ button {
     padding-bottom: 0.5rem;
   }
 
-  .table-row > span:last-child,
-  td:last-child {
+  .table-row > span:last-child {
     border-bottom: none;
     padding-bottom: 0;
     margin-top: 0.5rem;
@@ -1470,8 +1468,7 @@ button {
 
   /* Header-like effect for the first item (Title) */
   .table-row > span:first-child,
-  .row-title,
-  td:first-child {
+  .row-title {
     font-weight: 600;
     font-size: 1.1rem !important;
     color: var(--text-primary);
@@ -1479,10 +1476,6 @@ button {
     margin-bottom: 0.25rem;
     text-align: left;
     padding-bottom: 0.5rem;
-  }
-
-  .badge {
-    align-self: flex-end;
   }
 
   /* Header Actions Responsive */
@@ -1772,7 +1765,7 @@ select[multiple] option {
 }
 
 select[multiple] option:checked {
-  background-color: var(--primary-color);
+  background-color: var(--primary-button-bg);
   color: white;
 }
 
@@ -1978,7 +1971,7 @@ select[multiple] option:checked {
 }
 
 .date-picker-day.selected {
-  background-color: var(--primary-color);
+  background-color: var(--primary-button-bg);
   color: white;
   font-weight: 600;
 }
@@ -2224,7 +2217,7 @@ select[multiple] option:checked {
 
 .attribute-field .add-array-button {
   padding: 0.625rem 1rem;
-  background-color: var(--primary-color);
+  background-color: var(--primary-button-bg);
   color: white;
   border: none;
   border-radius: 6px;
@@ -3075,6 +3068,20 @@ input[type="number"] {
   outline-offset: 2px;
 }
 
+/* Reestablecer el foco de teclado donde los estilos heredados de campos
+   anulaban el outline nativo con reglas :focus de mayor especificidad. */
+.input:focus-visible,
+.select:focus-visible,
+textarea.input:focus-visible,
+.form-group input:focus-visible,
+.search-input:focus-visible,
+.attribute-field input:focus-visible,
+.attribute-field textarea:focus-visible,
+.attribute-field select:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--primary-color) 28%, transparent);
   color: inherit;
@@ -3171,7 +3178,7 @@ html {
 .segmented button + button { border-left: 1px solid var(--border-color); }
 
 .segmented button[aria-pressed="true"] {
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: #fff;
 }
 
@@ -3289,6 +3296,18 @@ button.user-chip-mobile {
 
 .input-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .required-mark { color: var(--danger-color); margin-left: 0.15rem; }
 
 /* --- Toggle --- */
@@ -3380,7 +3399,7 @@ button.user-chip-mobile {
   min-width: 1.25rem;
   padding: 0 0.35rem;
   border-radius: var(--radius-full);
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 600;
@@ -3425,6 +3444,11 @@ button.user-chip-mobile {
 }
 
 .multi-select-search input:focus-visible { outline: none; }
+.multi-select-search:has(input:focus-visible) {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
 
 .multi-select-list {
   max-height: 260px;
@@ -3466,7 +3490,7 @@ button.user-chip-mobile {
 
 .multi-select-option[aria-selected="true"] .multi-select-check {
   border-color: var(--primary-color);
-  background: var(--primary-color);
+  background: var(--primary-button-bg);
 }
 
 @media (hover: hover) and (pointer: fine) {

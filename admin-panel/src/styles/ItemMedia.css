@@ -33,7 +33,7 @@
 }
 
 .collapse-toggle-btn:hover {
-    background-color: var(--primary-color);
+    background-color: var(--primary-button-bg);
     color: white;
     border-color: var(--primary-color);
     transform: translateY(-2px);
@@ -72,7 +72,7 @@
 
 .upload-button {
     padding: 0.5rem 1rem;
-    background-color: var(--primary-color);
+    background-color: var(--primary-button-bg);
     color: white;
     border: none;
     border-radius: 6px;
@@ -178,7 +178,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    background-color: var(--primary-color);
+    background-color: var(--primary-button-bg);
     color: white;
     padding: 0.375rem 0.75rem;
     border-radius: 6px;
@@ -314,6 +314,11 @@
     box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+.description-edit .input:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 [data-theme="dark"] .description-edit .input {
     background-color: rgba(15, 23, 42, 0.6);
     color: #f8fafc;
@@ -389,9 +394,9 @@
 }
 
 .action-btn.primary {
-    background-color: var(--primary-color);
+    background-color: var(--primary-button-bg);
     color: white;
-    border-color: var(--primary-color);
+    border-color: var(--primary-button-bg);
 }
 
 .action-btn.primary:hover {
@@ -803,7 +808,7 @@
 .reorder-thumb-cover {
     padding: 0.1rem 0.4rem;
     border-radius: 999px;
-    background: var(--primary-color);
+  background: var(--primary-button-bg);
     color: #fff;
     font-size: 0.7rem;
     font-weight: 600;

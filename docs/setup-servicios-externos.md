@@ -43,7 +43,22 @@ Orden para esta funcionalidad; ejecuta cada archivo completo y no repitas las mi
 
 La función envía a Resend los correos de administradores activos y solo los conteos agregados descritos en `docs/emails.md`. La cola no guarda correos ni estadísticas. `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` activa las empresas en la BD; no se envía nada hasta desplegar Edge y programar el cron.
 
+### Enlaces y notificaciones de aprobación de presupuestos
+
+La base debe tener `QUOTES.sql`, `BILLING_QUOTE_APPROVAL.sql` y después `BILLING_QUOTE_APPROVAL_REVISIONS.sql`. Tras aplicar las revisiones, ejecuta el archivo completo `database/maintenance/BILLING_QUOTE_APPROVAL_PREFLIGHT.sql`; ahora también comprueba columnas de trazabilidad, nuevas RPC y permisos. No vuelvas a ejecutar las dos migraciones previas si ya están aplicadas.
+
+En **Edge Functions → Secrets** deben estar configurados `RESEND_API_KEY`, `REMINDERS_FROM_EMAIL`, `SUPABASE_ANON_KEY` y `ADMIN_APP_URL`. El usuario ya confirmó `ADMIN_APP_URL`; debe ser el origen HTTPS del panel, por ejemplo `https://admin.tudominio.es`, sin `/quotes` ni barra final. `REMINDERS_FROM_EMAIL` debe ser un remitente verificado por Resend.
+
+Desde la raíz del repositorio, despliega las funciones con la verificación JWT predeterminada de Supabase (no usar `--no-verify-jwt`):
+
+```bash
+supabase functions deploy send-quote-approval-link
+supabase functions deploy notify-quote-approval-response
+```
+
+`send-quote-approval-link` requiere la sesión autenticada del administrador y solo obtiene por RPC el correo asociado al presupuesto de su empresa. `notify-quote-approval-response` recibe el token del enlace público, valida que tenga una respuesta registrada y envía la notificación a los administradores activos. Prueba ambos recorridos con presupuestos y buzones controlados; ambos envían correos reales al proveedor configurado. No se programa cron.
+
 ## No configurado por este documento
 
-No se crean cuentas de proveedor, DNS, secretos, cron ni despliegues. No se integra VERI*FACTU ni se envían facturas/presupuestos a clientes.
+No se crean cuentas de proveedor, DNS, secretos, cron ni despliegues. No se integra VERI*FACTU ni se envían facturas a clientes; el único correo de cliente añadido en esta fase contiene un enlace de aprobación del presupuesto.
 

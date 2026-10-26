@@ -1,13 +1,30 @@
-.panel { display:grid; gap:.75rem; margin:.9rem 0; padding:1rem; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-secondary); }
+.panel { display:grid; gap:.75rem; margin:.9rem 0; padding:1rem; border:1px solid color-mix(in srgb,var(--primary-color) 38%,var(--border-color)); border-left:5px solid var(--primary-color); border-radius:var(--radius-lg); background:color-mix(in srgb,var(--primary-color) 8%,var(--bg-card)); box-shadow:0 4px 14px rgb(15 23 42 / 6%); }
+.panel[data-has-response="true"] { border-left-color:var(--success-color); background:color-mix(in srgb,var(--success-bg) 78%,var(--bg-card)); }
 .panel h2 { margin:0; font-size:1rem; }
 .panel p { margin:.3rem 0 0; color:var(--text-secondary); font-size:.85rem; }
+.emailChoice { display:flex; align-items:flex-start; flex-wrap:wrap; gap:.55rem; width:max-content; max-width:100%; padding:.65rem .8rem; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card); color:var(--text-primary); }
+.emailChoice input { width:1.1rem; height:1.1rem; margin:.1rem 0 0; accent-color:var(--primary-color); }
+.emailChoice small { flex-basis:100%; margin-left:1.65rem; color:var(--text-secondary); }
+.emailSuccess { padding:.55rem .75rem; border-radius:7px; background:var(--success-bg); color:var(--success-color)!important; }
 .linkRow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.5rem; }
-.linkRow :global(.field) { min-width:0; }
+.linkRow :global(.field) { min-width:0; margin:0; }
+.linkRow :global(.field-label) { line-height:1.35; }
+.linkRow :global(.input),.linkRow > button { box-sizing:border-box; height:2.75rem; min-height:2.75rem; }
+.linkRow > button { align-self:end; margin:0; }
 .linkRow small { grid-column:1 / -1; color:var(--text-secondary); }
 .response { display:grid; gap:.45rem; margin:0; padding-top:.75rem; border-top:1px solid var(--border-color); }
 .response div { display:grid; grid-template-columns:minmax(120px,.4fr) 1fr; gap:.6rem; }
 .response dt { color:var(--text-secondary); font-size:.82rem; }
 .response dd { margin:0; overflow-wrap:anywhere; font-size:.85rem; }
+.status { display:inline-flex; align-items:center; width:max-content; padding:.2rem .55rem; border:1px solid var(--border-color); border-radius:999px; background:var(--bg-card); }
+.status[data-status="accepted"] { color:var(--success-color); border-color:var(--success-color); }
+.status[data-status="rejected"] { color:var(--danger-color); border-color:var(--danger-color); }
+.responses { padding-top:.7rem; border-top:1px solid var(--border-color); }
+.responses summary { cursor:pointer; font-weight:650; }
+.responses ol { display:grid; gap:.5rem; margin:.6rem 0 0; padding-left:1.5rem; }
+.responses li { display:grid; gap:.2rem; padding:.55rem .7rem; border-radius:var(--radius-sm); background:var(--bg-card); }
+.responses time,.responses span { color:var(--text-secondary); font-size:.8rem; }
+.responses p { margin:.2rem 0 0; overflow-wrap:anywhere; }
 .links { padding-top:.7rem; border-top:1px solid var(--border-color); }
 .links summary { cursor:pointer; font-weight:650; }
 .links ul { display:grid; gap:.4rem; margin:.6rem 0 0; padding:0; list-style:none; }

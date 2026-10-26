@@ -32,6 +32,7 @@ export const NAV_GROUPS = [
       { to: '/companies', key: 'companies', icon: 'companies' },
       { to: '/settings/modules', key: 'modules', icon: 'grid', requires: 'canManageModules' },
       { to: '/settings/privacy', key: 'privacy', icon: 'lock', requires: 'canManagePrivacy' },
+      { to: '/settings/emails', key: 'emailSettings', icon: 'mail', requires: 'canManagePrivacy', module: 'billing' },
     ],
   },
 ]
@@ -41,6 +42,7 @@ const EXTRA_TITLES = [
   { to: '/privacy-policy', key: 'privacyPolicy' },
   { to: '/legal-notice', key: 'legalNotice' },
   { to: '/cookies-policy', key: 'cookiesPolicy' },
+  { to: '/settings/emails', key: 'emailSettings' },
 ]
 
 /** Grupos visibles según permisos */

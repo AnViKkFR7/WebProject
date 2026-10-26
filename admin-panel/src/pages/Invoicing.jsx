@@ -82,7 +82,8 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
   const [financeDetail,setFinanceDetail]=useState({payments:[],history:[],historyHasMore:false,loading:false,loadingMore:false,error:false})
   const [financeReload,setFinanceReload]=useState(0)
   const [reminderPreference,setReminderPreference]=useState({suppressed:false,loading:false,saving:false,error:false})
-  const [quoteApproval,setQuoteApproval]=useState({ quoteId:'',url:'',expiresAt:'',loading:false,error:false,auditError:false,audit:null })
+  const [quoteApproval,setQuoteApproval]=useState({ quoteId:'',url:'',expiresAt:'',loading:false,emailLoading:false,error:false,auditError:false,audit:null,emailSent:false,emailError:false })
+  const [sendApprovalEmail,setSendApprovalEmail]=useState(false)
   const isQuote = kind === 'quote'
   const editorRecordId=editor?.invoice?.id
   const reminderInvoiceStatus=editor?.invoice?.status
@@ -120,10 +121,27 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
     if (!isQuote || !editorRecordId || !canEdit) { setQuoteApproval({quoteId:'',url:'',expiresAt:'',loading:false,error:false,auditError:false,audit:null}); return }
     let current=true
     setQuoteApproval({quoteId:editorRecordId,url:'',expiresAt:'',loading:false,error:false,auditError:false,audit:null})
-    quoteApprovalService.audit(company.id,editorRecordId)
-      .then(audit=>{if(current)setQuoteApproval(previous=>({...previous,audit,error:false}))})
-      .catch(()=>{if(current)setQuoteApproval(previous=>({...previous,audit:null,auditError:true}))})
-    return()=>{current=false}
+    const refresh=async()=>{
+      try {
+        const audit=await quoteApprovalService.audit(company.id,editorRecordId)
+        if(!current)return
+        setQuoteApproval(previous=>({...previous,audit,error:false,auditError:false}))
+        if(audit.quote_status){
+          setInvoices(previous=>previous.map(item=>item.id===editorRecordId?{...item,status:audit.quote_status,version:audit.quote_version??item.version}:item))
+          setEditor(previous=>{
+            if(!previous?.invoice||previous.invoice.id!==editorRecordId)return previous
+            const changed=JSON.stringify({doc:previous.doc,status:previous.status})!==initialEditor.current
+            if(changed)return previous
+            const updated={...previous,status:audit.quote_status,invoice:{...previous.invoice,status:audit.quote_status,version:audit.quote_version??previous.invoice.version}}
+            initialEditor.current=JSON.stringify({doc:updated.doc,status:updated.status})
+            return updated
+          })
+        }
+      } catch {if(current)setQuoteApproval(previous=>({...previous,auditError:true}))}
+    }
+    void refresh()
+    const interval=window.setInterval(()=>void refresh(),8000)
+    return()=>{current=false;window.clearInterval(interval)}
   },[company.id,isQuote,editorRecordId,canEdit])
   const createReuseClient=async value=>{const created=await saveBillingClient(company.id,value);setReuse(previous=>({...previous,clients:[created,...previous.clients]}));return created}
   const createReuseItem=async value=>{const created=await saveBillingCatalogItem(company.id,value);setReuse(previous=>({...previous,catalog:[created,...previous.catalog]}));return created}
@@ -184,13 +202,18 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
     go('/new',{state:{listScroll:listScroll.current,company:company.id,duplicateSource:invoice.number,duplicateDocument:duplicateBillingDocument(invoice.document)}})
   }
   const startRectification=invoice=>go(`/rectify/${encodeURIComponent(invoice.id)}`,{state:{company:company.id}})
-  const issueQuoteApproval = async quote => {
+  const issueQuoteApproval = async (quote,sendEmail=false) => {
     if (!canEdit || quote?.status !== 'sent' || hasUnsavedChanges) return
     setQuoteApproval(previous=>({...previous,loading:true,error:false}))
     try {
       const token=createQuoteApprovalToken()
       const result=await quoteApprovalService.issue(company.id,quote.id,token,30)
-      setQuoteApproval(previous=>({...previous,quoteId:quote.id,url:result.url,expiresAt:result.expiresAt,loading:false,error:false,auditError:false}))
+      setQuoteApproval(previous=>({...previous,quoteId:quote.id,url:result.url,expiresAt:result.expiresAt,loading:false,error:false,auditError:false,emailSent:false,emailWarning:false,emailError:false}))
+      if(sendEmail){
+        setQuoteApproval(previous=>({...previous,emailLoading:true}))
+        try{const delivery=await quoteApprovalService.emailLink(company.id,quote.id,token);setQuoteApproval(previous=>({...previous,emailLoading:false,emailSent:true,emailWarning:Boolean(delivery.warning),emailError:false}))}
+        catch{setQuoteApproval(previous=>({...previous,emailLoading:false,emailError:true}))}
+      }
       try {
         const audit=await quoteApprovalService.audit(company.id,quote.id)
         setQuoteApproval(previous=>({...previous,audit,auditError:false}))
@@ -269,7 +292,14 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
       if (!active.current) return
       draftRef.current?.complete()
       setInvoices(prev => [saved, ...prev.filter(i => i.id !== saved.id)])
-      setEditor(null); go('',{completed:true}); toast.success(label('saved'))
+      const savedDoc = isQuote ? { ...structuredClone(saved.document), lines:withBillingLineIds(saved.document.lines) } : structuredClone(saved.document)
+      const nextEditor = { invoice:saved, doc:savedDoc, status:saved.status, useCompanyIssuer:usesCompanyIssuer(saved.document.issuer,profile), customIssuer:structuredClone(saved.document.issuer) }
+      initialEditor.current = JSON.stringify({doc:savedDoc,status:saved.status})
+      setEditor(nextEditor)
+      if (routeId === 'new' || routeId.startsWith('rectify/')) {
+        go(`/${encodeURIComponent(saved.id)}`,{completed:true,state:{listScroll:listScroll.current,company:company.id}})
+      }
+      toast.success(label('saved'))
     } catch(error) { reportOperationalFailure('billing','document_save_failed',error); if (active.current){draftRef.current?.failed(error);setError(label('saveError'))} } finally { if (active.current) setSaving(false) }
   }
   const cancel = async invoice => {
@@ -356,7 +386,7 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
       {!isQuote&&<BillingDueReminderSettings companyId={company.id} canManage={canManageModules} canRetry={canEdit} t={t}/>}
       <div className="invoice-toolbar"><input type="search" className="input" aria-label={label('search')} placeholder={label('search')} value={query} onChange={e => changeFilter('q',e.target.value)}/><select className="select" aria-label={label('status')} value={status} onChange={e => changeFilter('status',e.target.value)}>{['all', ...statuses].map(s => <option key={s} value={s}>{label(s)}</option>)}</select>{!isQuote&&<select className="select" aria-label={t('billingFinance.filter')} value={paymentFilter} onChange={event=>changeFilter('payment',event.target.value)}>{['all','overdue','outstanding','partial','paid','credit'].map(value=><option key={value} value={value}>{t(`billingFinance.states.${value}`)}</option>)}</select>}</div>
       {finance.error&&!isQuote&&<p className="field-error" role="alert">{t('billingFinance.loadError')}</p>}
-      <div className="card invoice-list">{!visible.length ? <p>{label('empty')}</p> : <div className="invoice-table-scroll"><table className="invoice-table"><thead><tr>{['number','customer','date','total',...(!isQuote?['balance']:[]),'status'].map(k => <th key={k}>{k==='balance'?t('billingFinance.balance'):label(k)}</th>)}<th>{t('common.actions')}</th></tr></thead><tbody>{visible.map(i => <tr key={i.id}>
+      <div className="card invoice-list">{!visible.length ? <p>{label('empty')}</p> : <div className="invoice-table-scroll" role="region" aria-label={label('title')} tabIndex={0}><table className="invoice-table"><thead><tr>{['number','customer','date','total',...(!isQuote?['balance']:[]),'status'].map(k => <th key={k} scope="col">{k==='balance'?t('billingFinance.balance'):label(k)}</th>)}<th scope="col">{t('common.actions')}</th></tr></thead><tbody>{visible.map(i => <tr key={i.id}>
         <td><button className="ghost-button" onClick={() => start(i)}>{i.number}</button></td><td>{i.document.customer.name}</td><td>{i.document.date}{!isQuote&&financialById.get(i.id)?.due_date&&<small className="invoice-due">{t('billingFinance.due')} {financialById.get(i.id).due_date}</small>}</td><td>{money(invoiceTotals(i.document.lines,i.document.withholding).total)}</td>{!isQuote&&<td>{financialById.has(i.id)?money(financialById.get(i.id).balance):'—'}</td>}<td><span className={`invoice-status invoice-status-${i.status}`}>{label(i.status)}</span>{!isQuote&&financialById.has(i.id)&&<small className="invoice-payment-state">{t(`billingFinance.states.${financialById.get(i.id).payment_state}`)}</small>}</td><td><div className="invoice-row-actions"><button className="ghost-button" aria-label={`${label('download')} ${i.number}`} onClick={() => download(i)}><Icon name="download" size={16}/></button>{canEdit && <button className="ghost-button" aria-label={`${label('duplicate')} ${i.number}`} onClick={()=>startDuplicate(i)}><Icon name="copy" size={16}/></button>}{canEdit&&!isQuote&&['issued','paid'].includes(i.status)&&!i.rectifies_invoice_id&&<button className="ghost-button" aria-label={`${t('rectification.start')} ${i.number}`} title={t('rectification.start')} onClick={()=>startRectification(i)}><Icon name="file" size={16}/></button>}</div></td>
       </tr>)}</tbody></table></div>}</div>
     </>}
@@ -398,26 +428,35 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
       {editor?.invoice && !locked && (isQuote || editor.invoice.status==='draft') && <DocumentActionButton variant="danger" disabled={saving || logoBusy} onClick={() => cancel(editor.invoice)}><Icon name="close" size={16}/>{label('cancelInvoice')}</DocumentActionButton>}
       {!locked && <button type="submit" form="invoice-editor" className="primary-button" disabled={saving || logoBusy}><Icon name="save" size={16}/>{t(saving ? 'common.savingChanges' : 'common.save')}</button>}    </>}>
       {hasUnsavedChanges && !draftProtected && <p className="field-help" role="status">{label('saveBeforeAction')}</p>}
-      {isQuote && canEdit && editor.invoice?.id && <section className={approvalStyles.panel} aria-labelledby="quote-approval-admin-title">
+        {isQuote && canEdit && editor.invoice?.id && <section className={approvalStyles.panel} data-has-response={Boolean(quoteApproval.audit?.response)} aria-labelledby="quote-approval-admin-title">
         <div><h2 id="quote-approval-admin-title">{t('quoteApproval.adminTitle')}</h2><p>{t('quoteApproval.adminHelp')}</p></div>
-        {editor.invoice.status === 'sent' && <button type="button" className="ghost-button" disabled={quoteApproval.loading || hasUnsavedChanges} onClick={()=>issueQuoteApproval(editor.invoice)}>{quoteApproval.loading ? t('common.loading') : t('quoteApproval.generateLink')}</button>}
+        {editor.invoice.status === 'sent' && <label className={approvalStyles.emailChoice}><input type="checkbox" checked={sendApprovalEmail} onChange={event=>setSendApprovalEmail(event.target.checked)} disabled={quoteApproval.loading||hasUnsavedChanges||!editor.doc.customer.email}/><span>{t('quoteApproval.sendLinkEmail')}</span>{!editor.doc.customer.email&&<small>{t('quoteApproval.customerEmailRequired')}</small>}</label>}
+        {editor.invoice.status === 'sent' && <button type="button" title={t('quoteApproval.generateLinkHelp')} className="primary-button" disabled={quoteApproval.loading || quoteApproval.emailLoading || hasUnsavedChanges} onClick={()=>issueQuoteApproval(editor.invoice,sendApprovalEmail)}>{quoteApproval.loading||quoteApproval.emailLoading ? t('common.loading') : sendApprovalEmail?t('quoteApproval.generateAndEmail'):t('quoteApproval.generateLink')}</button>}
         {hasUnsavedChanges && <p className="field-help">{label('saveBeforeAction')}</p>}
         {quoteApproval.error && <p className={approvalStyles.error} role="alert">{t('quoteApproval.adminError')}</p>}
+        {quoteApproval.emailSent && <p className={approvalStyles.emailSuccess} role="status">{t('quoteApproval.linkEmailSent')}</p>}
+        {quoteApproval.emailWarning && <p className={approvalStyles.error} role="status">{t('quoteApproval.linkEmailUncertain')}</p>}
+        {quoteApproval.emailError && <p className={approvalStyles.error} role="alert">{t('quoteApproval.linkEmailFailed')}</p>}
         {quoteApproval.auditError && <p className={approvalStyles.error} role="alert">{t('quoteApproval.auditError')}</p>}
         {quoteApproval.quoteId === editor.invoice.id && quoteApproval.url && <div className={approvalStyles.linkRow}>
           <label className="field"><span className="field-label">{t('quoteApproval.generatedLink')}</span><input className="input" readOnly value={quoteApproval.url} onFocus={event=>event.target.select()} /></label>
-          <button type="button" className="ghost-button" onClick={copyQuoteApprovalLink}>{t('quoteApproval.copyLink')}</button>
+          <button type="button" title={t('quoteApproval.copyLinkHelp')} className="ghost-button" onClick={copyQuoteApprovalLink}>{t('quoteApproval.copyLink')}</button>
           {quoteApproval.expiresAt && <small>{t('quoteApproval.linkExpires')} {new Date(quoteApproval.expiresAt).toLocaleDateString(language==='en'?'en-GB':'es-ES')}</small>}
         </div>}
         {quoteApproval.audit?.response && <dl className={approvalStyles.response}>
+          <div><dt>{t('quoteApproval.currentQuoteStatus')}</dt><dd><strong className={approvalStyles.status} data-status={quoteApproval.audit.quote_status}>{t(`quotes.${quoteApproval.audit.quote_status}`)}</strong></dd></div>
           <div><dt>{t('quoteApproval.responseDecision')}</dt><dd>{t(`quotes.${quoteApproval.audit.response.decision}`)}</dd></div>
           <div><dt>{t('quoteApproval.responseIdentity')}</dt><dd>{quoteApproval.audit.response.declared_name} · {quoteApproval.audit.response.declared_email}</dd></div>
           <div><dt>{t('quoteApproval.respondedAt')}</dt><dd><time dateTime={quoteApproval.audit.response.responded_at}>{new Date(quoteApproval.audit.response.responded_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</time></dd></div>
           {quoteApproval.audit.response.reason && <div><dt>{t('quoteApproval.reason')}</dt><dd>{quoteApproval.audit.response.reason}</dd></div>}
         </dl>}
+        {(quoteApproval.audit?.responses?.length||0)>1 && <details className={approvalStyles.responses}>
+          <summary>{t('quoteApproval.responseHistory')}</summary>
+          <ol>{quoteApproval.audit.responses.map(response=><li key={response.id}><strong>{t(`quotes.${response.decision}`)}</strong><span>{response.declared_name} · {response.declared_email}</span><time dateTime={response.responded_at}>{new Date(response.responded_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</time>{response.reason&&<p>{response.reason}</p>}</li>)}</ol>
+        </details>}
         {quoteApproval.audit?.links?.length > 0 && <details className={approvalStyles.links}><summary>{t('quoteApproval.linkHistory')}</summary><ul>{quoteApproval.audit.links.map((link,index)=>{
           const linkState=link.revoked_at?'revoked':link.resolved_at?'resolved':new Date(link.expires_at)<=new Date()?'expired':'active'
-          return <li key={`${link.issued_at}-${index}`}><span>{t(`quoteApproval.linkState.${linkState}`)}</span><time dateTime={link.issued_at}>{new Date(link.issued_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</time><small>{t('quoteApproval.linkExpires')} {new Date(link.expires_at).toLocaleDateString(language==='en'?'en-GB':'es-ES')}</small></li>
+          return <li key={`${link.issued_at}-${index}`}><span>{t(`quoteApproval.linkState.${linkState}`)}</span><time dateTime={link.issued_at}>{new Date(link.issued_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</time><small>{t('quoteApproval.linkExpires')} {new Date(link.expires_at).toLocaleDateString(language==='en'?'en-GB':'es-ES')}</small>{link.email_sent_at&&<small>{t('quoteApproval.linkEmailSentAt')}: {new Date(link.email_sent_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</small>}{link.company_notified_at&&<small>{t('quoteApproval.companyNotifiedAt')}: {new Date(link.company_notified_at).toLocaleString(language==='en'?'en-GB':'es-ES')}</small>}</li>
         })}</ul></details>}
       </section>}
       {canEdit && !editor.rectificationSource && (!editor.invoice || editor.invoice.status==='draft') && <DocumentDraftRecovery key={routeId} ref={draftRef} scope={{userId,companyId:company.id,kind,key:routeId}} document={editor.doc} baseVersion={editor.invoice?.version ?? null} t={t}

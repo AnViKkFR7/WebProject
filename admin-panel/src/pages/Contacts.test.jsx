@@ -48,7 +48,7 @@ it('shows form requests and linked invoices together in one chronological timeli
   await act(async () => root.render(
     <LanguageProvider>
       <ContactModal
-        contact={{ id: 'contact-1', name: 'Ada', email: 'ada@example.com' }}
+        contact={{ id: 'contact-1', name: 'Ada', email: 'ada@example.com', source_path:'/items/casa-del-mar', source_item:'Casa del Mar · casa-del-mar', source_referrer:'https://search.example/', source_utm_campaign:'verano', source_utm_source:'google', source_utm_medium:'cpc', source_utm_term:'casa venta', source_utm_content:'anuncio-a' }}
         stages={[]}
         members={[]}
         canEdit={false}
@@ -68,4 +68,13 @@ it('shows form requests and linked invoices together in one chronological timeli
   expect(entries[0].textContent).toContain('Solicitud recibida')
   expect(entries[1].textContent).toContain('F-2026-001')
   expect(entries[1].textContent).toContain('24/10/2026')
+  const attribution=document.querySelector('[aria-label="Origen y atribución"]')
+  expect(attribution.textContent).toContain('/items/casa-del-mar')
+  expect(attribution.textContent).toContain('Casa del Mar · casa-del-mar')
+  expect(attribution.textContent).toContain('https://search.example/')
+  expect(attribution.textContent).toContain('verano')
+  expect(attribution.textContent).toContain('google')
+  expect(attribution.textContent).toContain('cpc')
+  expect(attribution.textContent).toContain('casa venta')
+  expect(attribution.textContent).toContain('anuncio-a')
 })

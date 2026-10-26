@@ -6,6 +6,13 @@ import { countByStatus } from '../lib/leads'
 const ANALYTICS_DAYS = 30
 const isoDay = (date) => date.toISOString().slice(0, 10)
 
+export async function fetchRecentQuoteApprovalResponses(companyId){
+  if(!companyId)return []
+  const{data,error}=await supabase.rpc('get_company_recent_quote_approval_responses',{p_company:companyId,p_limit:5})
+  if(error)throw error
+  return data||[]
+}
+
 /**
  * Todo lo que el Dashboard necesita de una empresa, en una sola llamada.
  * Cada bloque va por separado: si la analítica falla (o la empresa aún no la
@@ -18,7 +25,7 @@ export async function fetchCompanyOverview(companyId) {
   const from = new Date(now.getTime() - ANALYTICS_DAYS * 24 * 60 * 60 * 1000)
   const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-  const [items, definitions, members, clients, tasks, bills, leads, analytics] = await Promise.all([
+  const [items, definitions, members, clients, tasks, bills, leads, analytics,quoteApprovals] = await Promise.all([
     supabase.from('items').select('status').eq('company_id', companyId),
     supabase.from('attribute_definitions').select('item_type').eq('company_id', companyId),
     supabase.from('company_members').select('role').eq('company_id', companyId),
@@ -34,6 +41,7 @@ export async function fetchCompanyOverview(companyId) {
       .gte('billing_date', isoDay(now)),
     supabase.from('lead').select('status').eq('company_id', companyId),
     analyticsService.getDailyAnalytics(companyId, isoDay(from), isoDay(now)).catch(() => null),
+    fetchRecentQuoteApprovalResponses(companyId).catch(()=>[]),
   ])
 
   const firstError = [items, definitions, members, clients, tasks, bills, leads].find(r => r.error)
@@ -67,5 +75,6 @@ export async function fetchCompanyOverview(companyId) {
       pageViews: analyticsSummary.pageViews,
       available: analytics.length > 0,
     },
+    quoteApprovals,
   }
 }

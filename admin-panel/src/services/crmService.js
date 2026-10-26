@@ -5,7 +5,7 @@ export const crmService = {
     const [stagesResult, contactsResult, reviewResult, membersResult] = await Promise.all([
       supabase.from('crm_pipeline_stages').select('*').eq('company_id', companyId).eq('is_active', true).order('position'),
       supabase.from('crm_contacts').select('*').eq('company_id', companyId).order('updated_at', { ascending: false }).limit(1000),
-      supabase.from('lead').select('id,company_id,name,email,phone,message,source_path,source_campaign,source_referrer,source_utm_source,source_utm_medium,source_utm_term,source_utm_content,consent_given,consent_at,consent_text_version,created_at,crm_match_state').eq('company_id', companyId).eq('crm_match_state', 'review_required').order('created_at', { ascending: false }).limit(200),
+      supabase.from('lead').select('id,company_id,name,email,phone,message,source_path,source_item,source_campaign,source_referrer,source_utm_source,source_utm_medium,source_utm_term,source_utm_content,consent_given,consent_at,consent_text_version,created_at,crm_match_state').eq('company_id', companyId).eq('crm_match_state', 'review_required').order('created_at', { ascending: false }).limit(200),
       supabase.from('company_members').select('user_id,full_name,role,is_active').eq('company_id', companyId).eq('is_active', true).order('full_name'),
     ])
     for (const result of [stagesResult, contactsResult, reviewResult, membersResult]) if (result.error) throw result.error

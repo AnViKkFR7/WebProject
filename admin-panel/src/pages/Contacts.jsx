@@ -29,6 +29,24 @@ const localDateTimeValue = value => {
   return date.toISOString().slice(0, 16)
 }
 
+function SourceAttribution({source,t, className}) {
+  const campaign=source.source_campaign||source.source_utm_campaign
+  const entries=[
+    [t('crm.source'),source.source_path],
+    [t('crm.item'),source.source_item],
+    [t('crm.referrer'),source.source_referrer],
+    [t('crm.campaign'),campaign],
+    [t('crm.utmSource'),source.source_utm_source],
+    [t('crm.utmMedium'),source.source_utm_medium],
+    [t('crm.utmTerm'),source.source_utm_term],
+    [t('crm.utmContent'),source.source_utm_content],
+  ].filter(([,value])=>Boolean(value))
+  if(!entries.length)return null
+  return <dl className={`${styles.attribution} ${className||''}`} aria-label={t('crm.attribution')}>
+    {entries.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+  </dl>
+}
+
 export function ContactModal({ contact, stages, members, canEdit, companyId, t, onClose, onSaved, toast }) {
   const [values, setValues] = useState({
     name: contact.name || '', email: contact.email || '', phone: contact.phone || '',
@@ -117,8 +135,7 @@ export function ContactModal({ contact, stages, members, canEdit, companyId, t, 
           <label className="field"><span className="field-label">{t('crm.assignedTo')}</span><select className="select" value={values.assigned_to} onChange={e => setValues(v => ({ ...v, assigned_to: e.target.value }))} disabled={!canEdit}><option value="">{t('crm.unassigned')}</option>{members.map(member => <option key={member.user_id} value={member.user_id}>{member.full_name || member.user_id.slice(0, 8)}</option>)}</select></label>
           <label className="field"><span className="field-label">{t('crm.nextFollowUp')}</span><input className="input" type="datetime-local" value={values.next_follow_up_at} onChange={e => setValues(v => ({ ...v, next_follow_up_at: e.target.value }))} disabled={!canEdit} /></label>
           {canEdit && <button className="primary-button" type="submit" disabled={saving || !values.name.trim()}>{saving ? t('common.savingChanges') : t('common.save')}</button>}
-          {contact.source_path && <p className={styles.source}><strong>{t('crm.source')}:</strong> {contact.source_path}</p>}
-          {contact.source_utm_campaign && <p className={styles.source}><strong>{t('crm.campaign')}:</strong> {contact.source_utm_campaign}</p>}
+          <SourceAttribution source={contact} t={t} className={styles.source}/>
           {contact.consent_given && <p className={styles.consent}><Icon name="check" size={15} />{t('crm.consentRecorded')}{contact.consent_at ? ` · ${formatDateTime(contact.consent_at)}` : ''}</p>}
         </form>
 
@@ -196,7 +213,7 @@ const Contacts = () => {
 
   const needle = search.trim().toLocaleLowerCase()
   const filteredContacts = useMemo(() => board.contacts.filter(contact => (!followUpsOnly || contact.next_follow_up_at) && (!needle ||
-    [contact.name, contact.email, contact.phone, contact.source_path, contact.source_utm_campaign]
+    [contact.name, contact.email, contact.phone, contact.source_path, contact.source_item, contact.source_utm_campaign]
       .some(value => String(value || '').toLocaleLowerCase().includes(needle)))), [board.contacts, needle, followUpsOnly])
 
   const saveContact = (saved) => {
@@ -304,20 +321,20 @@ const Contacts = () => {
         <div className={styles.reviewHead}><h2 id="crm-review-title">{t('crm.manualReview')}</h2><span>{board.reviews.length}</span></div>
         <p>{t('crm.manualReviewHelp')}</p>
         <ul>{board.reviews.map(lead => <li key={lead.id}>
-          <div className={styles.reviewPerson}><strong>{lead.name}</strong><span>{[lead.email, lead.phone].filter(Boolean).join(' · ')}</span><small>{lead.source_path || lead.source_utm_campaign || formatDateTime(lead.created_at)}</small></div>
+          <div className={styles.reviewPerson}><strong>{lead.name}</strong><span>{[lead.email, lead.phone].filter(Boolean).join(' · ')}</span><small>{formatDateTime(lead.created_at)}</small><SourceAttribution source={lead} t={t}/></div>
           <label className={styles.reviewSelect}><span className="sr-only">{t('crm.chooseContact')}</span><select className="select" value={reviewSelections[lead.id] || ''} onChange={e => setReviewSelections(current => ({ ...current, [lead.id]: e.target.value }))}><option value="">{t('crm.chooseContact')}</option>{board.contacts.map(contact => <option key={contact.id} value={contact.id}>{contact.name} · {contact.email || contact.phone || t('crm.noContactInfo')}</option>)}</select></label>
           <button type="button" className="primary-button small" disabled={!canEdit || !reviewSelections[lead.id] || savingKey === lead.id} onClick={() => resolveReview(lead, false)}>{t('crm.linkSelected')}</button>
           <button type="button" className="ghost-button small" disabled={!canEdit || savingKey === lead.id} onClick={() => resolveReview(lead, true)}>{t('crm.createNewContact')}</button>
         </li>)}</ul>
       </section>}
 
-      {board.stages.length === 0 ? <div className="card"><EmptyState icon="users" title={t('crm.noStages')} description={t('crm.noStagesHint')} /></div> : <div className={styles.board} aria-label={t('crm.pipeline')}>
+      {board.stages.length === 0 ? <div className="card"><EmptyState icon="users" title={t('crm.noStages')} description={t('crm.noStagesHint')} /></div> : <div className={styles.board} role="region" aria-label={t('crm.pipeline')} tabIndex={0}>
         {board.stages.map(stage => {
           const contacts = filteredContacts.filter(contact => contact.stage_id === stage.id)
           return <section className={styles.column} key={stage.id} aria-labelledby={`crm-column-${stage.id}`}>
             <header><h2 id={`crm-column-${stage.id}`}>{stageLabel(stage,t)}</h2><span>{contacts.length}</span></header>
             {contacts.length === 0 ? <p className={styles.columnEmpty}>{t('crm.noContactsInStage')}</p> : <ul>{contacts.map(contact => <li key={contact.id} className={styles.card}>
-              <button className={styles.cardOpen} type="button" onClick={() => setSelectedContact(contact)}><strong>{contact.name}</strong><span>{contact.email || contact.phone || t('crm.noContactInfo')}</span>{contact.source_path && <small>{contact.source_path}</small>}{contact.source_utm_campaign && <small>{t('crm.campaign')}: {contact.source_utm_campaign}</small>}{contact.next_follow_up_at && <small className={new Date(contact.next_follow_up_at) < new Date() ? styles.followUpOverdue : styles.followUpDue}>{new Date(contact.next_follow_up_at) < new Date() ? t('crm.followUpOverdue') : t('crm.nextFollowUp')}: {formatDateTime(contact.next_follow_up_at)}</small>}</button>
+              <button className={styles.cardOpen} type="button" onClick={() => setSelectedContact(contact)}><strong>{contact.name}</strong><span>{contact.email || contact.phone || t('crm.noContactInfo')}</span>{contact.source_path && <small>{contact.source_path}</small>}{contact.source_item && <small>{t('crm.item')}: {contact.source_item}</small>}{contact.source_utm_campaign && <small>{t('crm.campaign')}: {contact.source_utm_campaign}</small>}{contact.next_follow_up_at && <small className={new Date(contact.next_follow_up_at) < new Date() ? styles.followUpOverdue : styles.followUpDue}>{new Date(contact.next_follow_up_at) < new Date() ? t('crm.followUpOverdue') : t('crm.nextFollowUp')}: {formatDateTime(contact.next_follow_up_at)}</small>}</button>
               {canEdit && <div className={styles.cardControls}>
                 <label><span className="sr-only">{t('crm.moveContact').replace('{name}', contact.name)}</span><select className="select" value={contact.stage_id || ''} disabled={savingKey === contact.id} onChange={e => updateContactField(contact, { stage_id: e.target.value || null })}>{board.stages.map(item => <option key={item.id} value={item.id}>{stageLabel(item,t)}</option>)}</select></label>
                 <label><span className="sr-only">{t('crm.assignContact').replace('{name}', contact.name)}</span><select className="select" value={contact.assigned_to || ''} disabled={savingKey === contact.id} onChange={e => updateContactField(contact, { assigned_to: e.target.value || null })}><option value="">{t('crm.unassigned')}</option>{board.members.map(member => <option key={member.user_id} value={member.user_id}>{member.full_name || member.user_id.slice(0, 8)}</option>)}</select></label>

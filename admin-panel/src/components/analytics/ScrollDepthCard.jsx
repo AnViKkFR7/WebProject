@@ -18,7 +18,7 @@ const ScrollDepthCard = ({ byScroll, byPath }) => {
       {rows.length === 0 ? (
         <p className="text-muted">{t('analytics.noData')}</p>
       ) : (
-        <div className="depth-table-wrap">
+        <div className="depth-table-wrap" role="region" aria-label={t('analytics.scrollTitle')} tabIndex={0}>
           <table className="depth-table">
             <thead>
               <tr>

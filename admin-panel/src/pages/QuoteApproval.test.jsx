@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import QuoteApproval from './QuoteApproval'
 
 const mocks = vi.hoisted(() => ({
-  service: { details: vi.fn(), respond: vi.fn() },
+  service: { details: vi.fn(), respond: vi.fn(),notifyResponse:vi.fn().mockResolvedValue({sent:true}) },
 }))
 
 vi.mock('../contexts/LanguageContext', () => ({

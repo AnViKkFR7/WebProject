@@ -166,6 +166,8 @@ const AssignUserTab = ({ companies }) => {
                {assignUserSearch && (
                 <button
                   type="button"
+                  aria-label={t('profile.assignUser.clearUserSearch')}
+                  title={t('profile.assignUser.clearUserSearch')}
                   onClick={() => {
                     setAssignUserSearch('')
                     setAssignUserFormData(prev => ({ ...prev, user_id: '' }))
@@ -270,6 +272,8 @@ const AssignUserTab = ({ companies }) => {
               {assignCompanySearch && (
                 <button
                   type="button"
+                  aria-label={t('profile.assignUser.clearCompanySearch')}
+                  title={t('profile.assignUser.clearCompanySearch')}
                   onClick={() => {
                     setAssignCompanySearch('')
                     setAssignUserFormData(prev => ({ ...prev, company_id: '' }))

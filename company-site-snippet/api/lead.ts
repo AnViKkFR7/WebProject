@@ -16,7 +16,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const MAX = { name: 120, email: 160, phone: 40, message: 4000, path: 300, referrer: 500, campaign: 120 }
+const MAX = { name: 120, email: 160, phone: 40, message: 4000, path: 300, item: 200, referrer: 500, campaign: 120 }
 
 const clean = (value: unknown, max: number): string | null => {
   if (typeof value !== 'string') return null
@@ -76,8 +76,9 @@ export default async function handler(req: Request) {
 
   const { data: crmModule, error: moduleError } = await supabase.from('company_modules')
     .select('is_enabled').eq('company_id', company_id).eq('module_key', 'crm').maybeSingle()
-  if (moduleError) return new Response('Service unavailable', { status: 503 })
-  if (crmModule && !crmModule.is_enabled) return new Response('Requests are unavailable', { status: 503 })
+  // Missing module configuration must fail closed as well: otherwise a
+  // partially applied module migration would keep accepting public requests.
+  if (moduleError || !crmModule || !crmModule.is_enabled) return new Response('Requests are unavailable', { status: 503 })
 
   const { error } = await supabase.from('lead').insert({
     company_id: configuredCompanyId,
@@ -86,6 +87,7 @@ export default async function handler(req: Request) {
     phone,
     message,
     source_path: clean(body.source_path, MAX.path),
+    source_item: clean(body.source_item, MAX.item),
     source_campaign: clean(body.source_campaign, MAX.campaign),
     source_referrer: clean(body.source_referrer, MAX.referrer),
     source_utm_source: clean(body.source_utm_source, MAX.campaign),

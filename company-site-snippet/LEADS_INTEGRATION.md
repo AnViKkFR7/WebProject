@@ -6,9 +6,10 @@
 > `company-site-snippet/LEADS_INTEGRATION.md`. El formulario de contacto debe
 > guardar en la tabla `lead` a través de `/api/lead`.»
 
-Todo lo que hay que hacer está en este fichero. No hace falta tocar el admin
-panel ni la base de datos: la tabla `lead` y sus permisos ya existen
-(`database/schema/LEADS_SCHEMA.sql`).
+Todo lo que hay que hacer en cada web está en este fichero. Para registrar el
+item consultado, aplica primero la migración aditiva
+`database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql`; los campos base de
+solicitudes ya existen (`database/schema/LEADS_SCHEMA.sql`).
 
 ---
 
@@ -16,8 +17,8 @@ panel ni la base de datos: la tabla `lead` y sus permisos ya existen
 
 Lo que hoy se pierde en un email (o directamente no se recoge) pasa a la
 pestaña **Solicitudes** del panel, con estado *nueva → contactada → cerrada*,
-buscador y notas internas. Cada solicitud guarda además desde qué página se
-envió y la campaña (`utm_campaign`), para saber qué páginas traen clientes.
+buscador y notas internas. El CRM conserva la ruta de origen, el item consultado,
+el referrer, la campaña y los cinco campos UTM cuando el formulario los envía.
 
 ## 1. Copiar los dos archivos
 
@@ -73,7 +74,7 @@ export function ContactForm() {
       name: String(data.get('name') ?? ''),
       email: String(data.get('email') ?? ''),
       phone: String(data.get('phone') ?? ''),
-      message: String(data.get('message') ?? ''),
+  message: String(data.get('message') ?? ''),
       company_website: String(data.get('company_website') ?? ''), // trampa anti-bots
       consent_given: data.get('privacy_consent') === 'on',
       consent_text_version: LEAD_PRIVACY_TEXT_VERSION,
@@ -143,13 +144,19 @@ desde un listener de `submit`, haciendo `event.preventDefault()`.
 - Límites: nombre 120, email 160, teléfono 40, mensaje 4000 caracteres. Lo que
   pase se recorta, no se rechaza.
 - `source_path`, `source_referrer` y los cinco campos UTM los rellena `lib/leads.ts`.
+  En un formulario abierto desde una ficha, pasa además `source_item` con el
+  título, slug o identificador público de esa ficha:
+  `submitLead({ ...formValues, source_item: item.title + ' · ' + item.slug })`.
+  En un formulario de contacto general, deja ese campo vacío. El servidor
+  conserva solo el texto público (máximo 200 caracteres).
   La API registra `consent_given: true` solo cuando se marca la casilla y se
   envía una versión del texto. Si queda sin marcar, el lead se sigue enviando
   con `consent_given: false`; no se confunde la solicitud de respuesta con el
   consentimiento. El texto del ejemplo no sustituye la revisión de privacidad
   de cada empresa. Mantén la versión estable y cámbiala al modificar el texto.
 
-Tras instalar `database/migrations/CRM_CONTACTS_PIPELINE.sql`, el servidor crea
+Tras instalar `database/migrations/CRM_CONTACTS_PIPELINE.sql` y
+`database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql`, el servidor crea
 o enlaza automáticamente el contacto al insertar la solicitud. La coincidencia
 se calcula por email normalizado o teléfono. Si cada campo apunta a un contacto
 distinto, queda `review_required` sin vinculación y el equipo debe resolverlo en
@@ -188,6 +195,8 @@ Si no aparece:
 | 200 pero no aparece nada | El campo trampa llegó relleno: algún autocompletado lo está rellenando. Cámbiale el `name`. |
 | Aparece en otra empresa | `VITE_COMPANY_ID` es el uuid de otra empresa. |
 
+El endpoint también falla de forma cerrada si no existe la fila CRM de esa empresa en `company_modules`; revisa que `COMPANY_MODULES.sql` esté aplicado y que el módulo CRM se haya inicializado antes de habilitar el formulario público.
+
 ## 7. Privacidad
 
 Estos datos los escribe la propia persona en un formulario de contacto, así
@@ -196,6 +205,8 @@ que es un tratamiento con una finalidad clara. Dos cosas que conviene tener:
 - Una casilla de aceptación de la política de privacidad junto al botón.
 - Que la política de privacidad diga que los datos de contacto se guardan para
   responder a la solicitud, y durante cuánto tiempo.
+- Si se envía `source_item`, informar que también se conserva el item relacionado
+  con la solicitud. No usar ese texto como autorización ni como dato verificado.
 
 A diferencia de la analítica, aquí **sí** hay datos personales: no se puede
 borrar la bandeja entera sin más, pero sí se pueden borrar solicitudes sueltas

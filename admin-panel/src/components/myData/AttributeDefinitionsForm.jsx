@@ -10,7 +10,7 @@ const AttributeDefinitionsForm = ({ newDefinitions, handleNewDefinitionChange, h
   const { t } = useLanguage()
 
   return (
-    <div className="bulk-table-wrap">
+    <div className="bulk-table-wrap" role="region" aria-label={t('attributes.bulkTableLabel')} tabIndex={0}>
       <table className="bulk-table">
         <thead>
           <tr>

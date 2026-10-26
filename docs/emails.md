@@ -1,5 +1,38 @@
 # Emails transaccionales y recordatorios
 
+## Emails al cliente: marca y editor
+
+La vista previa convierte el logo a una imagen de datos local para que el iframe aislado lo pueda mostrar; al enviar, el renderizador sigue usando un adjunto CID para evitar depender de una URL pública. Los botones de acción de email se presentan como CTA con estilo de botón, pero se implementan como enlaces HTML (`<a href>`): los clientes de correo no ofrecen soporte interoperable para botones HTML que naveguen a una URL. «Revisar presupuesto» conserva así navegación y funciona en los clientes principales. El pie «powered by MoiraOrdo» enlaza a https://www.moiraordo.es. Las paletas guardadas de la empresa se pueden elegir en la configuración de emails; el logo sigue siendo una preferencia separada.
+
+En ambos diseños el logo va junto al aviso y nombre de la empresa en una fila de identidad, con un tamaño máximo de 72 × 48 px y proporción original. La cabecera fija las columnas y permite que nombres largos se ajusten a varias líneas en vista móvil. El diseño clásico usa fondo neutro y un acento lateral; marca destacada usa banda de color, texto mayor y el logo en una insignia clara. El logo no se repite debajo del encabezado.
+
+La implementación local cubre las plantillas existentes que llegan al cliente: enlace de aprobación de presupuesto y recordatorio de vencimiento de factura. Las facturas emitidas no tienen actualmente envío por email. Los avisos a administradores, Planning y el resumen semanal son internos y quedan fuera de este editor.
+
+El apartado **Configuración → Emails** permite a la persona administradora de la empresa cambiar el diseño (clásico o marca destacada), logo, paleta, idioma predeterminado de envío (ES/EN) y HTML/asunto/preencabezado por tipo e idioma. El idioma predeterminado se aplica a enlaces de presupuesto y avisos automáticos de vencimiento; español se usa si el ajuste falta o no es reconocido. Esto hace operativas ambas plantillas de idioma; el selector de idioma de plantilla sigue controlando qué variante se edita y previsualiza. El logo y la paleta se comparten entre todas las plantillas; no hay ajustes por documento ni por envío individual. La vista previa usa datos ficticios y un iframe aislado; no envía correo. La migración guarda una configuración por empresa detrás de RPC con verificación de rol; la tabla y el historial no admiten acceso directo de usuarios. Cada guardado conserva hasta diez configuraciones anteriores con fecha e ID del usuario; restaurar una versión crea una nueva entrada para mantener la trazabilidad.
+
+Al enviar, el renderizador común escapa los valores, limita el vocabulario HTML y los enlaces, genera HTML y texto plano y elige texto blanco o negro con contraste suficiente en el bloque de origen. El logo se adjunta como imagen CID. Si una plantilla guardada no es válida, el emisor usa la plantilla predefinida. Se conserva la idempotencia de cada envío.
+
+El encabezado visible dice «Este mensaje te lo envía {empresa}»; el remitente técnico sigue siendo el dominio verificado de MoiraOrdo y no se falsifica el dominio de la empresa. El pie dice «Recurso digital powered by MoiraOrdo». La plantilla de aprobación de presupuesto sigue enviándose solo tras acción expresa del administrador. El aviso de vencimiento conserva los datos previamente autorizados: email del cliente, número, fecha de vencimiento y saldo pendiente.
+
+El renderer recibe el nombre de la empresa, la marca y los datos propios del mensaje; no obtiene NIF, dirección, email, teléfono ni web para el pie. El registro general de empresa tiene contacto y web, pero la identidad fiscal (NIF/dirección) se conserva como copia del emisor en cada documento. El editor HTML permite texto fijo por plantilla/idioma, pero aún no existe un pie legal común parametrizado. Antes de automatizarlo hay que decidir qué datos deben aparecer y confirmar su inclusión en los emails enviados a Resend.
+
+### Activación y comprobación
+
+1. Comprobar la secuencia de `database/README.md`; ejecutar `migrations/COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql` después de `BILLING_APPEARANCE.sql`, `COMPANY_MODULES.sql` y `BILLING_DUE_REMINDERS.sql`. En bases existentes, ejecutar únicamente migraciones que falten.
+2. Ejecutar `maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql`. Se esperan `true` en todas las columnas, especialmente RLS, acceso directo denegado, RPC authenticated y RPC worker.
+3. Desplegar el frontend y las funciones `send-quote-approval-link` y `send-billing-due-reminders` desde la misma revisión. La función de recordatorios debe conservar su secreto de cron.
+4. Probar con un presupuesto y una factura de prueba, a destinatarios controlados: idioma/template por defecto, remitente visible, enlaces, logo, versión texto, fallback y que no haya duplicados ante reintento.
+
+La migración de marca/plantillas y las funciones de email solo están en el repositorio local: no hay evidencia de que se hayan aplicado o desplegado en Supabase/Vercel. El idioma nuevo se almacena como una propiedad opcional del JSON existente y no requiere migración SQL. No se han comprobado clientes de correo externos ni los datos legales que deban aparecer en el pie. La previsualización local no sustituye esas verificaciones.
+
+## Aprobación y respuesta de presupuestos
+
+El administrador puede enviar al cliente el enlace de aprobación guardado en el presupuesto. `send-quote-approval-link` obtiene el destinatario y el número desde la cotización en Supabase, valida que el usuario tenga permisos y envía el enlace al correo guardado; el token aleatorio viaja en el fragmento de URL y solo su hash se almacena. Resend recibe el correo del cliente, nombre de la empresa, número de presupuesto, caducidad y enlace. Guarda fecha e ID del proveedor para trazabilidad. La clave idempotente es `quote-approval-link/<link-id>`; Resend conserva la clave 24 horas. Es un envío bajo acción explícita del administrador, no una cola de campañas.
+
+Tras aceptar/rechazar, `notify-quote-approval-response` avisa a las direcciones de administradores activos de la empresa (primero `to`, restantes en `bcc`). El aviso incluye nombre/email declarados por el cliente, número de presupuesto, decisión, fecha y enlace directo al panel. Resend recibe estos datos. La clave idempotente es `quote-approval-response/<link-id>`; la BD guarda fecha/ID de proveedor y no duplica un aviso ya marcado. Si falla el envío, el usuario ve un aviso de error y puede reintentarlo desde la página de respuesta mientras conserve ese enlace. No hay cron ni cola de reintentos para este email; validar el correo con destinatarios de prueba antes de usarlo en producción.
+
+Las respuestas se muestran en el panel del presupuesto y en el dashboard (máximo cinco de los últimos 90 días). El dashboard permite abrir directamente el presupuesto. Cada nueva respuesta queda asociada a su enlace; después de modificar un rechazo hay que guardar el presupuesto como enviado y generar un enlace nuevo. Se conserva la historia anterior.
+
 ## Estado del envío de Planning
 
 El recordatorio de Planning ya tiene código local para consumir `PLANNING_EMAIL_QUEUE.sql`: encola ocurrencias, reclama un lote, valida membresía activa, reconstruye el mensaje y lo envía a Resend. La migración, Edge Function y cron no se han verificado como desplegados en el destino.

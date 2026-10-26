@@ -1,0 +1,20 @@
+-- Read-only validation for COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql.
+select
+  to_regclass('public.company_customer_email_settings') is not null as settings_table_exists,
+  to_regclass('public.company_customer_email_revisions') is not null as revisions_table_exists,
+  coalesce((select relrowsecurity from pg_catalog.pg_class where oid=to_regclass('public.company_customer_email_settings')),false) as rls_enabled,
+  coalesce((select relrowsecurity from pg_catalog.pg_class where oid=to_regclass('public.company_customer_email_revisions')),false) as revisions_rls_enabled,
+  coalesce(not has_table_privilege('authenticated','public.company_customer_email_settings','select'),false) as authenticated_direct_select_denied,
+  coalesce(not has_table_privilege('authenticated','public.company_customer_email_revisions','select'),false) as authenticated_history_select_denied,
+  coalesce(has_function_privilege('authenticated','public.get_company_customer_email_settings(uuid)','execute'),false) as settings_read_rpc_granted,
+  coalesce(has_function_privilege('authenticated','public.save_company_customer_email_settings(uuid,jsonb)','execute'),false) as settings_write_rpc_granted,
+  coalesce(has_function_privilege('authenticated','public.get_company_customer_email_revisions(uuid)','execute'),false) as revision_read_rpc_granted,
+  coalesce(has_function_privilege('authenticated','public.restore_company_customer_email_revision(uuid,uuid)','execute'),false) as revision_restore_rpc_granted,
+  coalesce(not has_function_privilege('anon','public.get_company_customer_email_settings(uuid)','execute'),false) as anonymous_settings_read_denied,
+  coalesce(not has_function_privilege('anon','public.save_company_customer_email_settings(uuid,jsonb)','execute'),false) as anonymous_settings_write_denied,
+  coalesce(has_function_privilege('service_role','public.get_company_customer_email_template(uuid,text,text,uuid)','execute'),false) as worker_template_rpc_granted,
+  coalesce(has_function_privilege('authenticated','public.get_company_customer_email_template(uuid,text,text,uuid)','execute'),false) as authenticated_template_rpc_granted,
+  to_regprocedure('public.default_company_customer_email_settings()') is not null as default_settings_function_exists,
+  to_regprocedure('public.validate_company_customer_email_settings(jsonb)') is not null as validation_function_exists,
+  to_regprocedure('public.get_company_customer_email_revisions(uuid)') is not null as revision_read_function_exists,
+  to_regprocedure('public.restore_company_customer_email_revision(uuid,uuid)') is not null as revision_restore_function_exists;

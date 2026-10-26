@@ -12,6 +12,7 @@ export function useBillingPaletteLibrary(companyId,canEdit) {
   useEffect(()=>{active.current=true;return()=>{active.current=false}},[])
   useEffect(()=>{
     let current=true
+    if(!companyId){setEntries([]);setStatus('ready');return()=>{current=false}}
     loadBillingPalettes(companyId).then(rows=>{if(current){setEntries(rows);setStatus('ready')}})
       .catch(()=>{if(current)setStatus('error')})
     return()=>{current=false}
