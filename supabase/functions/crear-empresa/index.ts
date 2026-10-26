@@ -18,13 +18,10 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[CREATE-USER] Request received')
-
     // 1. Obtener el usuario que hace la llamada
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error('[CREATE-USER] Missing Authorization header');
-      console.log(req.headers);
+      console.error('[CREATE-COMPANY] auth_header_missing')
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,7 +29,6 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('[CREATE-USER] Token length:', token.length)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -116,7 +112,7 @@ serve(async (req) => {
 
     return json({ company });
   } catch (error) {
-    console.error('[CREATE-USER] Unexpected error:', error)
+    console.error('[CREATE-COMPANY] unexpected_error')
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -67,3 +67,9 @@ Las pruebas de interfaz verifican comportamiento con Happy DOM, no el aspecto vi
 6. Ejecutar completo database/maintenance/BILLING_SECURITY_AUDIT.sql como consulta administrativa y comprobar con usuarios reales de dos empresas: lectura, modificación, descarga, conversión y adjuntos.
 
 No se aplicaron estas nuevas migraciones remotamente ni se modificaron facturas o presupuestos reales durante la revisión. El archivo de auditoría contiene únicamente consultas y validaciones de lectura.
+
+**Revisión aditiva local — 26/10/2026 [P19]**
+
+Se contrastaron las migraciones de paletas, borradores, directorio/catálogo, plantillas, cobros/historial, rectificativas, cola de emails y movimientos de Planning con sus pruebas PGlite. La matriz local incluye roles `viewer`, `editor`, usuarios externos y duales cuando corresponde; hay pruebas de escrituras directas, IDs de otra empresa, membresía inactiva, borradores privados entre autores, reintentos idempotentes y versiones obsoletas. Los tests ejercitan esas RPC bajo `authenticated`, `anon` y `service_role` según su contrato.
+
+No se encontró una brecha nueva durante esta lectura. Esto confirma únicamente cobertura del esquema del repositorio bajo PGlite; no demuestra que las migraciones estén aplicadas, que las políticas desplegadas coincidan, ni que no existan carreras bajo concurrencia real. Siguen pendientes prueba con latencia/conflictos en entorno integrado, usuarios autenticados de dos empresas en el destino y verificación de backups/restauración. La suite local actual pasa **416 pruebas en 66 archivos**.

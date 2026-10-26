@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { itemMediaService } from '../../services/itemMediaService'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useFeedback } from '../../contexts/FeedbackContext'
@@ -61,12 +61,25 @@ const ItemMedia = ({ itemId, canEdit }) => {
   const [pendingPdfs, setPendingPdfs] = useState(null)
   const [reorderImages, setReorderImages] = useState([])
 
-  const images = media.filter(m => m.file_type === 'image')
-  const pdfs = media.filter(m => m.file_type === 'pdf')
+  const images = useMemo(() => media.filter(m => m.file_type === 'image'), [media])
+  const pdfs = useMemo(() => media.filter(m => m.file_type === 'pdf'), [media])
+
+  const loadMedia = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await itemMediaService.getItemMedia(itemId)
+      setMedia(data)
+      setError(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [itemId])
 
   useEffect(() => {
     loadMedia()
-  }, [itemId])
+  }, [loadMedia])
 
   // Preload adjacent images for smooth navigation
   useEffect(() => {
@@ -90,20 +103,7 @@ const ItemMedia = ({ itemId, canEdit }) => {
     preloadImage(currentImageIndex)
     preloadImage(currentImageIndex + 1)
     preloadImage(currentImageIndex - 1)
-  }, [currentImageIndex, images])
-
-  const loadMedia = async () => {
-    try {
-      setLoading(true)
-      const data = await itemMediaService.getItemMedia(itemId)
-      setMedia(data)
-      setError(null)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [currentImageIndex, imageLoaded, images])
 
   const handleFileUpload = async (e, fileType) => {
     const files = Array.from(e.target.files)

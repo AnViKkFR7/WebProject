@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { companyService } from '../../services/companyService'
 import { useLanguage } from '../../contexts/LanguageContext'
 import Icon from '../ui/Icon'
@@ -13,13 +13,8 @@ const PersonalTab = ({ selectedCompany, currentUser }) => {
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
-  useEffect(() => {
-    if (selectedCompany?.id) {
-      loadMemberProfile()
-    }
-  }, [selectedCompany])
-
-  const loadMemberProfile = async () => {
+  const loadMemberProfile = useCallback(async () => {
+    if (!selectedCompany?.id) return
     try {
       const profile = await companyService.getCurrentUserMemberProfile(selectedCompany.id)
       setPersonalFormData({
@@ -29,7 +24,11 @@ const PersonalTab = ({ selectedCompany, currentUser }) => {
     } catch (error) {
       console.error('Error cargando perfil del miembro:', error)
     }
-  }
+  }, [selectedCompany?.id])
+
+  useEffect(() => {
+    loadMemberProfile()
+  }, [loadMemberProfile])
 
   const handleSavePersonalInfo = async (e) => {
     e.preventDefault()

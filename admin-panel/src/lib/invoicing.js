@@ -1,6 +1,6 @@
 import { validBillingPalette, withBillingAppearance } from './billingAppearance'
 
-export const emptyProfile = { name: '', taxId: '', address: '', email: '', phone: '', logo: '', color: '#635bff', prefix: 'F', quotePrefix: 'P', iban: '', payment: '', notes: '' }
+export const emptyProfile = { name: '', taxId: '', address: '', email: '', phone: '', logo: '', color: '#635bff', prefix: 'F', quotePrefix: 'P', rectificationPrefix: 'FR', iban: '', payment: '', notes: '' }
 export const newLine = () => ({ description: '', quantity: 1, price: 0, discount: 0, tax: 21 })
 // Cantidades en milésimas; importes en céntimos; porcentajes en centésimas.
 // Evita discrepancias de redondeo entre JavaScript y numeric de PostgreSQL.
@@ -16,10 +16,11 @@ const euros = cents => Number(cents) / 100
 export function invoiceTotals(lines, withholding = 0) {
   let baseCents = 0n; let taxCents = 0n
   const rows = lines.map(line => {
-    const base = divideRounded(scaled(line.quantity,3) * scaled(line.price,2) * (10000n-scaled(line.discount || 0,2)),10000000n)
+    const sign = line.sign === -1 ? -1n : 1n
+    const base = sign * divideRounded(scaled(line.quantity,3) * scaled(line.price,2) * (10000n-scaled(line.discount || 0,2)),10000000n)
     const tax = divideRounded(base * scaled(line.tax,2),10000n)
     baseCents += base; taxCents += tax
-    const original=divideRounded(scaled(line.quantity,3)*scaled(line.price,2),1000n)
+    const original=sign * divideRounded(scaled(line.quantity,3)*scaled(line.price,2),1000n)
     return { original:euros(original),discount:euros(original-base),base:euros(base),tax:euros(tax),total:euros(base+tax) }
   })
   const retained = divideRounded(baseCents * scaled(withholding || 0,2),10000n)
@@ -35,8 +36,8 @@ export const validBillingDate = value => {
 }
 export function validBillingProfile(profile) {
   if (!object(profile) || !hasBillingProfile(profile)) return false
-  if (!['name','taxId','address','email','phone','iban','payment','notes','prefix','quotePrefix','color'].every(key => !(key in profile) || text(profile[key]))) return false
-  if (['prefix','quotePrefix'].some(key => key in profile && !/^[A-Za-z0-9_-]{1,20}$/.test(profile[key]))) return false
+  if (!['name','taxId','address','email','phone','iban','payment','notes','prefix','quotePrefix','rectificationPrefix','color'].every(key => !(key in profile) || text(profile[key]))) return false
+  if (['prefix','quotePrefix','rectificationPrefix'].some(key => key in profile && !/^[A-Za-z0-9_-]{1,20}$/.test(profile[key]))) return false
   if ('color' in profile && !/^#[0-9a-f]{6}$/i.test(profile.color)) return false
   if ('palette' in profile && !validBillingPalette(profile.palette)) return false
   return !('logo' in profile) || (text(profile.logo,1400000) && (profile.logo === '' || /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(profile.logo)))
@@ -51,13 +52,34 @@ export function validInvoice(doc) {
   if ('email' in doc.customer && !text(doc.customer.email)) return false
   if (!['date','dueDate','payment','iban','notes','sourceQuote'].every(key => !(key in doc) || text(doc[key]))) return false
   if ('presentation' in doc && (!object(doc.presentation) || !['title','site','introduction','conditions'].every(key => !(key in doc.presentation) || text(doc.presentation[key],['title','site'].includes(key) ? 300 : 2000)) || ('signatures' in doc.presentation && typeof doc.presentation.signatures !== 'boolean'))) return false
+  if ('rectification' in doc) {
+    const r=doc.rectification
+    if (!object(r) || !text(r.originalId,80) || !text(r.originalNumber,40) || !text(r.method,20)
+      || !['difference','substitution'].includes(r.method) || !text(r.cause,300) || !r.cause.trim()
+      || !text(r.note || '',2000) || !validNumber(r.originalTotal,2,1e12)) return false
+  }
   if (!validBillingDate(doc.date) || (doc.dueDate && (!validBillingDate(doc.dueDate) || doc.dueDate<doc.date))) return false
   if (!validNumber(doc.withholding,2,100) || !Array.isArray(doc.lines) || doc.lines.length<1 || doc.lines.length>1000) return false
   if (!doc.lines.every(line => object(line) && text(line.description) && line.description.trim()
     && (!('chapter' in line) || text(line.chapter,200)) && (!('details' in line) || text(line.details,2000))
     && validNumber(line.quantity,3,1e9,true) && validNumber(line.price,2,1e9)
+    && (!('sign' in line) || (doc.rectification?.method === 'difference' && [-1,1].includes(line.sign)))
     && validNumber(line.discount,2,100) && validNumber(line.tax,2,100))) return false
   return invoiceTotals(doc.lines,doc.withholding).base <= 1e12
+}
+
+export function createRectificationDocument(original, method, cause, note, date) {
+  const source=structuredClone(original.document)
+  const lines=method==='difference'
+    ? source.lines.map(line=>({...line,sign:-1}))
+    : source.lines.map(line=>{const replacement={...line};delete replacement.sign;return replacement})
+  return {
+    ...source,
+    date,
+    dueDate:'',
+    lines,
+    rectification:{originalId:original.id,originalNumber:original.number,method,cause,note,originalTotal:invoiceTotals(source.lines,source.withholding).total},
+  }
 }
 
 export const documentStatuses = kind => kind === 'quote'

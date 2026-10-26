@@ -1,6 +1,6 @@
 # Roadmap de facturación, presupuestos y planning
 
-Fecha: 22/10/2026. Estado: fase 1 implementada y comprobada localmente; resto de fases y despliegue pendientes.
+Actualizado: 26/10/2026. Estado: fases 1–7 implementadas y comprobadas localmente; continúan pendientes las puertas de operación de fase 8. P12 implementa rectificativas, P13 movimiento/deshacer de Planning, P14 parcial prepara cola/CI y P15 añade diagnósticos operativos sin PII ni colector externo. Lint global en CI local; migraciones, despliegues y verificación remota siguen pendientes.
 
 Referencias de trabajo: [DevelopmentBasics.md](DevelopmentBasics.md) y [PLAYBOOK-WEB.md](PLAYBOOK-WEB.md). Se aplican a cada entrega, con el alcance concreto de un panel privado multiempresa ya existente. Las capturas y el PDF de presupuesto aportados siguen siendo las referencias de composición de los documentos.
 
@@ -12,7 +12,7 @@ MVP significa primera entrega utilizable de esta evolución, no la primera versi
 
 ## Situación comprobada
 
-- El editor de factura/presupuesto está en un modal y alterna formulario y preview.
+- El editor de factura/presupuesto ocupa una vista completa desde [P2], con preview adaptable.
 - Existe un perfil de facturación por empresa con logo PNG/JPEG y un color HEX. La subida actual limita el archivo a 1 MB y 4096 px por dimensión; se revisarán también contenido decodificado y errores.
 - El PDF ya incorpora el logo; preview y descarga comparten renderizador. La nueva petición amplía la personalización y su accesibilidad en el flujo.
 - Existen capítulos con varias partidas, descuentos, numeración y controles de versión/permisos. Se deben conservar y cubrir como regresiones.
@@ -89,6 +89,6 @@ Listas ejecutables: [MVP](roadmap-mvp.md) y [versión final](roadmap-final-versi
 
 ## Próxima implementación
 
-La fase 1 está implementada localmente en [P2]: editor de página completa, rutas, preview adaptable y protección/validación de formularios. Evidencias y límites en `docs/testing.md`.
+Las fases 1–5 están comprobadas localmente. [P9] añade duplicación como borrador y plantillas de capítulos por compañía con copias editables e IDs estables. Evidencias y límites en `docs/testing.md`.
 
-Continuar con fase 2: acceso al logo y las tres paletas/personalizada, conservando compatibilidad con documentos guardados. Antes de ampliar contratos de BD, cerrar los puntos correspondientes de fase 0 y crear migraciones nuevas. El autoguardado sigue previsto para fase 3. Ningún despliegue se considera verificado por completar código local.
+Continuar con fase 8 de operación y estabilización. Antes de desplegar, inventariar el estado remoto y aplicar mediante el proceso autorizado las migraciones pendientes de apariencia, paletas, borradores, directorio/catálogo, plantillas, cobros, bloqueo de emitidas, rectificativas y movimientos/deshacer de Planning. Ningún despliegue se considera verificado por completar código local.

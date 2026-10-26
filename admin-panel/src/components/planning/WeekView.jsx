@@ -16,7 +16,7 @@ function toGridEvent(task) {
   return { ...task, _start: startMin, _end: endMin };
 }
 
-export default function WeekView({ date, tasks, onDelete, onEdit, onSelectSlot, fullDay=false }) {
+export default function WeekView({ date, tasks, onDelete, onEdit, onSelectSlot, onMoveTask, onResizeTask, fullDay=false }) {
   const { t } = useLanguage();
   const {scrollRef,firstHour,lastHour,hourHeight:HOUR_H,hours:HOURS}=useCalendarHours(fullDay);
 
@@ -67,6 +67,7 @@ export default function WeekView({ date, tasks, onDelete, onEdit, onSelectSlot, 
                   view="week"
                   onDelete={onDelete}
                   onEdit={onEdit}
+                  onMoveTask={onMoveTask} onResizeTask={onResizeTask} hourHeight={HOUR_H}
                   style={{ position: 'relative', height: 'auto', width: '100%' }}
                 />
               ))}
@@ -114,6 +115,7 @@ export default function WeekView({ date, tasks, onDelete, onEdit, onSelectSlot, 
                       view="week"
                       onDelete={onDelete}
                       onEdit={onEdit}
+                      onMoveTask={onMoveTask} onResizeTask={onResizeTask} hourHeight={HOUR_H}
                       style={{
                         position: 'absolute',
                         ...calendarEventBox(ev,firstHour,lastHour,HOUR_H),

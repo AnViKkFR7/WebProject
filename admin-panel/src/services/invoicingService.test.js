@@ -4,6 +4,11 @@ vi.mock('../lib/supabaseClient', () => ({ supabase:{ rpc } }))
 import { saveInvoice, convertQuote, saveProfile } from './invoicingService'
 beforeEach(() => rpc.mockReset())
 describe('invoices and quotes RPCs', () => {
+  it('commits a prepared recovery copy atomically only on explicit document save',async()=>{
+    rpc.mockReturnValue({abortSignal:vi.fn().mockResolvedValue({data:{id:'committed'},error:null})})
+    await saveInvoice('tenant',{notes:'final'},'issued',null,'invoice',{id:'draft',version:4,key:'new'})
+    expect(rpc).toHaveBeenCalledWith('commit_billing_draft',{p_company:'tenant',p_kind:'invoice',p_key:'new',p_request:'draft',p_version:4,p_document:{notes:'final'},p_status:'issued',p_invoice_version:null})
+  })
   it('saves invoices through the invoice RPC by default', async () => {
     rpc.mockResolvedValue({ data:{ id:'invoice' },error:null })
     await saveInvoice('tenant',{},'draft',null)

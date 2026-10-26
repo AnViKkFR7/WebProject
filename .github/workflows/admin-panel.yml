@@ -1,0 +1,33 @@
+name: Admin panel checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  admin-panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            admin-panel/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix admin-panel
+      - run: npm run lint --prefix admin-panel
+      - run: npm test --prefix admin-panel
+      - run: npm run build --prefix admin-panel
+        env:
+          VITE_DEPLOYMENT_ENV: ci
+          VITE_APP_VERSION: ${{ github.sha }}
+      - run: node scripts/check-admin-production-output.mjs admin-panel/dist
+      - run: npm run check:functions

@@ -17,7 +17,7 @@ import Icon from '../components/ui/Icon'
 import ClientCompanyModal from '../components/planning/ClientCompanyModal'
 import '../styles/planning.css'
 
-const emptyForm = { name: '', phone: '', email: '', responsible: '', color: '#1976d2' }
+const emptyForm = { name: '', tax_id:'', billing_address:'', phone: '', email: '', responsible: '', color: '#1976d2' }
 
 /**
  * Empresas cliente de la empresa seleccionada: las que se planifican y
@@ -58,6 +58,8 @@ const Companies = () => {
   const openEdit = (company) => {
     setForm({
       name: company.name || '',
+      tax_id:company.tax_id || '',
+      billing_address:company.billing_address || '',
       phone: company.phone || '',
       email: company.email || '',
       responsible: company.responsible || '',
@@ -74,10 +76,13 @@ const Companies = () => {
     try {
       const payload = {
         name: form.name.trim(),
+        tax_id:form.tax_id.trim() || null,
+        billing_address:form.billing_address.trim() || null,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
         responsible: form.responsible.trim() || null,
         color: form.color,
+        company_id:companyId,
       }
       if (modal.editing) {
         await updateClientCompany(modal.editing.id, payload)
@@ -109,18 +114,17 @@ const Companies = () => {
       message: inUse
         ? t('companies.deleteInUse').replace('{tasks}', usage.tasks).replace('{bills}', usage.bills)
         : t('companies.deleteMessage'),
-      confirmLabel: t('common.delete'),
+      confirmLabel: t('companies.archive'),
       danger: true,
     })
     if (!ok) return
     try {
-      await deleteClientCompany(company.id)
+      await deleteClientCompany(company.id,companyId)
       toast.success(t('companies.deleted'))
       load()
     } catch (error) {
       console.error(error)
-      // La base de datos rechaza el borrado si quedan tareas o facturas apuntando
-      toast.error(inUse ? t('companies.deleteBlocked') : t('feedback.deleteError'))
+      toast.error(t('feedback.deleteError'))
     }
   }
 

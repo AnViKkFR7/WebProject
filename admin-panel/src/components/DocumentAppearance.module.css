@@ -16,8 +16,9 @@
 .swatches { display:flex; padding:.15rem; border:1px solid var(--border-color); border-radius:20px; background:white; }
 .swatches i { width:20px; height:20px; border-radius:50%; margin-right:-3px; border:1px solid #cbd5e1; }
 .swatches i:last-child { margin-right:0; }
-.custom { display:grid; gap:.75rem; }
-.custom :global(.color-selector) { min-width:0; }
+.custom { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:1rem; }
+.custom > p { grid-column:1 / -1; margin:0; }
+.custom :global(.color-selector) { min-width:0; padding:.8rem; border:1px solid var(--border-color); border-radius:10px; }
 .sample { padding:1rem; border:1px solid var(--border-color); border-top:3px solid var(--sample-accent); border-radius:8px; background:var(--sample-paper); color:var(--sample-ink); }
 .sample > div:first-child { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
 .sample img { width:32px; height:32px; object-fit:contain; }

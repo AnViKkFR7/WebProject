@@ -1,0 +1,12 @@
+.library { border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin:0; min-width:0; }
+.library > legend { font-weight:650; font-size:.85rem; color:var(--text-primary); }
+.library > p { margin:0 0 .75rem; }
+.selector { display:grid; gap:.5rem; min-width:0; }
+.selector > p { margin:0; }
+.choice { display:flex; align-items:center; gap:.75rem; min-width:0; }
+.choice > select { flex:1; min-width:0; width:100%; }
+.swatches { display:flex; flex-shrink:0; }
+.swatches i { width:16px; height:16px; border-radius:50%; border:1px solid var(--text-secondary); margin-right:-3px; }
+.save { display:grid; gap:.5rem; margin-top:.75rem; }
+.save > button { justify-self:start; }
+.save > p { margin:0; }

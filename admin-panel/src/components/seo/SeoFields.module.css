@@ -1,0 +1,8 @@
+.fields { display:grid; gap:1rem; min-width:0; }
+.preview { min-width:0; max-width:640px; margin:0; padding:1rem; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-card); }
+.preview figcaption { margin-bottom:.65rem; color:var(--text-secondary); font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.url { margin:0 0 .15rem; overflow-wrap:anywhere; color:#188038; font-size:.78rem; }
+.previewTitle { margin:0; overflow-wrap:anywhere; color:#1a0dab; font-size:1.1rem; line-height:1.35; }
+.previewDescription { margin:.25rem 0 0; color:#4d5156; font-size:.85rem; line-height:1.45; }
+[data-theme='dark'] .preview { background:#fff; }
+@media(max-width:600px) { .preview { padding:.8rem; } }

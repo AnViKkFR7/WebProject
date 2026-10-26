@@ -662,6 +662,11 @@
 .task-hour-shortcut:disabled { opacity:.4; cursor:default; }
 .task-duration { color:var(--text-secondary); font-size:.68rem; margin:.2rem 0 0; }
 
+.task-card.is-draggable { touch-action:none; cursor:grab; user-select:none; }
+.task-card.is-draggable:active { cursor:grabbing; }
+.task-resize-handle { position:absolute; z-index:4; inset-inline:30%; bottom:1px; height:6px; border-radius:8px; background:color-mix(in srgb,var(--task-color) 65%,white); cursor:ns-resize; touch-action:none; }
+.task-drag-feedback { position:absolute; z-index:5; inset:auto 2px 7px; padding:2px 4px; border-radius:4px; color:var(--text-primary); background:var(--bg-card); font-size:.62rem; white-space:nowrap; pointer-events:none; }
+
 .cal-business { overflow-y:hidden; min-height:0; }
 .cal-business .task-card-day,.cal-business .task-card-week { display:flex; flex-direction:row; align-items:center; gap:4px; padding:2px 4px; min-height:0; overflow:hidden; }
 .cal-business .task-card-meta { display:none; }

@@ -6,7 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { es } from '../locales/es'
 import { emptyProfile } from '../lib/invoicing'
 import { billingPalettes } from '../lib/billingAppearance'
+import {clearDraftRecovery} from '../lib/documentDrafts'
 const mocks = vi.hoisted(() => ({ company:null,canEdit:true,readLogo:vi.fn(),download:vi.fn(),load:vi.fn(),saveProfile:vi.fn(),saveInvoice:vi.fn(),convert:vi.fn(),confirm:vi.fn(),toast:{ success:vi.fn(),error:vi.fn() } }))
+const paletteMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn()}))
+const draftMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),remove:vi.fn()}))
+const templateMocks=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),archive:vi.fn()}))
+vi.mock('../services/documentDraftService',()=>({loadDocumentDraft:(...args)=>draftMocks.load(...args),saveDocumentDraft:(...args)=>draftMocks.save(...args),deleteDocumentDraft:(...args)=>draftMocks.remove(...args)}))
+vi.mock('../services/billingReuseService',()=>({loadBillingReuse:async()=>({clients:[],catalog:[]}),saveBillingClient:vi.fn(),saveBillingCatalogItem:vi.fn(),archiveBillingCatalogItem:vi.fn()}))
+vi.mock('../services/billingTemplateService',()=>({loadBillingChapterTemplates:(...args)=>templateMocks.load(...args),saveBillingChapterTemplate:(...args)=>templateMocks.save(...args),archiveBillingChapterTemplate:(...args)=>templateMocks.archive(...args)}))
+vi.mock('../services/billingFinanceService',()=>({loadInvoiceFinancials:async()=>[],loadBillingFinanceDetail:async()=>({payments:[],history:[],historyHasMore:false}),loadBillingHistoryPage:async()=>({history:[],historyHasMore:false}),loadBillingDueReminderSettings:async company_id=>({company_id,enabled:false,offsets_days:[7,1,0,-7],local_send_time:'09:00:00',timezone:'Europe/Madrid'}),saveBillingDueReminderSettings:vi.fn(),loadBillingDueReminderFailures:async()=>[],retryBillingDueReminder:vi.fn(),loadInvoiceDueReminderPreference:async(company_id,invoice_id)=>({company_id,invoice_id,suppressed:false}),setInvoiceDueReminders:vi.fn(),registerInvoicePayment:vi.fn(),reverseInvoicePayment:vi.fn(),restoreBillingDraftVersion:vi.fn()}))
+vi.mock('../services/billingPaletteService',()=>({loadBillingPalettes:(...args)=>paletteMocks.load(...args),saveBillingPalette:(...args)=>paletteMocks.save(...args)}))
 vi.mock('../components/DocumentPreview',()=>({default:({invoice})=><div data-preview>{invoice.document.customer.name}</div>}))
 vi.mock('../lib/billingLogo',()=>({readBillingLogo:(...args)=>mocks.readLogo(...args)}))
 vi.mock('../lib/invoicingPdf',()=>({downloadInvoice:(...args)=>mocks.download(...args)}))
@@ -31,6 +40,11 @@ const button = name => [...container.querySelectorAll('button')].find(b=>b.textC
 const click = async element => { expect(element).toBeTruthy(); await act(async()=>element.click()) }
 const issuerSection = () => container.querySelector('.invoice-issuer-section')
 beforeEach(()=>{
+  sessionStorage.clear()
+  draftMocks.load.mockReset().mockResolvedValue(null);draftMocks.remove.mockReset().mockResolvedValue()
+  templateMocks.load.mockReset().mockResolvedValue([]);templateMocks.save.mockReset();templateMocks.archive.mockReset()
+  draftMocks.save.mockReset().mockImplementation(async(scope,document,baseVersion,version,writeId)=>({id:'draft-id',company_id:scope.companyId,owner_id:scope.userId,kind:scope.kind,document_key:scope.key,document,base_version:baseVersion,version:version+1,last_write:writeId}))
+  paletteMocks.load.mockReset().mockResolvedValue([]);paletteMocks.save.mockReset()
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
   router=null;currentKind=null;refresh=null
   mocks.company={ id:'company-a',name:'Company A' }; mocks.canEdit=true
@@ -39,7 +53,7 @@ beforeEach(()=>{
   mocks.saveProfile.mockReset().mockResolvedValue(4); mocks.saveInvoice.mockReset(); mocks.convert.mockReset(); mocks.confirm.mockReset()
   container=document.createElement('div'); document.body.append(container); root=createRoot(container)
 })
-afterEach(async()=>{ await act(async()=>root.unmount());container.remove();vi.restoreAllMocks();vi.unstubAllGlobals() })
+afterEach(async()=>{ await act(async()=>root.unmount());container.remove();sessionStorage.clear();vi.restoreAllMocks();vi.unstubAllGlobals() })
 describe('issuer forms and tenant switching',()=>{
   it.each(['invoice','quote'])('hides the saved issuer form and restores it with the switch (%s)',async kind=>{
     await render(kind);await click(button(kind==='quote'?'Nuevo presupuesto':'Nueva factura'))
@@ -107,9 +121,31 @@ describe('issuer forms and tenant switching',()=>{
 })
 
 const record = () => ({id:'i1',company_id:'company-a',number:'F260001',version:1,status:'draft',document:{issuer:savedProfile,customer:{name:'Client',taxId:'C789',address:'City',email:''},date:'2026-10-22',dueDate:'',withholding:0,lines:[{description:'Service',quantity:1,price:100,discount:0,tax:21}]}})
+
+it('makes issued invoices read-only, removes the cancel action, and explains the rectification limit',async()=>{
+  const invoice=record();invoice.status='issued'
+  mocks.load.mockResolvedValue({invoices:[invoice],profile:savedProfile,profileVersion:3})
+  await render('invoice','/invoicing/i1')
+  expect(container.querySelector('#invoice-editor fieldset').disabled).toBe(true)
+  expect(container.textContent).toContain(es.invoicing.issuedImmutable)
+  expect(button(es.invoicing.cancelInvoice)).toBeUndefined()
+  const statusSelect=[...container.querySelectorAll('#invoice-editor select')].find(select=>[...select.options].some(option=>option.value==='issued'))
+  expect(statusSelect).toBeTruthy()
+  expect([...statusSelect.options].map(option=>option.value)).toEqual(['issued'])
+})
 const input = async (element,value) => { await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))}) }
 const submit = async () => {await act(async()=>container.querySelector('#invoice-editor').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})))}
 describe('full page document navigation',()=>{
+  it.each(['invoice','quote'])('duplicates a saved %s into an unnumbered draft and requires new dates',async kind=>{
+    const source=record();source.status=kind==='quote'?'sent':'issued';source.document.date='2026-10-20';source.document.dueDate='2026-11-20'
+    mocks.load.mockResolvedValue({invoices:[source],profile:savedProfile,profileVersion:1})
+    await render(kind);await click(button(source.number));await click(button(kind==='quote'?'Duplicar presupuesto':'Duplicar factura'))
+    expect(router.state.location.pathname).toBe(kind==='quote'?'/quotes/new':'/invoicing/new')
+    expect(container.querySelector('[data-field="date"] input').value).toBe('')
+    expect(container.querySelector('[data-field="dueDate"] input').value).toBe('')
+    expect(container.textContent).toContain(`Copia de ${source.number}`)
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  })
   it('opens a direct document URL after loading tenant-scoped data',async()=>{
     mocks.load.mockResolvedValue({invoices:[record()],profile:savedProfile,profileVersion:1})
     await render('invoice','/invoicing/i1')
@@ -210,7 +246,184 @@ describe('full page document navigation',()=>{
 })
 
 const paletteButton=(scope,name)=>[...scope.querySelectorAll('button')].find(item=>item.querySelector('strong')?.textContent===name)
+const savedPaletteSelect=()=>container.querySelector(`select[aria-label="${es.namedPalettes.select}"]`)
+const chooseSavedPalette=async id=>{await act(async()=>{savedPaletteSelect().value=id;savedPaletteSelect().dispatchEvent(new Event('change',{bubbles:true}))})}
 describe('document summary and brand snapshots',()=>{
+  it.each(['invoice','quote'])('offers recovery of an incomplete %s before editing and never restores an issued status',async kind=>{
+    const restored={...record().document,customer:{name:'Recovered client',taxId:'',address:'',email:''},lines:[{description:'Pending',quantity:'',price:0,discount:0,tax:21}]}
+    draftMocks.load.mockResolvedValue({id:'draft',version:2,base_version:null,document:restored})
+    await render(kind);await click(button(kind==='quote'?'Nuevo presupuesto':'Nueva factura'))
+    expect(button(es.documentAutosave.recoverRemote)).toBeTruthy()
+    await click(button(es.documentAutosave.recoverRemote))
+    expect(container.querySelector('[data-field="name"] input').value).toBe('Recovered client')
+    expect(container.querySelector('.document-metadata-grid select').value).toBe('draft')
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  })
+
+  it('clears recovery on logout and prevents unmount cleanup from writing it back',async()=>{
+    await render();await click(button('Nueva factura'))
+    await input(container.querySelector('[data-field="name"] input'),'Private draft')
+    window.dispatchEvent(new Event('beforeunload',{cancelable:true}))
+    expect(sessionStorage.length).toBeGreaterThan(0)
+    clearDraftRecovery()
+    expect(sessionStorage.length).toBe(0)
+    await act(async()=>root.unmount());container.remove()
+    expect(sessionStorage.length).toBe(0)
+    root=createRoot(container);document.body.append(container)
+  })
+  it.each(['invoice','quote'])('shows a saved palette selector before custom colors and applies a loaded palette (%s)',async kind=>{
+    const palette={...billingPalettes[1],id:'custom'}
+    const logo='data:image/png;base64,iVBORw0KGgo='
+    mocks.load.mockResolvedValue({invoices:[],profile:{...savedProfile,logo},profileVersion:3})
+    paletteMocks.load.mockResolvedValue([{id:'ocean-saved',company_id:'company-a',name:'Mar guardado',palette}])
+    await render(kind);await click(button(kind==='quote'?'Nuevo presupuesto':'Nueva factura'))
+    const appearance=container.querySelector('.document-appearance-details')
+    expect(savedPaletteSelect()).toBeTruthy()
+    expect(savedPaletteSelect().disabled).toBe(false)
+    expect([...savedPaletteSelect().options].map(option=>option.textContent)).toContain('Mar guardado')
+    await chooseSavedPalette('ocean-saved')
+    expect(savedPaletteSelect().value).toBe('ocean-saved')
+    const custom=appearance.querySelector('.color-selector').parentElement
+    expect(savedPaletteSelect().compareDocumentPosition(custom)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(appearance.querySelector('.color-selector input').value).toBe(palette.accent)
+    expect(appearance.querySelector('img').getAttribute('src')).toBe(logo)
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+    expect(mocks.saveProfile).not.toHaveBeenCalled()
+  })
+
+  it.each(['invoice','quote'])('saves named palettes and reuses their colors in a %s without changing the logo',async kind=>{
+    await render(kind);await click(button(kind==='quote'?'Nuevo presupuesto':'Nueva factura'))
+    const appearance=container.querySelector('.document-appearance-details')
+    await click(paletteButton(appearance,'Personalizada'))
+    const name=appearance.querySelector('input[placeholder="Ej. Arena y mar"]')
+    await input(name,' Arena y mar ')
+    paletteMocks.save.mockRejectedValueOnce(new Error('offline'))
+    await act(async()=>name.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})))
+    expect(name.value).toBe(' Arena y mar ')
+    expect(appearance.textContent).toContain(es.namedPalettes.saveError)
+    const palette={...billingPalettes[0],id:'custom'}
+    paletteMocks.save.mockResolvedValueOnce({id:'palette-1',company_id:'company-a',name:'Arena y mar',palette})
+    await click(button(es.namedPalettes.save))
+    expect(name.value).toBe('')
+    expect(paletteMocks.save).toHaveBeenLastCalledWith('company-a',' Arena y mar ',expect.objectContaining({id:'custom'}))
+    await click(paletteButton(appearance,'Oliva'))
+    await chooseSavedPalette('palette-1')
+    expect(paletteButton(appearance,'Personalizada').getAttribute('aria-pressed')).toBe('true')
+    expect(appearance.querySelector('.color-selector input').value).toBe(palette.accent)
+    expect(mocks.saveProfile).not.toHaveBeenCalled()
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  })
+
+  it('does not apply a palette response from the previous company to the current library',async()=>{
+    let resolve
+    paletteMocks.load.mockImplementationOnce(()=>new Promise(done=>{resolve=done}))
+    await render();await click(button('Nueva factura'))
+    mocks.company={id:'company-b',name:'Company B'}
+    await render()
+    await act(async()=>resolve([{id:'foreign',company_id:'company-a',name:'Only company A',palette:{...billingPalettes[0],id:'custom'}}]))
+    expect(container.textContent).not.toContain('Only company A')
+    expect(paletteMocks.load).toHaveBeenLastCalledWith('company-b')
+  })
+
+  it('keeps document editing available when the palette library fails and supports retry',async()=>{
+    paletteMocks.load.mockRejectedValueOnce(new Error('unavailable'))
+    await render();await click(button('Nueva factura'))
+    expect(container.querySelector('#invoice-editor')).toBeTruthy()
+    expect(container.textContent).toContain(es.namedPalettes.loadError)
+    paletteMocks.load.mockResolvedValueOnce([{id:'a1',company_id:'company-a',name:'Recuperada',palette:{...billingPalettes[0],id:'custom'}}])
+    await click(button(es.invoicing.retry))
+    expect([...savedPaletteSelect().options].map(option=>option.textContent)).toContain('Recuperada')
+    expect(container.textContent).not.toContain(es.namedPalettes.loadError)
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  })
+
+  it('discards a named palette saved after switching company',async()=>{
+    let resolve
+    paletteMocks.save.mockImplementation(()=>new Promise(done=>{resolve=done}))
+    await render();await click(button('Nueva factura'))
+    await click(paletteButton(container.querySelector('.document-appearance-details'),'Personalizada'))
+    await input(container.querySelector('input[placeholder="Ej. Arena y mar"]'),'Private A')
+    await click(button(es.namedPalettes.save))
+    mocks.company={id:'company-b',name:'Company B'}
+    await render()
+    await act(async()=>resolve({id:'a1',company_id:'company-a',name:'Private A',palette:{...billingPalettes[0],id:'custom'}}))
+    expect(container.textContent).not.toContain('Private A')
+  })
+
+  it('lets a reader see the library without a named palette save control',async()=>{
+    mocks.canEdit=false
+    mocks.load.mockResolvedValue({invoices:[record()],profile:savedProfile,profileVersion:3})
+    paletteMocks.load.mockResolvedValue([{id:'a1',company_id:'company-a',name:'Arena',palette:{...billingPalettes[0],id:'custom'}}])
+    await render('invoice','/invoicing/i1')
+    expect(container.querySelector('.document-appearance-details')).toBeTruthy()
+    expect([...savedPaletteSelect().options].map(option=>option.textContent)).toContain('Arena')
+    expect(button(es.namedPalettes.save)).toBeUndefined()
+  })
+
+  it('guides each color role and updates blocked swatches as related HEX values change',async()=>{
+    await render();await click(button('Nueva factura'))
+    const appearance=container.querySelector('.document-appearance-details')
+    await click(paletteButton(appearance,'Personalizada'))
+    const blocks=appearance.querySelectorAll('.color-selector')
+    const swatch=(index,color)=>[...blocks[index].querySelectorAll('button')].find(item=>item.style.getPropertyValue('--swatch')===color)
+    const hex=index=>blocks[index].querySelector('input')
+    expect(swatch(1,'#ffffff').disabled).toBe(true)
+    expect(swatch(1,'#ffffff').title).toContain(es.billingAppearance.paper)
+    expect(swatch(1,'#ffffff').title).toContain(es.billingAppearance.surface)
+    const initialInk=hex(1).value
+    await click(swatch(1,'#ffffff'))
+    expect(hex(1).value).toBe(initialInk)
+    await input(hex(0),'#767676')
+    expect(swatch(3,'#f5f9ff').disabled).toBe(true)
+    await input(hex(0),'#334155')
+    expect(swatch(3,'#f5f9ff').disabled).toBe(false)
+    await click(swatch(3,'#f5f9ff'))
+    expect(hex(3).value).toBe('#f5f9ff')
+    expect(appearance.querySelector('[role="alert"]')).toBeNull()
+    await input(hex(1),'#ffffff')
+    expect(hex(1).getAttribute('aria-invalid')).toBe('true')
+    expect(hex(1).validity.customError).toBe(true)
+    expect(hex(0).validity.customError).toBe(false)
+    const errorId=hex(1).getAttribute('aria-describedby').split(' ').at(-1)
+    expect(document.getElementById(errorId).textContent).toContain(es.billingAppearance.paper)
+    await click(swatch(1,'#20252b'))
+    expect(hex(1).hasAttribute('aria-invalid')).toBe(false)
+    expect(hex(1).validity.customError).toBe(false)
+    expect(appearance.querySelector('[role="alert"]')).toBeNull()
+    expect(mocks.saveProfile).not.toHaveBeenCalled()
+  })
+
+  it.each(['invoice','quote'])('retains a %s logo after a failed replacement and allows retry and removal',async kind=>{
+    const original='data:image/png;base64,iVBORw0KGgo='
+    mocks.load.mockResolvedValue({invoices:[],profile:{...savedProfile,logo:original},profileVersion:3})
+    await render(kind);await click(button(kind==='quote'?'Nuevo presupuesto':'Nueva factura'))
+    const appearance=container.querySelector('.document-appearance-details')
+    const upload=appearance.querySelector('input[type="file"]')
+    // A transparent dark logo needs the document's paper, including in a dark panel.
+    expect(appearance.querySelector('img').parentElement.style.background).toMatch(/#ffffff|rgb\(255, 255, 255\)/)
+    const selectLogo=async()=>{
+      Object.defineProperty(upload,'files',{configurable:true,value:[new File(['data'],'logo.png',{type:'image/png'})]})
+      await act(async()=>upload.dispatchEvent(new Event('change',{bubbles:true})))
+    }
+    mocks.readLogo.mockRejectedValueOnce(new Error('decode failed'))
+    await selectLogo()
+    expect(appearance.querySelector('[role="alert"]').textContent).toBe(es.invoicing.logoError)
+    expect(upload.getAttribute('aria-invalid')).toBe('true')
+    expect(upload.getAttribute('aria-describedby').split(' ').map(id=>document.getElementById(id).textContent)).toEqual([es.invoicing.logoHelp,es.invoicing.logoError])
+    expect(appearance.querySelector('img').getAttribute('src')).toBe(original)
+    expect(upload.disabled).toBe(false)
+    const replacement='data:image/jpeg;base64,/9j/AA=='
+    mocks.readLogo.mockResolvedValueOnce(replacement)
+    await selectLogo()
+    expect(appearance.querySelector('[role="alert"]')).toBeNull()
+    expect(upload.hasAttribute('aria-invalid')).toBe(false)
+    expect(appearance.querySelector('img').getAttribute('src')).toBe(replacement)
+    await click(button(es.invoicing.removeLogo))
+    expect(appearance.querySelector('img')).toBeNull()
+    expect(mocks.saveProfile).not.toHaveBeenCalled()
+    expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  })
+
   it('places the summary before the form, including new documents and preview mode',async()=>{
     await render();await click(button('Nueva factura'))
     const summary=container.querySelector('[aria-label="Resumen"]'),form=container.querySelector('#invoice-editor')
@@ -249,7 +462,7 @@ describe('document summary and brand snapshots',()=>{
     const hex=appearance.querySelectorAll('.color-selector input')
     expect(hex).toHaveLength(5)
     await input(hex[1],'#ffffff')
-    expect(appearance.textContent).toContain(es.billingAppearance.contrastError)
+    expect(appearance.textContent).toContain(es.billingColorPicker.invalid)
     expect(button(es.billingAppearance.saveDefault).disabled).toBe(true)
     expect(mocks.saveProfile).not.toHaveBeenCalled()
   })

@@ -13,9 +13,14 @@ vi.mock('../contexts/FeedbackContext',()=>({useFeedback:()=>({toast:{success:vi.
 vi.mock('../services/invoicingService',()=>({loadInvoicing:async()=>({invoices:[],profile,profileVersion:1}),saveInvoice:(...args)=>mock.save(...args),saveProfile:vi.fn(),convertQuote:vi.fn()}))
 vi.mock('./DocumentPreview',()=>({default:()=>null}))
 import Invoicing from '../pages/Invoicing'
+vi.mock('../services/billingPaletteService',()=>({loadBillingPalettes:async()=>[],saveBillingPalette:vi.fn()}))
+vi.mock('../services/documentDraftService',()=>({loadDocumentDraft:async()=>null,saveDocumentDraft:vi.fn(),deleteDocumentDraft:vi.fn()}))
+vi.mock('../services/billingReuseService',()=>({loadBillingReuse:async()=>({clients:[],catalog:[]}),saveBillingClient:vi.fn(),saveBillingCatalogItem:vi.fn(),archiveBillingCatalogItem:vi.fn()}))
+vi.mock('../services/billingTemplateService',()=>({loadBillingChapterTemplates:async()=>[],saveBillingChapterTemplate:vi.fn(),archiveBillingChapterTemplate:vi.fn()}))
+vi.mock('../services/billingFinanceService',()=>({loadInvoiceFinancials:async()=>[],loadBillingFinanceDetail:async()=>({payments:[],history:[],historyHasMore:false}),loadBillingHistoryPage:async()=>({history:[],historyHasMore:false}),registerInvoicePayment:vi.fn(),reverseInvoicePayment:vi.fn(),restoreBillingDraftVersion:vi.fn()}))
 let root,node
-beforeEach(()=>{vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);node=document.createElement('div');document.body.append(node);root=createRoot(node)})
-afterEach(async()=>{await act(async()=>root.unmount());node.remove();vi.unstubAllGlobals()})
+beforeEach(()=>{sessionStorage.clear();vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);node=document.createElement('div');document.body.append(node);root=createRoot(node)})
+afterEach(async()=>{await act(async()=>root.unmount());node.remove();sessionStorage.clear();vi.unstubAllGlobals()})
 const button=text=>[...document.querySelectorAll('button')].find(item=>item.textContent===text)
 const click=async element=>act(async()=>element.click())
 it('adds several independent items to a chapter and creates a separate new chapter',async()=>{

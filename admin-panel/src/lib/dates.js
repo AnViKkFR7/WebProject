@@ -27,6 +27,12 @@ export function toLocalInputValue(value) {
   return date ? format(date, LOCAL_INPUT) : ''
 }
 
+// Date-only form values must use the browser's calendar day, not the UTC day.
+export function toLocalDateInputValue(value) {
+  const date = toDate(value)
+  return date ? format(date, 'yyyy-MM-dd') : ''
+}
+
 export function formatTime(value) {
   const date = toDate(value)
   return date ? format(date, 'HH:mm') : ''

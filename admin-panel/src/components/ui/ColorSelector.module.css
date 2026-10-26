@@ -1,0 +1,4 @@
+.swatch { position:relative; }
+.swatch:disabled { cursor:not-allowed; }
+.swatch[data-unavailable='true']::after { content:''; position:absolute; inset:50% 2px auto; height:2px; background:var(--text-primary); box-shadow:0 0 0 1px var(--bg-card); transform:rotate(-45deg); }
+.selected { display:grid; place-items:center; position:absolute; inset:3px; border-radius:50%; background:var(--bg-card); color:var(--text-primary); font-size:.75rem; }

@@ -1,5 +1,6 @@
 import { useLanguage } from '../../contexts/LanguageContext'
 import Icon from '../ui/Icon'
+import SeoFields from '../seo/SeoFields'
 
 const ItemBasicInfo = ({ 
   itemData, 
@@ -51,6 +52,7 @@ const ItemBasicInfo = ({
   }
 
   return (
+    <>
     <div className="section-card">
       <h2 style={{ 
         fontSize: '1.125rem', 
@@ -219,6 +221,22 @@ const ItemBasicInfo = ({
         </div>
       </div>
     </div>
+    <div className="section-card">
+      {canEdit && (
+        <button type="button" className="ghost-button small" onClick={() => onToggleEditable('seo')} aria-expanded={Boolean(editableFields?.seo)}>
+          <Icon name="edit" size={16} />{t(editableFields?.seo ? 'seo.lockFields' : 'seo.editFields')}
+        </button>
+      )}
+      <SeoFields
+        values={itemData}
+        onChange={values => setItemData(current => ({ ...current, ...values }))}
+        title={itemData.title}
+        summary={itemData.summary}
+        section="items"
+        disabled={!canEdit || !editableFields?.seo}
+      />
+    </div>
+    </>
   )
 }
 

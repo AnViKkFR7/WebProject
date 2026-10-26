@@ -19,6 +19,8 @@ export function permissionsFor(role, isPlatformAdmin = false) {
     canEdit,
     canManageMembers: canEdit,
     canManageMemberAccess: isCompanyAdmin,
+    canManageModules: isPlatformAdmin,
+    canManagePrivacy: isCompanyAdmin,
     // Crear empresas y dar de alta usuarios pasa por Edge Functions solo para admin de plataforma
     canAdministerPlatform: isPlatformAdmin,
     // Los viewers no ven el grupo Administración: no pueden cambiar nada en él

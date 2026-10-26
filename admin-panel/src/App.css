@@ -99,6 +99,7 @@ body {
 /* --- Sidebar --- */
 
 .sidebar {
+  box-sizing: border-box;
   width: 250px;
   background-color: var(--bg-sidebar);
   color: var(--sidebar-text); /* Use new specific variable */
@@ -1129,6 +1130,7 @@ button {
     width: 80px; /* Slim width */
     padding: 1.5rem 0.5rem;
     align-items: center; 
+    overflow-x: hidden;
   }
 
   /* Hide Text Elements */
@@ -1150,8 +1152,10 @@ button {
   }
 
   .sidebar.collapsed .sidebar-nav {
+    box-sizing: border-box;
     width: 100%;
     align-items: center;
+    overflow-x: hidden;
   }
 
   .sidebar.collapsed .nav-link {

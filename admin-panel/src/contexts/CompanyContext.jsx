@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { isPlatformAdminUser } from '../lib/permissions'
+import { clearDraftRecovery } from '../lib/documentDrafts'
 
 const CompanyContext = createContext()
 
@@ -48,9 +49,11 @@ export const CompanyProvider = ({ children }) => {
     setLoading(true)
     setError(null)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user },error:authError } = await supabase.auth.getUser()
       if (request !== requestId.current) return
+      if(authError)throw authError
       if (!user) {
+        clearDraftRecovery()
         authUserId.current = null
         setUser(null); setUserId(null); setCompanies([]); setSelectedCompany(null)
         return
@@ -110,6 +113,7 @@ export const CompanyProvider = ({ children }) => {
     loadCompanies()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextUserId = session?.user?.id || null
+      if(_event==='SIGNED_OUT' || authUserId.current && authUserId.current!==nextUserId)clearDraftRecovery()
       if (authUserId.current === nextUserId) { setUser(session?.user || null); return }
       authUserId.current = nextUserId
       ++requestId.current

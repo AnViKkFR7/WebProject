@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { itemService } from '../services/itemService'
 import { attributeDefinitionService } from '../services/attributeDefinitionService'
@@ -12,6 +12,7 @@ import ItemMedia from '../components/itemDetails/ItemMedia'
 import AttributesList from '../components/itemDetails/AttributesList'
 import ItemDetailFooter from '../components/itemDetails/ItemDetailFooter'
 import Icon from '../components/ui/Icon'
+import { slugify } from '../lib/contentSeo'
 
 const ItemDetail = () => {
   const { itemId } = useParams()
@@ -29,15 +30,17 @@ const ItemDetail = () => {
     title: '',
     summary: '',
     status: 'draft',
-    item_type: ''
+    item_type: '',
+    slug: '',
+    seo_title: '',
+    seo_description: '',
+    seo_og_image_url: '',
   })
   const [attributeValues, setAttributeValues] = useState({})
   const [attributeDefinitions, setAttributeDefinitions] = useState([])
   const [editableFields, setEditableFields] = useState({})
   const [originalItemData, setOriginalItemData] = useState(null)
 
-  const [user, setUser] = useState(null)
-  const [userRole, setUserRole] = useState(null)
   const [canEdit, setCanEdit] = useState(false)
 
   const [saving, setSaving] = useState(false)
@@ -45,10 +48,6 @@ const ItemDetail = () => {
 
   const [searchFilter, setSearchFilter] = useState('')
   const [changedFieldsCount, setChangedFieldsCount] = useState(0)
-
-  useEffect(() => {
-    loadItemData()
-  }, [itemId])
 
   // Requerido/Filtrable ya no se editan aquí (afectan a todos los items del tipo): están en /my-data
   useEffect(() => {
@@ -58,11 +57,14 @@ const ItemDetail = () => {
       if (itemData.title !== originalItemData.title) basicInfoChanges++
       if (itemData.summary !== originalItemData.summary) basicInfoChanges++
       if (itemData.status !== originalItemData.status) basicInfoChanges++
+      for (const field of ['slug', 'seo_title', 'seo_description', 'seo_og_image_url']) {
+        if ((itemData[field] || '') !== (originalItemData[field] || '')) basicInfoChanges++
+      }
     }
     setChangedFieldsCount(valueChanges + basicInfoChanges)
   }, [attributeValues, itemData, originalItemData])
 
-  const loadItemData = async () => {
+  const loadItemData = useCallback(async () => {
     setLoading(true)
     setError(null)
     setAccessDenied(false)
@@ -81,8 +83,6 @@ const ItemDetail = () => {
         setLoading(false)
         return
       }
-
-      setUser(currentUser)
 
       const itemData = await itemService.getItemById(itemId)
 
@@ -106,7 +106,6 @@ const ItemDetail = () => {
         return
       }
 
-      setUserRole(membership.role)
       setCanEdit(membership.role === 'admin' || membership.role === 'editor')
 
       setItem(itemData)
@@ -114,7 +113,11 @@ const ItemDetail = () => {
         title: itemData.title || '',
         summary: itemData.summary || '',
         status: itemData.status || 'draft',
-        item_type: itemData.item_type || ''
+        item_type: itemData.item_type || '',
+        slug: itemData.slug || '',
+        seo_title: itemData.seo_title || '',
+        seo_description: itemData.seo_description || '',
+        seo_og_image_url: itemData.seo_og_image_url || '',
       }
       setItemData(basicData)
       setOriginalItemData(basicData)
@@ -170,7 +173,11 @@ const ItemDetail = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [itemId, t])
+
+  useEffect(() => {
+    loadItemData()
+  }, [loadItemData])
 
   const toggleFieldEditable = (fieldId) => {
     setEditableFields(prev => ({
@@ -235,11 +242,20 @@ const ItemDetail = () => {
         }
       }
 
-      await itemService.updateItem(itemId, {
+      const itemUpdates = {
         title: itemData.title,
         summary: itemData.summary,
         status: itemData.status
-      })
+      }
+      if (editableFields.seo) {
+        const image = itemData.seo_og_image_url.trim()
+        if (image && !/^https:\/\//i.test(image)) throw new Error(t('seo.invalidImageUrl'))
+        itemUpdates.slug = slugify(itemData.slug) || null
+        itemUpdates.seo_title = itemData.seo_title.trim() || null
+        itemUpdates.seo_description = itemData.seo_description.trim() || null
+        itemUpdates.seo_og_image_url = image || null
+      }
+      await itemService.updateItem(itemId, itemUpdates)
 
       for (const [attributeId, valueData] of Object.entries(attributeValues)) {
         if (!valueData.edited) continue

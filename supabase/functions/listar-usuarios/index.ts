@@ -13,8 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[LISTAR-USUARIOS] Request received')
-
     // 1. Obtener y validar header Auth
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -64,7 +62,7 @@ serve(async (req) => {
     const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
 
     if (listError) {
-      console.error('[LISTAR-USUARIOS] Subapase listUsers error:', listError)
+      console.error('[LISTAR-USUARIOS] auth_list_failed')
       throw listError
     }
 
@@ -84,7 +82,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[LISTAR-USUARIOS] Unexpected error:', error)
+    console.error('[LISTAR-USUARIOS] unexpected_error')
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', message: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

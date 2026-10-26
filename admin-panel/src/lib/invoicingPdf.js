@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { invoiceTotals } from './invoicing'
-import { documentPalette, validBillingPalette } from './billingAppearance'
+import { contrastRatio, documentPalette, validBillingPalette } from './billingAppearance'
 
 // Shared renderer: preview and download use exactly the same PDF and pagination.
 export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice') {
@@ -26,12 +26,18 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
   const surface=branded ? palette.surface : '#f3f4f5'
   const brandColor = /^#[0-9a-f]{6}$/i.test(doc.issuer.color || '') ? doc.issuer.color : (quote ? '#175b55' : '#111111')
   const accent = branded ? palette.accent : '#20252b'
+  // Custom accents are validated on paper; table surfaces can need the main ink instead.
+  const surfaceAccent = branded && contrastRatio(accent,surface)<4.5 ? ink : accent
   const gray = palette.muted
+  const pageLeft = 14
+  const pageRight = 196
+  const contentWidth = pageRight-pageLeft
+  const cellLeft = pageLeft+3
   let y = 0
   const font = (size=9,bold=false,color=ink) => { pdf.setFont('helvetica',bold ? 'bold' : 'normal'); pdf.setFontSize(size); pdf.setTextColor(color) }
   const text = (value,x,at,size=9,bold=false,color=ink,align='left') => { font(size,bold,color); pdf.text(String(value || ''),x,at,{ align }); record({ type:'text',value:String(value || ''),x,y:at,size:size/2.83464567,bold,color,align }) }
   const amount = (value,x,at,size=9,bold=false,color=accent,width=22) => { font(size,bold); text(value,x,at,Math.min(size,size*width/Math.max(pdf.getTextWidth(value),width)),bold,color,'right') }
-  const rule = (at,color='#dce1e1') => { pdf.setDrawColor(color); pdf.setLineWidth(.25); pdf.line(14,at,196,at); record({ type:'line',x1:14,y1:at,x2:196,y2:at,color }) }
+  const rule = (at,color='#dce1e1') => { pdf.setDrawColor(color); pdf.setLineWidth(.25); pdf.line(pageLeft,at,pageRight,at); record({ type:'line',x1:pageLeft,y1:at,x2:pageRight,y2:at,color }) }
   const fill = (x,at,w,h,color) => { pdf.setFillColor(color); pdf.rect(x,at,w,h,'F'); record({ type:'rect',x,y:at,width:w,height:h,fill:color }) }
   const wrap = (value,width,size=9,bold=false) => { font(size,bold); return pdf.splitTextToSize(String(value || ''),width) }
   const logo = (x,at,w,h) => {
@@ -45,12 +51,12 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
     return true
   }
   const quoteBand = () => {
-    const hasLogo = logo(14,8,17,15)
+    const hasLogo = logo(pageLeft,8,17,15)
     const title = wrap(doc.issuer.name,hasLogo ? 105 : 120,12,true).slice(0,2)
-    title.forEach((line,i) => text(line,hasLogo ? 36 : 14,13+i*5,12,true,accent))
+    title.forEach((line,i) => text(line,hasLogo ? 36 : pageLeft,13+i*5,12,true,accent))
     const contact = [doc.issuer.phone,doc.issuer.email].filter(Boolean).flatMap(value => wrap(value,47,7)).slice(0,3)
-    contact.forEach((line,i) => text(line,196,10+i*4,7,false,gray,'right'))
-    fill(14,25,182,.5,branded ? palette.accent : brandColor)
+    contact.forEach((line,i) => text(line,pageRight,10+i*4,7,false,gray,'right'))
+    fill(pageLeft,25,contentWidth,.5,branded ? palette.accent : brandColor)
     y=31
   }
   const newPage = () => { pdf.addPage(); previewPages.push([]); previewPage=previewPages.length-1; if(branded) fill(0,0,210,297,palette.paper); if (quote) quoteBand(); else { text(`${word('Factura','Invoice')} · ${invoice.number}`,14,17,11,true); rule(23); y=31 } }
@@ -84,25 +90,42 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
   if(branded) fill(0,0,210,297,palette.paper)
   if (!quote) {
     // Reference: generous white header, compact issuer details and a right-aligned document identity.
-    const hasLogo = logo(14,18,25,22)
-    const issuerX = hasLogo ? 49 : 14
+    const hasLogo = logo(pageLeft,18,25,22)
+    const issuerX = hasLogo ? 49 : pageLeft
     y=25
     const issuerLines = wrap(doc.issuer.name,94,17)
     issuerLines.forEach(line => { ensure(7); text(line,issuerX,y,17); y+=7 })
     ;['taxId','address','phone','email'].forEach(key => { if (doc.issuer[key]) flow(doc.issuer[key],92,7,false,gray,issuerX,4) })
-    text(word('Factura','Invoice'),196,25,20,false,branded ? accent : '#111111','right')
+    text(doc.rectification ? word('Factura rectificativa','Corrective invoice') : word('Factura','Invoice'),pageRight,25,20,false,branded ? accent : '#111111','right')
     const metadata = [[word('NÚMERO #','NUMBER #'),invoice.number],[word('FECHA','DATE'),date(doc.date)],[word('VENCIMIENTO','DUE DATE'),date(doc.dueDate)],[word('ESTADO','STATUS'),label(invoice.status)]]
     let metaY=34
-    metadata.forEach(([name,value]) => { text(name,141,metaY,6.5,true); for (const part of wrap(value,27,7)) { text(part,196,metaY,7,false,gray,'right'); metaY+=4 }; metaY+=1 })
+    metadata.forEach(([name,value]) => { text(name,141,metaY,6.5,true); for (const part of wrap(value,27,7)) { text(part,pageRight,metaY,7,false,gray,'right'); metaY+=4 }; metaY+=1 })
     y=Math.max(y+4,metaY+4,61); rule(y); space(10)
-    text(word('CLIENTE','CLIENT'),14,y,7,true)
-    text(word('TOTAL','TOTAL'),196,y,7,true,branded ? accent : '#111111','right'); space(7)
-    text(money(totals.total),196,y+5,19,false,branded ? accent : '#111111','right')
-    ;['name','address','taxId','email'].forEach(key => { if (doc.customer[key]) flow(doc.customer[key],113,8,key==='name',gray) })
-    space(4); rule(y); space(10)
+    const customerLabelY=y
+    text(word('CLIENTE','CLIENT'),pageLeft,customerLabelY,7,true)
+    text(word('TOTAL','TOTAL'),pageRight,customerLabelY,7,true,branded ? accent : '#111111','right')
+    const totalY=customerLabelY+12
+    text(money(totals.total),pageRight,totalY,19,false,branded ? accent : '#111111','right')
+    const customerLines=[]
+    ;['name','address','taxId','email'].forEach(key => {
+      if(doc.customer[key]) wrap(doc.customer[key],113,8,key==='name').forEach(line=>customerLines.push({line,bold:key==='name'}))
+    })
+    let customerY=customerLabelY+8
+    customerLines.forEach(({line,bold})=>{text(line,pageLeft,customerY,8,bold,gray);customerY+=4.8})
+    y=Math.max(customerY,totalY+4)+5
+    rule(y);space(10)
+    if (doc.rectification) {
+      flow(`${word('FACTURA RECTIFICATIVA DE','CORRECTIVE INVOICE FOR')} ${doc.rectification.originalNumber}`,182,8,true,accent);space(2)
+      const causeLabels={required_data:['Falta de datos obligatorios','Missing required details'],incorrect_tax:['Impuesto calculado incorrectamente','Incorrectly calculated tax'],article_80:['Supuesto del artículo 80 de la Ley del IVA','Case under Article 80 of the VAT Act'],other:['Otra causa','Other reason']}
+      const cause=causeLabels[doc.rectification.cause] || [doc.rectification.cause,doc.rectification.cause]
+      flow(`${word('CAUSA','REASON')}: ${word(...cause)}${doc.rectification.note ? ` · ${doc.rectification.note}` : ''}`,182,7,false,gray);space(2)
+      const correctionAmount=doc.rectification.method==='difference' ? totals.total : totals.total-Number(doc.rectification.originalTotal || 0)
+      flow(`${word('MÉTODO','METHOD')}: ${word(doc.rectification.method==='difference'?'Por diferencias':'Por sustitución',doc.rectification.method==='difference'?'By difference':'By substitution')}`,182,7,false,gray)
+      flow(`${word('IMPORTE DE RECTIFICACIÓN','CORRECTION AMOUNT')}: ${money(correctionAmount)}`,182,8,true,accent);space(4)
+    }
     const tableHead = () => {
       ensure(18)
-      const cols = [[word('CONCEPTO','DESCRIPTION'),17],[word('PRECIO','PRICE'),125],[word('UNIDADES','UNITS'),146],[word('ANTES DTO.','BEFORE DISC.'),172],[word('DESPUÉS DTO.','AFTER DISC.'),193]]
+      const cols = [[word('CONCEPTO','DESCRIPTION'),pageLeft],[word('PRECIO','PRICE'),125],[word('UNIDADES','UNITS'),146],[word('ANTES DTO.','BEFORE DISC.'),172],[word('DESPUÉS DTO.','AFTER DISC.'),193]]
       cols.forEach(([name,x],i) => text(name,x,y,6.5,true,branded ? accent : '#111111',i ? 'right' : 'left')); space(6)
     }
     tableHead()
@@ -118,10 +141,10 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
         const count = Math.max(1,Math.floor((271-y-5)/4))
         const chunk = fragments.splice(0,count)
         const height = Math.max(10,chunk.length*4+5)
-        fill(14,y,182,height,branded ? surface : '#eeeeee')
-        chunk.forEach((part,i) => text(part,17,y+5+i*4,8,false,branded ? ink : '#202629'))
+        fill(pageLeft,y,contentWidth,height,branded ? surface : '#eeeeee')
+        chunk.forEach((part,i) => text(part,cellLeft,y+5+i*4,8,false,branded ? ink : '#202629'))
         if (first) {
-          amount(money(line.price),125,y+5,8,false,gray,22); text(String(line.quantity),146,y+5,8,false,gray,'right')
+          amount(money(line.price),125,y+5,8,false,gray,22); text(line.sign===-1?`−${line.quantity}`:String(line.quantity),146,y+5,8,false,gray,'right')
           amount(money(totals.rows[index].original),172,y+5,8,false,gray,22); amount(money(totals.rows[index].base),193,y+5,8,true,ink,19)
         }
         y+=height+1.2; first=false
@@ -161,7 +184,7 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
       groups.get(chapter).push({ line,index })
     })
     const chapterAmount = rows => rows.reduce((sum,{index}) => sum+Math.round(totals.rows[index].base*100),0)/100
-    const summaryHead = () => { ensure(17); fill(14,y,182,10,surface); text(word('TRABAJOS INCLUIDOS','INCLUDED WORK'),17,y+6.5,8,true,accent); text(word('IMPORTE','AMOUNT'),193,y+6.5,8,true,accent,'right'); y+=10 }
+    const summaryHead = () => { ensure(17); fill(14,y,182,10,surface); text(word('TRABAJOS INCLUIDOS','INCLUDED WORK'),17,y+6.5,8,true,surfaceAccent); text(word('IMPORTE','AMOUNT'),193,y+6.5,8,true,surfaceAccent,'right'); y+=10 }
     summaryHead()
     for (const [chapter,rows] of groups) {
       const lines = wrap(chapter,140,10,true)
@@ -177,16 +200,16 @@ export function createDocumentPdf(invoice, t, language = 'es', kind = 'invoice')
     const summaryHeight = Math.max(26,summaryRows.length*6+10)
     const pageBeforeSummary=pdf.getNumberOfPages()
     ensure(summaryHeight+2); fill(14,y,182,summaryHeight,surface)
-    text(money(totals.total),19,y+12,20,true,accent)
-    text(word('TOTAL PRESUPUESTO','QUOTATION TOTAL'),19,y+20,7,true,accent)
-    summaryRows.forEach(([name,amount],index) => { text(name,132,y+8+index*6,8,false,gray); text(money(amount),193,y+8+index*6,9,true,accent,'right') })
+    text(money(totals.total),19,y+12,20,true,surfaceAccent)
+    text(word('TOTAL PRESUPUESTO','QUOTATION TOTAL'),19,y+20,7,true,surfaceAccent)
+    summaryRows.forEach(([name,amount],index) => { text(name,132,y+8+index*6,8,false,gray); text(money(amount),193,y+8+index*6,9,true,surfaceAccent,'right') })
     y+=summaryHeight+6
     if(pdf.getNumberOfPages()===pageBeforeSummary)newPage();else space(8)
     heading(word('Detalle de trabajos incluidos','Included work details'))
     for (const [chapter,rows] of groups) {
       ensure(30)
       const chapterTitle = wrap(chapter,172,12,true)
-      for (const part of chapterTitle) { ensure(9); fill(14,y,182,9,surface); text(part,18,y+6,11,true,accent); y+=9 }
+      for (const part of chapterTitle) { ensure(9); fill(14,y,182,9,surface); text(part,18,y+6,11,true,surfaceAccent); y+=9 }
       space(4)
       for (const {line,index} of rows) {
         ensure(15)

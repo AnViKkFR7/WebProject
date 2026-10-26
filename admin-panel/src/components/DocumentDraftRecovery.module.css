@@ -1,0 +1,5 @@
+.panel { margin:.5rem 0 1rem; padding:.75rem 1rem; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-card); color:var(--text-primary); font-size:.8rem; overflow-wrap:anywhere; }
+.status { margin:0; font-weight:600; }
+.recovery { display:flex; flex-wrap:wrap; align-items:start; gap:.65rem; margin-top:.65rem; }
+.recovery > p { flex-basis:100%; margin:0; }
+.panel > button,.panel > div > button { margin-top:.65rem; }

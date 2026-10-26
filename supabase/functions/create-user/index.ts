@@ -13,13 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[CREATE-USER] Request received')
-    
     // 1. Obtener el usuario que hace la llamada
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error('[CREATE-USER] Missing Authorization header');
-      console.log(req.headers);
+      console.error('[CREATE-USER] auth_header_missing')
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -27,17 +24,13 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('[CREATE-USER] Token length:', token.length)
     
     // Cliente con service_role para operaciones admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('[CREATE-USER] Missing environment variables', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!serviceRoleKey
-      })
+      console.error('[CREATE-USER] configuration_missing')
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -47,7 +40,6 @@ serve(async (req) => {
       )
     }
     
-    console.log('[CREATE-USER] Environment OK')
     
     const supabaseAdmin = createClient(
       supabaseUrl,
@@ -61,11 +53,10 @@ serve(async (req) => {
     )
     
     // 2. Verificar que quien llama es admin validando el JWT
-    console.log('[CREATE-USER] Validating user token')
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
     
     if (userError) {
-      console.error('[CREATE-USER] Token validation error:', userError.message)
+      console.error('[CREATE-USER] auth_validation_failed')
       return new Response(
         JSON.stringify({ 
           error: 'Unauthorized: Invalid token', 
@@ -76,7 +67,7 @@ serve(async (req) => {
     }
     
     if (!user) {
-      console.error('[CREATE-USER] No user found in token')
+      console.error('[CREATE-USER] auth_user_missing')
       return new Response(
         JSON.stringify({ 
           error: 'Unauthorized: Invalid token', 
@@ -86,10 +77,7 @@ serve(async (req) => {
       )
     }
     
-    console.log('[CREATE-USER] User validated:', user.email)
-    
     const isAdmin = user.app_metadata?.app_role === 'admin'
-    console.log('[CREATE-USER] Is admin?', isAdmin, 'Role:', user.app_metadata?.app_role)
     
     if (!isAdmin) {
       return new Response(
@@ -103,11 +91,10 @@ serve(async (req) => {
     
     // 3. Obtener datos del nuevo usuario desde el body
     const { email, password, full_name, company_id, role } = await req.json()
-    console.log('[CREATE-USER] Creating user:', { email, company_id, role })
     
     // Validaciones básicas
     if (!email || !password || !full_name || !company_id || !role) {
-      console.error('[CREATE-USER] Missing required fields')
+      console.error('[CREATE-USER] required_fields_missing')
       return new Response(
         JSON.stringify({ error: 'Missing required fields: email, password, full_name, company_id, role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -115,7 +102,7 @@ serve(async (req) => {
     }
 
     if (!['editor', 'viewer'].includes(role)) {
-      console.error('[CREATE-USER] Invalid role:', role)
+      console.error('[CREATE-USER] role_invalid')
       return new Response(
         JSON.stringify({ error: 'Role must be either "editor" or "viewer"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -123,7 +110,6 @@ serve(async (req) => {
     }
     
     // 4. Crear el nuevo usuario en auth.users
-    console.log('[CREATE-USER] Creating user in auth.users')
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -137,17 +123,14 @@ serve(async (req) => {
     })
     
     if (createError) {
-      console.error('[CREATE-USER] Failed to create user:', createError.message)
+      console.error('[CREATE-USER] auth_create_failed')
       return new Response(
         JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log('[CREATE-USER] User created in auth:', newUser.user.id)
-    
     // 5. Añadir a company_members
-    console.log('[CREATE-USER] Adding user to company_members')
     const { error: memberError } = await supabaseAdmin
       .from('company_members')
       .insert({
@@ -160,8 +143,7 @@ serve(async (req) => {
       })
     
     if (memberError) {
-      console.error('[CREATE-USER] Failed to add to company_members:', memberError.message)
-      console.log('[CREATE-USER] Cleaning up: deleting user from auth')
+      console.error('[CREATE-USER] membership_create_failed')
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       
       return new Response(
@@ -170,7 +152,6 @@ serve(async (req) => {
       )
     }
     
-    console.log('[CREATE-USER] Success! User created:', newUser.user.email)
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -187,7 +168,7 @@ serve(async (req) => {
     )
     
   } catch (error) {
-    console.error('[CREATE-USER] Unexpected error:', error)
+    console.error('[CREATE-USER] unexpected_error')
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

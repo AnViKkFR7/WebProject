@@ -5,7 +5,7 @@ import {
 import {
   getPlanningTasks, createPlanningTask, getBilling, createBilling,
   uploadPlannerFiles, deletePlanningTask, updatePlanningTask,
-  deleteBilling, updateBilling,
+  deleteBilling, updateBilling, movePlanningTask, undoPlanningTaskMove,
 } from "../services/planningService";
 import { supabase } from "../lib/supabaseClient";
 import { useCompany } from "../contexts/CompanyContext";
@@ -19,8 +19,10 @@ import { getCompanyColor } from "../lib/planningColors";
 import { mergeAttachments, removeAttachment } from "../lib/attachments";
 import { normalizeReminders } from "../lib/reminders";
 import { toDateOnly } from "../lib/planningRange";
+import { movedPlanningTask } from "../lib/planningTaskMove";
 import CalendarWrapper from "../components/planning/CalendarWrapper";
 import BillingView from "../components/planning/BillingView";
+import PlanningEmailFailures from "../components/planning/PlanningEmailFailures";
 import TaskFormModal from "../components/planning/TaskFormModal";
 import BillingFormModal from "../components/planning/BillingFormModal";
 import ClientCompanyModal from "../components/planning/ClientCompanyModal";
@@ -37,7 +39,7 @@ const emptyBillForm = {
   title: "", description: "", client_company_id: "", billing_date: "",
   amount: "", direction: "cobrar", recurrence_type: "none", recurrence_value: null,
 };
-const emptyCompanyForm = { name: "", phone: "", email: "", responsible: "", color: "#1976d2" };
+const emptyCompanyForm = { name: "", tax_id:"", billing_address:"", phone: "", email: "", responsible: "", color: "#1976d2" };
 
 // La selección de clientes se recuerda por empresa: antes se perdía al refrescar
 const selectionKey = (companyId) => `moira.planning.clients.${companyId}`;
@@ -116,6 +118,10 @@ const PlanningWorkspace = () => {
   const [editingBill, setEditingBill] = useState(null);
 
   const [saving, setSaving] = useState(false);
+  const [lastMove,setLastMove]=useState(null)
+  const workspaceActive=useRef(true)
+  useEffect(()=>{workspaceActive.current=true;return()=>{workspaceActive.current=false}},[])
+  useEffect(()=>{if(!lastMove)return;const timer=setTimeout(()=>setLastMove(null),10000);return()=>clearTimeout(timer)},[lastMove])
 
   // El calendario crece hasta el borde de la ventana; .page no acota la altura,
   // así que sin esto el "flex:1 + overflow" no tenía de dónde recortar
@@ -201,6 +207,8 @@ const PlanningWorkspace = () => {
     try {
       const created = await createClientCompany({
         name: companyForm.name,
+        tax_id:companyForm.tax_id || null,
+        billing_address:companyForm.billing_address || null,
         phone: companyForm.phone || null,
         email: companyForm.email || null,
         responsible: companyForm.responsible || null,
@@ -288,6 +296,29 @@ const PlanningWorkspace = () => {
       toast.error(t('feedback.deleteError'));
     }
   };
+
+  const persistTaskMove=async(task,change)=>{
+    if(!canEdit||saving)return
+    const recurring=task.recurrence_type&&task.recurrence_type!=='none'
+    const accepted=await confirm({title:t('planning.moveTaskTitle'),message:recurring?t('planning.moveSeriesWarning'):t('planning.moveTaskWarning'),confirmLabel:t('planning.moveTaskConfirm')})
+    if(!accepted||!workspaceActive.current||!companyId)return
+    setSaving(true)
+    try{
+      const dates=movedPlanningTask(task,change)
+      const result=await movePlanningTask(companyId,task,dates)
+      if(!workspaceActive.current)return
+      setLastMove({id:result.move_id,taskId:task.id,version:result.version})
+      setReloadKey(key=>key+1);toast.success(t('planning.taskMoveSaved'))
+    }catch{if(workspaceActive.current)toast.error(t('planning.taskMoveError'))}
+    finally{if(workspaceActive.current)setSaving(false)}
+  }
+  const undoTaskMove=async()=>{
+    if(!lastMove||!companyId||saving)return
+    setSaving(true)
+    try{await undoPlanningTaskMove(companyId,lastMove.taskId,lastMove.id,lastMove.version);if(!workspaceActive.current)return;setLastMove(null);setReloadKey(key=>key+1);toast.success(t('planning.taskMoveUndone'))}
+    catch{if(workspaceActive.current){setLastMove(null);toast.error(t('planning.taskMoveUndoError'))}}
+    finally{if(workspaceActive.current)setSaving(false)}
+  }
 
   // ── Facturación ──
   const handleEditBill = (bill) => {
@@ -391,6 +422,7 @@ const PlanningWorkspace = () => {
         <button type="button" className="ghost-button" onClick={() => updateSelection(filteredCompanies.map(c => c.id))}>
           {t('planning.selectAll')}
         </button>
+        {lastMove&&<button type="button" className="ghost-button" onClick={undoTaskMove} disabled={saving}>{t('planning.undoTaskMove')}</button>}
       </div>
 
       {selectedCompanies.length > 0 && (
@@ -431,9 +463,11 @@ const PlanningWorkspace = () => {
               onRangeChange={onRangeChange}
               onDeleteTask={canEdit ? handleDeleteTask : undefined}
               onEditTask={canEdit ? handleEditTask : undefined}
+              onMoveTask={canEdit ? (task,change)=>persistTaskMove(task,change) : undefined}
+              onResizeTask={canEdit ? (task,resizeMinutes)=>resizeMinutes&&persistTaskMove(task,{resizeMinutes}) : undefined}
               onSelectSlot={canEdit ? openTaskModal : undefined}
             />
-          ) : (
+          ) : mainView === "billing" ? (
             <div className="planning-panel">
               {selectedCompanies.length === 0
                 ? <p className="planning-empty">{t('planning.selectCompanyPrompt')}</p>
@@ -446,12 +480,14 @@ const PlanningWorkspace = () => {
                       onEdit={canEdit ? handleEditBill : undefined}
                     />}
             </div>
+          ) : (
+            <PlanningEmailFailures companyId={companyId} canEdit={canEdit} t={t}/>
           )}
         </div>
 
         <div className="planning-sidebar">
           <div className="segmented" role="group" aria-label={t('planning.viewMode')}>
-            {[["calendar", 'planning.switcherCalendar'], ["billing", 'planning.switcherBilling']].map(([key, labelKey]) => (
+            {[["calendar", 'planning.switcherCalendar'], ["billing", 'planning.switcherBilling'], ["emailFailures", 'planning.switcherEmailFailures']].map(([key, labelKey]) => (
               <button
                 key={key}
                 type="button"

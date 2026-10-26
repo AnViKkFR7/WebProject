@@ -22,7 +22,7 @@ const ResetPassword = () => {
     if (!/[A-Z]/.test(password)) return t('profile.messages.passwordUppercase')
     if (!/[a-z]/.test(password)) return t('profile.messages.passwordLowercase')
     if (!/[0-9]/.test(password)) return t('profile.messages.passwordNumber')
-    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) return t('profile.messages.passwordSpecial')
+    if (!/[!@#$%^&*()_+=\x5b\x5d{}|;:,.<>?-]/.test(password)) return t('profile.messages.passwordSpecial')
     return null
   }
 
@@ -49,7 +49,7 @@ const ResetPassword = () => {
       setIsValidToken(false)
       setError(t('resetPassword.noValidLink'))
     }
-  }, [])
+  }, [t])
 
   const handleResetPassword = async (e) => {
     e.preventDefault()

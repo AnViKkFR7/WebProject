@@ -8,3 +8,21 @@ export const loadInvoicing=async(company,kind)=>({invoices:records.map(row=>({..
 export const saveInvoice=async(company,doc,status,invoice)=>{const row={...invoice,id:invoice?.id||'new-document',number:invoice?.number||'F260002',status,document:doc,version:2};records=[row,...records.filter(item=>item.id!==row.id)];return row}
 export const saveProfile=async(company,value)=>{profile=value;return 2}
 export const convertQuote=async(company,quote)=>({...quote,status:'invoiced'})
+export const loadBillingReuse=async()=>({clients:[{id:'client-1',company_id:'demo-company',name:'Casa Norte S.L.',tax_id:'B87654321',billing_address:'Avenida del Mar 18, Barcelona',email:'cliente@ejemplo.com'}],catalog:[{id:'item-1',company_id:'demo-company',name:'Consultoría de proyecto',description:'Sesión de planificación',unit:'hora',price:'90',tax:'21'}]})
+export const saveBillingClient=async(company,value)=>({id:'client-new',company_id:company,...value,tax_id:value.taxId,billing_address:value.address})
+export const saveBillingCatalogItem=async(company,value)=>({id:'item-new',company_id:company,...value})
+export const archiveBillingCatalogItem=async()=>{}
+export const loadBillingChapterTemplates=async()=>[{id:'template-1',company_id:'demo-company',name:'Reforma básica',lines:exampleDocument.lines}]
+export const saveBillingChapterTemplate=async(company,value)=>({id:'template-new',company_id:company,...value})
+export const archiveBillingChapterTemplate=async()=>{}
+export const loadInvoiceFinancials=async()=>[{invoice_id:'demo-document',total:1252.35,paid:500,balance:752.35,payment_state:'partial',due_date:'2026-11-22'}]
+export const loadBillingFinanceDetail=async()=>({payments:[{id:'payment-1',company_id:'demo-company',invoice_id:'demo-document',entry_type:'payment',amount:500,paid_on:'2026-10-23',method:'Transferencia'}],history:[{id:2,company_id:'demo-company',record_id:'demo-document',action:'document_updated',version:2,created_at:'2026-10-23T10:30:00Z',actor_label:'Usuario de demostración',snapshot:{status:'draft',document:exampleDocument},changes:{document_changed:true}},{id:1,company_id:'demo-company',record_id:'demo-document',action:'created',version:1,created_at:'2026-10-22T09:00:00Z',actor_label:'Usuario de demostración',snapshot:{status:'draft',document:exampleDocument},changes:{}}],historyHasMore:false})
+export const loadBillingHistoryPage=async()=>({history:[],historyHasMore:false})
+export const registerInvoicePayment=async()=>({invoice_version:3,invoice_status:'issued'})
+export const reverseInvoicePayment=async()=>({invoice_version:3,invoice_status:'issued'})
+export const restoreBillingDraftVersion=async(company,kind,record)=>({...record,version:record.version+1})
+export const loadBillingPalettes=async()=>[]
+export const saveBillingPalette=async(company,value)=>({id:'palette-new',company_id:company,...value})
+export const loadDocumentDraft=async()=>null
+export const saveDocumentDraft=async()=>({version:1})
+export const deleteDocumentDraft=async()=>{}

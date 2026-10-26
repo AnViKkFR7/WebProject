@@ -13,12 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[INVITE-USER] Request received')
-    
     // 1. Obtener el usuario que hace la llamada
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error('[INVITE-USER] Missing Authorization header')
+      console.error('[INVITE-USER] auth_header_missing')
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -26,7 +24,6 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('[INVITE-USER] Token length:', token.length)
     
     // Cliente con service_role para operaciones admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -34,10 +31,7 @@ serve(async (req) => {
     const siteUrl = Deno.env.get('SITE_URL') ?? 'https://moira-ordo.vercel.app'
     
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('[INVITE-USER] Missing environment variables', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!serviceRoleKey
-      })
+      console.error('[INVITE-USER] configuration_missing')
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -47,7 +41,6 @@ serve(async (req) => {
       )
     }
     
-    console.log('[INVITE-USER] Environment OK')
     
     const supabaseAdmin = createClient(
       supabaseUrl ?? '',
@@ -68,13 +61,6 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'Unauthorized: Invalid token', 
           details: userError.message,
-          debug: {
-            tokenLength: token.length,
-            supabaseUrlSet: !!supabaseUrl,
-            serviceRoleKeySet: !!serviceRoleKey,
-            errorCode: userError.code,
-            errorName: userError.name
-          }
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -85,11 +71,6 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'Unauthorized: Invalid token', 
           details: 'No user found',
-          debug: {
-            tokenLength: token.length,
-            supabaseUrlSet: !!supabaseUrl,
-            serviceRoleKeySet: !!serviceRoleKey
-          }
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -101,11 +82,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Forbidden: Admin only',
-          debug: {
-            userEmail: user.email,
-            appMetadata: user.app_metadata,
-            appRole: user.app_metadata?.app_role
-          }
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -176,7 +152,7 @@ serve(async (req) => {
     })
     
     if (inviteError) {
-      console.error('Failed to send invitation email:', inviteError)
+      console.error('[INVITE-USER] invitation_send_failed')
       // No fallar toda la operación si el email no se envía
       // El admin puede reenviar la invitación más tarde
     }

@@ -11,6 +11,8 @@
 .invoice-table th { color:var(--text-secondary); font-size:.8rem; font-weight:500; }
 .invoice-table th,.invoice-table td { padding:.8rem; border-bottom:1px solid var(--border-color); }
 .invoice-table td { overflow-wrap:anywhere; }
+.invoice-row-actions { display:flex; gap:.25rem; }
+.invoice-due,.invoice-payment-state { display:block; margin-top:.2rem; color:var(--text-secondary); font-size:.68rem; }
 .invoice-status { border-radius:20px; padding:.25rem .6rem; background:var(--bg-hover); white-space:nowrap; font-size:.8rem; }
 .invoice-status-paid { background:var(--success-bg); color:var(--success-color); }
 .invoice-status-cancelled { background:var(--danger-bg); color:var(--danger-color); }
@@ -164,6 +166,8 @@
 .quote-chapter-heading > div { display:grid; gap:.2rem; text-align:right; font-variant-numeric:tabular-nums; }
 .quote-chapter-heading > div span { font-size:.65rem; color:var(--text-secondary); }
 .quote-chapter-heading strong { font-size:.9rem; }
+.quote-move-actions,.quote-line-move { display:flex; gap:.2rem; }
+.quote-line-move { align-self:center; }
 .quote-item { padding:0 .7rem .7rem; border-bottom:1px solid var(--border-color); }
 .quote-item:last-of-type { border-bottom:0; }
 .quote-item .invoice-line { border-bottom:0; }

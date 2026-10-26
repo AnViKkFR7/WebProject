@@ -1,8 +1,28 @@
 import {describe,it,expect} from 'vitest'
-import {billingPalettes,contrastRatio,documentPalette,selectBillingPalette,validBillingPalette,withBillingAppearance} from './billingAppearance'
+import {billingColorConflicts,billingColorSamples,billingPalettes,contrastRatio,documentPalette,selectBillingPalette,validBillingPalette,withBillingAppearance} from './billingAppearance'
 import {validBillingProfile,changeIssuerSource} from './invoicing'
 const profile={name:'Company',taxId:'A',address:'Madrid',color:'#e11d48',logo:''}
 describe('billing appearance contracts',()=>{
+  it('offers role-specific suggestions and only enables edits that keep each preset readable',()=>{
+    expect(billingColorSamples.paper).toContain('#ffffff')
+    expect(billingColorSamples.ink).toContain('#20252b')
+    expect(billingColorSamples.paper).not.toEqual(billingColorSamples.ink)
+    for(const preset of billingPalettes) {
+      const palette={...preset,id:'custom'}
+      for(const [role,colors] of Object.entries(billingColorSamples)) {
+        expect(colors.filter(color=>!billingColorConflicts(palette,role,color).length).length).toBeGreaterThanOrEqual(5)
+        for(const color of colors) expect(billingColorConflicts(palette,role,color).length===0).toBe(validBillingPalette({...palette,[role]:color}))
+      }
+    }
+  })
+  it('recalculates background compatibility after an accent change and allows repairing incomplete HEX values',()=>{
+    const palette={...billingPalettes[0],id:'custom',accent:'#767676'}
+    expect(billingColorConflicts(palette,'paper','#f5f9ff')).toEqual(['accent'])
+    expect(billingColorConflicts({...palette,accent:'#334155'},'paper','#f5f9ff')).toEqual([])
+    expect(billingColorConflicts({...palette,accent:'#invalid'},'ink','#20252b')).toEqual([])
+    expect(billingColorConflicts({...palette,paper:'#invalid'},'ink','#ffffff')).toEqual(['surface'])
+    expect(billingColorConflicts(palette,'ink','#ffffff')).toEqual(['paper','surface'])
+  })
   it('provides three readable palettes and exact WCAG contrast calculations',()=>{
     expect(contrastRatio('#000000','#ffffff')).toBe(21)
     expect(contrastRatio('#ffffff','#ffffff')).toBe(1)

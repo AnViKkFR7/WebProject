@@ -3,7 +3,7 @@
 // entonces solo da un "BOOT_ERROR: Function failed to start".
 //
 //   node supabase/check-functions.mjs
-import { readdirSync, existsSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
@@ -25,6 +25,10 @@ let failed = 0
 
 for (const name of names) {
   try {
+    const source = readFileSync(join(functionsDir, name, 'index.ts'), 'utf8')
+    if (/console\.(?:log|info|debug)\s*\(/.test(source)) {
+      throw new Error('Usa solo errores estructurados y mínimos; console.log/info/debug aumenta la ingesta y puede filtrar datos.')
+    }
     // Incluye helpers locales; los imports remotos quedan externos y no se descargan.
     await build({
       entryPoints: [join(functionsDir, name, 'index.ts')],
@@ -38,7 +42,8 @@ for (const name of names) {
   } catch (error) {
     failed += 1
     console.error(`  FALLA ${name}`)
-    for (const message of error.errors ?? []) {
+    const messages = error.errors ?? [{ text:error.message }]
+    for (const message of messages) {
       const where = message.location ? `linea ${message.location.line}` : ''
       console.error(`        ${message.text} ${where}`)
     }

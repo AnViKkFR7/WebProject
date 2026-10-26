@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { es } from '../locales/es'
 import { en } from '../locales/en'
 
@@ -20,7 +20,7 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem('language', language)
   }, [language])
 
-  const t = (key) => {
+  const t = useCallback((key) => {
     const keys = key.split('.')
     let value = translations[language]
     
@@ -29,11 +29,11 @@ export const LanguageProvider = ({ children }) => {
     }
     
     return value || key
-  }
+  }, [language])
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     setLanguage(prev => prev === 'es' ? 'en' : 'es')
-  }
+  }, [])
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>

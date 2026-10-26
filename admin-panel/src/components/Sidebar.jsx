@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { useCompanyModules } from '../hooks/useCompanyModules'
 import { visibleNavGroups } from '../lib/navigation'
 import CompanySwitcher from './CompanySwitcher'
 import Icon from './ui/Icon'
@@ -8,6 +9,8 @@ import Icon from './ui/Icon'
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed }) => {
   const { t } = useLanguage()
   const permissions = usePermissions()
+  const { modules, loading: modulesLoading } = useCompanyModules()
+  const visibleModules = modulesLoading ? Object.fromEntries(Object.keys(modules).map(key => [key, false])) : modules
   const closeMobile = () => setIsMobileMenuOpen(false)
 
   const renderLink = (item) => (
@@ -41,7 +44,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
       <CompanySwitcher onSwitch={closeMobile} />
 
       <nav className="sidebar-nav" aria-label={t('sidebar.navLabel')}>
-        {visibleNavGroups(permissions).map((group) => (
+        {visibleNavGroups(permissions, visibleModules).map((group) => (
           group.key === 'main' ? (
             <div key={group.key} className="nav-group">{group.items.map(renderLink)}</div>
           ) : (

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { reportOperationalFailure } from '../lib/operationalTelemetry'
 
 const parseFunctionsErrorBody = (body) => {
   if (!body) return null
@@ -10,12 +11,6 @@ const parseFunctionsErrorBody = (body) => {
     }
   }
   return body
-}
-
-const getFunctionsErrorMessage = (error) => {
-  const body = parseFunctionsErrorBody(error?.context?.body)
-  if (body) return body.error || body.message || JSON.stringify(body)
-  return error?.message || 'Error desconocido'
 }
 
 /**
@@ -52,9 +47,7 @@ export const userService = {
         }
       }
       const parsedBody = parseFunctionsErrorBody(errorBodyText)
-      console.error('Error detallado:', error)
-      console.error('Functions error context:', error?.context)
-      console.error('Functions error body:', parsedBody || errorBodyText)
+      reportOperationalFailure('users', 'user_create_failed', error)
       const message = parsedBody?.error || parsedBody?.message || errorBodyText || error.message || 'Error al crear usuario'
       throw new Error(message)
     }
@@ -91,9 +84,7 @@ export const userService = {
         }
       }
       const parsedBody = parseFunctionsErrorBody(errorBodyText)
-      console.error('Error detallado:', error)
-      console.error('Functions error context:', error?.context)
-      console.error('Functions error body:', parsedBody || errorBodyText)
+      reportOperationalFailure('users', 'user_invite_failed', error)
       const message = parsedBody?.error || parsedBody?.message || errorBodyText || error.message || 'Error al invitar usuario'
       throw new Error(message)
     }
@@ -111,7 +102,7 @@ export const userService = {
     const { data, error } = await supabase.functions.invoke('listar-usuarios')
 
     if (error) {
-       console.error('Error fetching users:', error)
+       reportOperationalFailure('users', 'user_list_failed', error)
        throw new Error('Error al obtener lista de usuarios')
     }
 
@@ -130,7 +121,7 @@ export const userService = {
       // Verificar el claim app_role en app_metadata
       return user.app_metadata?.app_role === 'admin'
     } catch (error) {
-      console.error('Error verificando rol de admin:', error)
+      reportOperationalFailure('users', 'admin_role_check_failed', error)
       return false
     }
   },

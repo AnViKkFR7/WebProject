@@ -10,12 +10,13 @@ describe('permissions — la UI refleja la RLS', () => {
     expect(p.canManageMemberAccess).toBe(false)
   })
 
-  it('editor y admin de empresa editan, pero no administran la plataforma', () => {
+  it('editor y admin de empresa editan, pero no administran módulos de plataforma', () => {
     for (const role of ['editor', 'admin']) {
       const p = permissionsFor(role)
       expect(p.canEdit).toBe(true)
       expect(p.canAdministerPlatform).toBe(false)
       expect(p.canManageMemberAccess).toBe(role === 'admin')
+      expect(p.canManageModules).toBe(false)
     }
   })
 
@@ -23,6 +24,7 @@ describe('permissions — la UI refleja la RLS', () => {
     const p = permissionsFor(null, true)
     expect(p.canEdit).toBe(true)
     expect(p.canAdministerPlatform).toBe(true)
+    expect(p.canManageModules).toBe(true)
   })
 
   it('sin empresa seleccionada no se ofrece editar', () => {

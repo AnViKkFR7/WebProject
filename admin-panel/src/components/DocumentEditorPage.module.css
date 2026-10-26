@@ -2,7 +2,6 @@
 .header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--editor-gap); padding:.75rem 0 1.25rem; border-bottom:1px solid var(--border-color); background:var(--bg-body); }
 .heading { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; min-width:0; }
 .heading h1 { font-size:clamp(1.3rem,2vw,1.8rem); line-height:1.25; margin:.25rem 0; overflow-wrap:anywhere; color:var(--text-primary); }
-.heading h1:focus { outline:none; }
 .eyebrow { margin:0; color:var(--text-secondary); font-size:.75rem; }
 .state { margin:.3rem 0 0; font-size:.75rem; color:var(--text-secondary); }
 .actions { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }

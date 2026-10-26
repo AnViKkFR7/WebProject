@@ -9,7 +9,7 @@ import Icon from '../ui/Icon';
 
 const VIEWS = ['day', 'week', 'month'];
 
-export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask, onSelectSlot, onRangeChange }) {
+export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteTask, onEditTask, onMoveTask, onResizeTask, onSelectSlot, onRangeChange }) {
   const { t } = useLanguage();
   const [fullDay,setFullDay]=useState(false);
   const [view, setView] = useState(defaultView);
@@ -46,7 +46,7 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
     return `${weekdaysLong[current.getDay()]}, ${current.getDate()} ${months[current.getMonth()]} ${current.getFullYear()}`;
   })();
 
-  const viewProps = { date: current, tasks, onDelete: onDeleteTask, onEdit: onEditTask, onSelectSlot,fullDay };
+  const viewProps = { date: current, tasks, onDelete: onDeleteTask, onEdit: onEditTask,onMoveTask,onResizeTask,onSelectSlot,fullDay };
 
   return (
     <div className="calendar-shell">

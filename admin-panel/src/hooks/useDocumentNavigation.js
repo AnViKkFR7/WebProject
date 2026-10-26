@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useBeforeUnload, useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom'
 
-export function useDocumentNavigation({ dirty, saving, confirm, t, base }) {
+export function useDocumentNavigation({ dirty, saving, confirm, t, base, leaveMessage }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { '*': routeId = '' } = useParams()
@@ -15,13 +15,13 @@ export function useDocumentNavigation({ dirty, saving, confirm, t, base }) {
     if (blocker.state !== 'blocked' || asking.current) return
     if (saving) { blocker.reset(); return }
     asking.current = true
-    Promise.resolve(confirm({ title:t('documentWorkspace.leaveTitle'), message:t('documentWorkspace.leaveMessage'), confirmLabel:t('documentWorkspace.discard'), danger:true }))
+    Promise.resolve(confirm({ title:t('documentWorkspace.leaveTitle'), message:leaveMessage || t('documentWorkspace.leaveMessage'), confirmLabel:t('documentWorkspace.discard'), danger:true }))
       .then(discard => {
         if (!alive.current) return
         if (discard) blocker.proceed()
         else blocker.reset()
       }).finally(() => { asking.current = false })
-  }, [blocker, saving, confirm, t])
+  }, [blocker, saving, confirm, t, leaveMessage])
   useBeforeUnload(event => {
     if (dirty || saving) { event.preventDefault(); event.returnValue = '' }
   })

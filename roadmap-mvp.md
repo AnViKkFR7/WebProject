@@ -20,29 +20,40 @@ Implementación local completada en [P2]. Las puertas de lanzamiento de fase 8 y
 
 ## Fase 2 · Identidad y PDF
 
-- [ ] Subir/cambiar/quitar logo desde ajustes accesibles en el editor; validar tamaño, formato y decodificación; proporción y fallback sin logo. Actualizar `Features.md`.
-- [ ] Añadir Grafito/Océano/Oliva y paleta Personalizada con HEX y muestras, sin colorPicker, con contraste validado. Actualizar `docs/design-system.md`.
-- [ ] Persistir valores por empresa y copia por documento; personalización individual opcional; fallback del color antiguo. Nueva migración y `docs/facturacion-datos.md`.
-- [ ] Aplicar la misma paleta/logo al preview y PDF de ambos tipos, manteniendo las composiciones de referencia. Actualizar `docs/testing.md`.
+Implementación existente revisada y completada localmente en [P3]. Las pruebas de persistencia/permisos usan PostgreSQL local (PGlite); no certifican el entorno remoto. La migración `BILLING_APPEARANCE.sql` ya existía y no se ha modificado ni aplicado. Las puertas de lanzamiento siguen pendientes.
+
+- [x] Subir/cambiar/quitar logo desde ajustes accesibles en el editor; validar tamaño, formato y decodificación; proporción y fallback sin logo. Actualizar `Features.md`.
+- [x] Añadir Grafito/Océano/Oliva y paleta Personalizada con HEX y muestras, sin colorPicker, con contraste validado. Actualizar `docs/design-system.md`.
+- [x] Persistir valores por empresa y copia por documento; personalización individual opcional; fallback del color antiguo. Migración `BILLING_APPEARANCE.sql` comprobada localmente y contrato en `docs/facturacion-datos.md`.
+- [x] Aplicar la misma paleta/logo al preview y PDF de ambos tipos, manteniendo las composiciones de referencia. Actualizar `docs/testing.md`.
+- [x] [P4] Guiar la personalizada con muestras por rol y bloqueo dinámico por contraste; errores HEX por bloque y revisión adaptable ES/EN. Evidencias en `docs/testing.md`.
+- [x] [P5] Guardar paletas personalizadas con nombre por compañía y reutilizarlas en ambos tipos de documento. RLS/RPC y pruebas negativas locales; migración `BILLING_NAMED_PALETTES.sql` pendiente de aplicar en destino.
+- [x] [P6] Mostrar un selector explícito de paletas guardadas antes de los bloques de color y separar el guardado al final; carga/selección comprobadas en factura y presupuesto.
 
 ## Fase 3 · Autoguardado y recuperación
 
-- [ ] Guardar borradores incompletos tras pausa, con identificación estable y recuperación al recargar/volver. Actualizar `Features.md`.
-- [ ] Mostrar estado de guardado y errores; serializar escrituras, controlar versión, cambios de empresa, desconexión y conflictos entre pestañas. Actualizar `docs/facturacion-datos.md`.
-- [ ] Recuperación local acotada y remota, borrado/caducidad y limpieza al cerrar sesión; emitir sigue siendo una acción explícita. Actualizar `docs/testing.md`.
+Implementación local completada en [P7], con contratos y pruebas negativas de servidor. `BILLING_DRAFTS.sql` y la programación de su purga siguen pendientes en destino. Las casillas no certifican despliegue ni completan la auditoría general de fase 0/8.
+
+- [x] Guardar borradores incompletos tras pausa, con identificación estable y recuperación al recargar/volver. Actualizado `Features.md`.
+- [x] Mostrar estado de guardado y errores; serializar escrituras, controlar versión, cambios de empresa, desconexión y conflictos entre pestañas. Actualizado `docs/facturacion-datos.md`.
+- [x] Recuperación local acotada y remota, borrado/caducidad y limpieza al cerrar sesión; emitir sigue siendo una acción explícita. Evidencias en `docs/testing.md`; retención y despliegue en `docs/entornos.md`.
 
 ## Fase 4 · Clientes y conceptos reutilizables
 
-- [ ] Reutilizar el directorio de clientes existente antes de crear otro; ampliar sus datos fiscales con permisos por empresa. Actualizar `docs/facturacion-datos.md`.
-- [ ] Buscar/seleccionar cliente y guardar nuevos datos sin abandonar el documento; copiar sus datos al borrador. Actualizar `Features.md`.
-- [ ] Catálogo de servicios/partidas con descripción, unidad, precio e impuestos; selección/búsqueda rápida y edición puntual en el documento. Actualizar `Features.md`.
-- [ ] Archivar referencias sin romper documentos históricos; pruebas contra referencias cruzadas entre compañías. Actualizar `docs/testing.md`.
+Implementación local completada en [P8]. `BILLING_DIRECTORY_CATALOG.sql` está comprobada en PostgreSQL local y pendiente en destino; las casillas no certifican su despliegue.
+
+- [x] Reutilizar el directorio de clientes existente antes de crear otro; ampliar sus datos fiscales con permisos por empresa. Actualizado `docs/facturacion-datos.md`.
+- [x] Buscar/seleccionar cliente y guardar nuevos datos sin abandonar el documento; copiar sus datos al borrador. Actualizado `Features.md`.
+- [x] Catálogo de servicios/partidas con descripción, unidad, precio e impuestos; selección/búsqueda rápida y edición puntual en el documento. Actualizado `Features.md`.
+- [x] Archivar referencias sin romper documentos históricos; pruebas contra referencias cruzadas entre compañías. Actualizado `docs/testing.md`.
 
 ## Fase 5 · Duplicación y plantillas
 
-- [ ] Duplicar factura/presupuesto en borrador, copiando partidas e identidad; limpiar número/estado/cobros/historial y pedir nuevas fechas. Actualizar `Features.md`.
-- [ ] Guardar/reutilizar plantillas de capítulos con varias partidas, reordenación con IDs estables y nombres claros. Actualizar `Features.md`.
-- [ ] Verificar duplicación y conversión idempotentes: un reintento no crea documentos definitivos duplicados. Actualizar `docs/testing.md`.
+Implementación local completada en [P9]. `BILLING_CHAPTER_TEMPLATES.sql` está comprobada en PostgreSQL local y pendiente en destino; las casillas no certifican despliegue.
+
+- [x] Duplicar factura/presupuesto en borrador, copiando partidas e identidad; limpiar número/estado/cobros/historial y pedir nuevas fechas. Actualizado `Features.md`.
+- [x] Guardar/reutilizar plantillas de capítulos con varias partidas, reordenación con IDs estables y nombres claros. Actualizado `Features.md`.
+- [x] Verificar duplicación y conversión idempotentes: un reintento no crea documentos definitivos duplicados. Actualizado `docs/testing.md`.
 
 ## Fase 8A · Puerta de entrega MVP
 

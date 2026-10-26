@@ -1,4 +1,21 @@
 export const paletteRoles = ['accent', 'ink', 'muted', 'paper', 'surface']
+export const validPaletteName = name => typeof name==='string' && name.trim().length>0 && name.trim().length<=60 && [...name].every(character=>{const code=character.codePointAt(0);return code>=32 && (code<127 || code>159)})
+export const samePaletteColors = (first,second) => paletteRoles.every(role=>validHex(first?.[role]) && validHex(second?.[role]) && first[role].toLowerCase()===second[role].toLowerCase())
+export const billingColorSamples = {
+  accent: ['#334155','#1e4c78','#4d6137','#6d28d9','#be123c','#b45309','#0f766e','#1d4ed8','#9d174d','#7c2d12'],
+  ink: ['#20252b','#1c3045','#293424','#312044','#3f202b','#3b2c21','#172554','#134e4a','#ffffff','#f1f5f9'],
+  muted: ['#58616d','#52647a','#596450','#665077','#785361','#73553b','#475569','#3f625f','#ffffff','#e2e8f0'],
+  paper: ['#ffffff','#fffdf5','#f5f9ff','#faf5ff','#fff5f7','#f3faf6','#fff7ed','#f8fafc','#f5f5f4','#f0fdfa'],
+  surface: ['#f1f3f5','#edf3f8','#f1f4ed','#f3e8ff','#fce7f3','#fef3c7','#dbeafe','#dcfce7','#ffedd5','#ccfbf1'],
+}
+const contrastPairs = [['accent','paper'],['ink','paper'],['ink','surface'],['muted','paper'],['muted','surface']]
+
+// Check only relationships affected by this edit, so other incomplete HEX fields never trap recovery.
+export function billingColorConflicts(palette,role,color=palette?.[role]) {
+  if (!validHex(color)) return []
+  return contrastPairs.filter(pair=>pair.includes(role)).map(pair=>pair.find(part=>part!==role))
+    .filter(other=>validHex(palette?.[other]) && contrastRatio(color,palette[other])<4.5)
+}
 export const billingPalettes = [
   { id:'graphite',accent:'#334155',ink:'#20252b',muted:'#58616d',paper:'#ffffff',surface:'#f1f3f5' },
   { id:'ocean',accent:'#1e4c78',ink:'#1c3045',muted:'#52647a',paper:'#ffffff',surface:'#edf3f8' },

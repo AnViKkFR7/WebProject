@@ -111,6 +111,37 @@ export async function updatePlanningTask(id, updates) {
   return data
 }
 
+export async function movePlanningTask(companyId,task,dates) {
+  const {data,error}=await supabase.rpc('move_planning_task',{
+    p_company:companyId,p_task:task.id,p_version:task.version,p_start:dates.start_datetime,p_end:dates.end_datetime,
+  })
+  if(error)throw error
+  return data
+}
+
+export async function undoPlanningTaskMove(companyId,taskId,moveId,version) {
+  const {data,error}=await supabase.rpc('undo_planning_task_move',{
+    p_company:companyId,p_task:taskId,p_move:moveId,p_version:version,
+  })
+  if(error)throw error
+  return data
+}
+
+export async function listPlanningEmailFailures(companyId) {
+  if(!/^[0-9a-f-]{36}$/i.test(companyId || '')) throw new Error('Invalid company')
+  const {data,error}=await supabase.rpc('list_planning_email_failures',{p_company:companyId})
+  if(error)throw error
+  if(!Array.isArray(data)||data.length>100||data.some(row=>!row||!/^[0-9a-f-]{36}$/i.test(row.id||'')||!/^[0-9a-f-]{36}$/i.test(row.task_id||''))) throw new Error('Invalid reminder failures')
+  return data
+}
+
+export async function retryPlanningEmail(companyId,queueId) {
+  if(!/^[0-9a-f-]{36}$/i.test(companyId || '')||!/^[0-9a-f-]{36}$/i.test(queueId || '')) throw new Error('Invalid reminder')
+  const {data,error}=await supabase.rpc('retry_planning_email',{p_company:companyId,p_queue:queueId})
+  if(error)throw error
+  return data===true
+}
+
 // Eliminar facturación
 export async function deleteBilling(id) {
   const { error } = await supabase.from('billing').delete().eq('id', id)

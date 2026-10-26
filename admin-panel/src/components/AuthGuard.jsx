@@ -5,13 +5,10 @@ import { supabase } from '../lib/supabaseClient'
 
 const AuthGuard = () => {
   const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(supabase))
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
+    if (!supabase) return
 
     // 1. Check active session on mount
     authService.getSession().then((currentSession) => {

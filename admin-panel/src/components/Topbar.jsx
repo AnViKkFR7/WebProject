@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { navKeyForPath } from '../lib/navigation'
 import UserMenu from './UserMenu'
 import Icon from './ui/Icon'
+import GlobalSearch from './GlobalSearch'
 
 const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const { pathname } = useLocation()
@@ -41,6 +42,7 @@ const Topbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
         </div>
       </div>
       <div className="topbar-right">
+        <GlobalSearch />
         <UserMenu />
       </div>
     </header>

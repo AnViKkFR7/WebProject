@@ -1,0 +1,8 @@
+.list { display:grid; gap:.6rem; margin:1rem 0; padding:0; list-style:none; }
+.list li { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-card); }
+.list strong { display:block; margin-bottom:.25rem; }
+.list p { margin:0; max-width:55rem; color:var(--text-secondary); font-size:.86rem; }
+.toggle { display:flex; align-items:center; gap:.65rem; flex-shrink:0; color:var(--text-secondary); font-size:.82rem; }
+.toggle input { width:2.6rem; height:1.4rem; accent-color:var(--primary-color); }
+.note { color:var(--text-secondary); font-size:.82rem; }
+@media(max-width:560px) { .list li { align-items:flex-start; flex-direction:column; } }

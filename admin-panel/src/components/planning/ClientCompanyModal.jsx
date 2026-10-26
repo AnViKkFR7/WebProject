@@ -11,6 +11,8 @@ export default function ClientCompanyModal({ open, editing, form, setForm, error
 
   const FIELDS = [
     ['name', 'planning.namePlaceholder', 'text', true],
+    ['tax_id','invoicing.taxId','text',false],
+    ['billing_address','invoicing.address','text',false],
     ['phone', 'planning.phonePlaceholder', 'tel', false],
     ['email', 'planning.emailPlaceholder', 'email', false],
     ['responsible', 'planning.responsiblePlaceholder', 'text', false],

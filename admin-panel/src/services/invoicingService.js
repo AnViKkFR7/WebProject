@@ -27,11 +27,14 @@ export async function saveProfile(companyId, profile, version) {
   if (error) throw error
   return data
 }
-export async function saveInvoice(companyId, document, status, invoice, kind = 'invoice') {
-  const { data, error } = await supabase.rpc(kind === 'quote' ? 'save_quote' : 'save_invoice', {
+export async function saveInvoice(companyId, document, status, invoice, kind = 'invoice', recovery) {
+  const request = supabase.rpc(recovery ? 'commit_billing_draft' : kind === 'quote' ? 'save_quote' : 'save_invoice', recovery ? {
+    p_company:companyId,p_kind:kind,p_key:recovery.key,p_request:recovery.id,p_version:recovery.version,p_document:document,p_status:status,p_invoice_version:invoice?.version ?? null,
+  } : {
     p_company: companyId, p_document: document, p_status: status,
     p_id: invoice?.id || null, p_version: invoice?.version || null,
   })
+  const {data,error}=await (recovery ? request.abortSignal(AbortSignal.timeout(10000)) : request)
   if (error) throw error
   return data
 }
@@ -41,5 +44,15 @@ export async function convertQuote(companyId, quote) {
     p_company: companyId, p_id: quote.id, p_version: quote.version,
   })
   if (error) throw error
+  return data
+}
+
+export async function rectifyInvoice(companyId, original, document, requestId) {
+  const rectification=document.rectification
+  const {data,error}=await supabase.rpc('rectify_invoice',{
+    p_company:companyId,p_original:original.id,p_document:document,p_method:rectification.method,
+    p_cause:rectification.cause,p_note:rectification.note,p_request:requestId,
+  })
+  if(error)throw error
   return data
 }

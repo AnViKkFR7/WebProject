@@ -1,8 +1,37 @@
 import { describe, it, expect } from 'vitest'
 import { createDocumentPdf } from './invoicingPdf'
-import { billingPalettes } from './billingAppearance'
+import { billingPalettes, contrastRatio, validBillingPalette } from './billingAppearance'
 import {readFileSync} from 'node:fs'
 describe('invoice PDF', () => {
+  it('keeps custom quote text readable on table surfaces without changing the saved palette',()=>{
+    const palette={id:'custom',accent:'#767676',ink:'#000000',muted:'#000000',paper:'#ffffff',surface:'#767676'}
+    expect(validBillingPalette(palette)).toBe(true)
+    const document={issuer:{name:'Company',taxId:'A',address:'Madrid',palette},customer:{name:'Client',taxId:'B',address:'Barcelona'},date:'2026-10-24',withholding:0,lines:[{chapter:'01 · Work',description:'Service',quantity:1,price:100,discount:0,tax:21}]}
+    const pdf=createDocumentPdf({number:'P0001',status:'draft',document},key=>key,'es','quote')
+    let checked=0
+    for(const page of pdf.previewPages) {
+      const surfaces=page.filter(item=>item.type==='rect' && item.fill===palette.surface)
+      for(const item of page.filter(item=>item.type==='text')) {
+        if(surfaces.some(rect=>item.x>=rect.x && item.x<=rect.x+rect.width && item.y>rect.y && item.y<=rect.y+rect.height)) {
+          expect(contrastRatio(item.color,palette.surface)).toBeGreaterThanOrEqual(4.5)
+          checked++
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(5)
+    expect(pdf.previewPages.flat().find(item=>item.type==='text' && item.value==='Company').color).toBe(palette.accent)
+    expect(document.issuer.palette.accent).toBe('#767676')
+  })
+
+  it.each(['invoice','quote'])('renders a corrupt legacy logo with the same fallback as no logo (%s)',kind=>{
+    const document={issuer:{name:'Company',taxId:'A',address:'Madrid',logo:'data:image/png;base64,iVBORw0KGgo='},customer:{name:'Client',taxId:'B',address:'Barcelona'},date:'2026-10-24',withholding:0,lines:[{description:'Service',quantity:1,price:100,discount:0,tax:21}]}
+    const record={number:'F0001',status:'draft',document}
+    const broken=createDocumentPdf(record,key=>key,'es',kind)
+    const without=createDocumentPdf({...record,document:{...document,issuer:{...document.issuer,logo:''}}},key=>key,'es',kind)
+    expect(broken.previewPages).toEqual(without.previewPages)
+    expect(broken.previewPages.flat().some(item=>item.type==='text' && item.value==='Company')).toBe(true)
+  })
+
   it.each(['invoice','quote'])('preserves a company logo aspect ratio in the %s PDF and preview',kind=>{
     const logo='data:image/png;base64,'+readFileSync(new URL('../../tests/fixtures/billing-logo.png',import.meta.url)).toString('base64')
     const document={issuer:{name:'Company',taxId:'A',address:'Madrid',palette:billingPalettes[0],logo},customer:{name:'Client',taxId:'B',address:'Barcelona'},date:'2026-10-22',withholding:0,lines:[{description:'Service',quantity:1,price:100,discount:0,tax:21}]}
@@ -76,6 +105,31 @@ describe('invoice PDF', () => {
     expect(text).toContain('217,80 €')
     expect(text).toContain(kind==='quote' ? 'Después del descuento (sin IVA)' : 'DESPUÉS DTO.')
     expect(commands.filter(item=>item.type==='rect' && item.fill==='#e11d48' && item.height>1)).toHaveLength(0)
+  })
+
+  it('keeps invoice separators clear of text and aligns section labels to the page grid',()=>{
+    const doc={issuer:{name:'Company',taxId:'A',address:'Madrid'},customer:{name:'',taxId:'',address:'',email:''},date:'2026-10-24',withholding:0,lines:[{description:'',quantity:1,price:0,discount:0,tax:21}]}
+    const commands=createDocumentPdf({number:'F-BORRADOR',status:'draft',document:doc},key=>key,'es','invoice').previewPages[0]
+    const texts=commands.filter(item=>item.type==='text')
+    const client=texts.find(item=>item.value==='CLIENTE')
+    const concept=texts.find(item=>item.value==='CONCEPTO')
+    const totalAmount=texts.find(item=>item.value==='0,00 €' && item.size>6)
+    const separator=commands.filter(item=>item.type==='line' && item.y1>client.y).sort((a,b)=>a.y1-b.y1)[0]
+    expect(client.x).toBe(14)
+    expect(concept.x).toBe(client.x)
+    expect(separator.y1).toBeGreaterThan(totalAmount.y+4)
+  })
+
+  it.each(['invoice','quote'])('keeps horizontal separators outside text glyphs in the %s layout',kind=>{
+    const doc={issuer:{name:'Company',taxId:'A',address:'Madrid'},customer:{name:'Cliente',taxId:'B',address:'Barcelona'},date:'2026-10-24',withholding:0,presentation:{title:'Proyecto'},lines:[{chapter:'01 · Inicio',description:'Servicio detallado',details:'Alcance del trabajo',quantity:1,price:100,discount:0,tax:21}]}
+    const pages=createDocumentPdf({number:kind==='quote'?'P-1':'F-1',status:'draft',document:doc},key=>key,'es',kind).previewPages
+    for(const page of pages) {
+      const texts=page.filter(item=>item.type==='text')
+      for(const line of page.filter(item=>item.type==='line')) {
+        const crossed=texts.filter(item=>item.x>=line.x1 && item.x<=line.x2 && line.y1>item.y-item.size*.9 && line.y1<item.y+1)
+        expect(crossed.map(item=>item.value)).toEqual([])
+      }
+    }
   })
 
 })

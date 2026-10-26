@@ -14,6 +14,9 @@ export interface LeadInput {
   email?: string
   phone?: string
   message?: string
+  /** Explicit consent for the privacy text displayed by the form. */
+  consent_given?: boolean
+  consent_text_version?: string
   /** Campo trampa: debe llegar vacío. Ver el input oculto del formulario. */
   company_website?: string
 }
@@ -43,7 +46,12 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
         company_id: COMPANY_ID,
         ...input,
         source_path: window.location.pathname,
+        source_referrer: document.referrer || undefined,
+        source_utm_source: new URLSearchParams(window.location.search).get('utm_source') ?? undefined,
+        source_utm_medium: new URLSearchParams(window.location.search).get('utm_medium') ?? undefined,
         source_campaign: new URLSearchParams(window.location.search).get('utm_campaign') ?? undefined,
+        source_utm_term: new URLSearchParams(window.location.search).get('utm_term') ?? undefined,
+        source_utm_content: new URLSearchParams(window.location.search).get('utm_content') ?? undefined,
       }),
     })
     if (response.ok) {

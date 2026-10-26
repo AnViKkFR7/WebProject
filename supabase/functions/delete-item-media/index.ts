@@ -137,7 +137,7 @@ serve(async (req) => {
     // Si no (URL en un formato irreconocible), el registro ya está borrado
     // igualmente y solo queda un archivo huérfano en el bucket.
     if (!storagePath) {
-      console.error('Could not determine storage path from url_externa:', media.url_externa)
+      console.error('[DELETE-ITEM-MEDIA] storage_path_unrecognized')
       return new Response(
         JSON.stringify({
           success: true,
@@ -153,7 +153,7 @@ serve(async (req) => {
 
     if (storageError) {
       // Log pero no fallar la operación (el registro ya fue borrado)
-      console.error('Failed to delete from storage:', storageError)
+      console.error('[DELETE-ITEM-MEDIA] storage_delete_failed')
 
       return new Response(
         JSON.stringify({
@@ -174,7 +174,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('[DELETE-ITEM-MEDIA] unexpected_error')
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -29,7 +29,7 @@ export default function DocumentEditorPage({ title, company, status, dirty, savi
     </header>
     <div ref={summaryBar} className={styles.summary}>{summary}</div>
     <div className={styles.toolbar}>
-      <div className={styles.modes} aria-label={t('documentWorkspace.view')}>
+      <div className={styles.modes} role="group" aria-label={t('documentWorkspace.view')}>
         <button className="ghost-button" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}><Icon name="edit" size={16}/>{t('documentWorkspace.edit')}</button>
         <button className="ghost-button" aria-pressed={mode === 'preview'} onClick={() => { setMode('preview'); setCollapsed(false) }}><Icon name="eye" size={16}/>{t('invoicing.preview')}</button>
       </div>

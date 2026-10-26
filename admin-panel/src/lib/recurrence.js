@@ -55,6 +55,7 @@ export function expandRecurringItem(item, dateField = 'start_datetime', endField
     const occurrenceEnd = durationMs !== null ? new Date(occurrenceStart.getTime() + durationMs) : null
     occurrences.push({
       ...item,
+      ...(dateField==='start_datetime'?{_seriesStart:item[dateField],_seriesEnd:endField?item[endField]:null}:{}),
       [dateField]: formatLike(item[dateField], occurrenceStart),
       ...(endField && item[endField]
         ? { [endField]: occurrenceEnd ? formatLike(item[endField], occurrenceEnd) : item[endField] }

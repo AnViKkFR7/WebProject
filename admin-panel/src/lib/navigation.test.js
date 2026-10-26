@@ -11,6 +11,7 @@ describe('navigation — título de la página en la topbar', () => {
     expect(navKeyForPath('/my-data')).toBe('myData')
     expect(navKeyForPath('/quotes')).toBe('quotes')
     expect(navKeyForPath('/invoicing')).toBe('invoicing')
+    expect(navKeyForPath('/settings/weekly-summary')).toBeNull()
   })
 
   it('no confunde prefijos ni inventa títulos', () => {
@@ -30,5 +31,19 @@ describe('navigation — menú según rol', () => {
     expect(groupKeys('editor')).toContain('administration')
     expect(groupKeys('admin')).toContain('administration')
     expect(groupKeys(null, true)).toContain('administration')
+  })
+
+  it('solo muestra la configuración de módulos al admin de plataforma', () => {
+    const editor = visibleNavGroups(permissionsFor('editor'), { billing: false })
+    expect(editor.flatMap(group => group.items).some(item => item.to === '/invoicing')).toBe(false)
+    expect(editor.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(false)
+    const companyAdmin = visibleNavGroups(permissionsFor('admin'), { billing: false })
+    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(false)
+    const platformAdmin = visibleNavGroups(permissionsFor(null, true), { billing: false })
+    expect(platformAdmin.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(true)
+    expect(platformAdmin.flatMap(group => group.items).some(item => item.to === '/settings/privacy')).toBe(true)
+    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/privacy')).toBe(true)
+    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/weekly-summary')).toBe(false)
+    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/invoicing')).toBe(false)
   })
 })
