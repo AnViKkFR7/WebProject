@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { usePermissions } from '../hooks/usePermissions'
-import { fetchCompanyOverview,fetchRecentQuoteApprovalResponses } from '../services/companyOverviewService'
+import { fetchCompanyOverview,fetchRecentQuoteApprovalResponses,markQuoteApprovalResponseHandled } from '../services/companyOverviewService'
 import { formatDateTime } from '../lib/dates'
 import { ITEM_STATUSES, MEMBER_ROLES } from '../lib/companyOverview'
 import PageHeader from '../components/ui/PageHeader'
@@ -36,13 +36,36 @@ const Dashboard = () => {
   const [overview, setOverview] = useState(null)
   const [state, setState] = useState('loading') // loading | error | ready
   const [reloadKey, setReloadKey] = useState(0)
+  const [handlingResponseIds,setHandlingResponseIds] = useState([])
+  const [approvalActionError,setApprovalActionError] = useState(false)
+  const handledResponseIds=useRef(new Set())
   const companyId = selectedCompany?.id
+
+  const markResponseHandled=async(responseId)=>{
+    if(!companyId||!responseId)return
+    setApprovalActionError(false)
+    setHandlingResponseIds(current=>current.includes(responseId)?current:[...current,responseId])
+    try{
+      await markQuoteApprovalResponseHandled(companyId,responseId)
+      handledResponseIds.current.add(responseId)
+      setOverview(previous=>previous?{
+        ...previous,
+        quoteApprovals:(previous.quoteApprovals||[]).filter(response=>response.response_id!==responseId),
+      }:previous)
+    }catch(error){
+      console.error('Error marcando respuesta como tratada:',error)
+      setApprovalActionError(true)
+    }finally{
+      setHandlingResponseIds(current=>current.filter(id=>id!==responseId))
+    }
+  }
 
   useEffect(() => {
     if (!companyId) return undefined
+    handledResponseIds.current.clear()
     let cancelled = false
     fetchCompanyOverview(companyId)
-      .then((data) => { if (!cancelled) { setOverview(data); setState('ready') } })
+      .then((data) => { if (!cancelled) { setOverview(data?{...data,quoteApprovals:(data.quoteApprovals||[]).filter(response=>!handledResponseIds.current.has(response.response_id))}:data); setState('ready') } })
       .catch((error) => {
         console.error('Error cargando el resumen:', error)
         if (!cancelled) setState('error')
@@ -54,7 +77,7 @@ const Dashboard = () => {
     if(!companyId)return undefined
     let active=true
     const refresh=async()=>{
-      try{const quoteApprovals=await fetchRecentQuoteApprovalResponses(companyId);if(active)setOverview(previous=>previous?{...previous,quoteApprovals}:previous)}catch{return}
+      try{const quoteApprovals=await fetchRecentQuoteApprovalResponses(companyId);if(active)setOverview(previous=>previous?{...previous,quoteApprovals:quoteApprovals.filter(response=>!handledResponseIds.current.has(response.response_id))}:previous)}catch{return}
     }
     const timer=window.setInterval(()=>void refresh(),30000)
     return()=>{active=false;window.clearInterval(timer)}
@@ -114,14 +137,16 @@ const Dashboard = () => {
 
       {state === 'ready' && overview && (
         <>
-        {overview.quoteApprovals?.length>0 && <section className={styles.approvals} aria-labelledby="dashboard-approvals-title">
-          <header><div><h2 id="dashboard-approvals-title">{t('dashboard.approvalsTitle')}</h2><p>{t('dashboard.approvalsHelp')}</p></div><Icon name="file" size={20}/></header>
-          <ul>{overview.quoteApprovals.map(response=><li key={`${response.quote_id}-${response.responded_at}`}>
+        {overview.quoteApprovals?.length>0 && <details className={styles.approvals} open aria-labelledby="dashboard-approvals-title">
+          <summary><span><h2 id="dashboard-approvals-title">{t('dashboard.approvalsTitle')}</h2><p>{t('dashboard.approvalsHelp')}</p></span><span className={styles.approvalCount}>{overview.quoteApprovals.length}</span><Icon name="file" size={20}/></summary>
+          {approvalActionError&&<p className={styles.approvalError} role="alert">{t('dashboard.approvalHandleError')}</p>}
+          <ul>{overview.quoteApprovals.map(response=><li key={response.response_id}>
             <span className={styles.decision} data-decision={response.decision}>{t(`quotes.${response.decision}`)}</span>
             <div><strong>{response.customer_name}</strong><span>{t('dashboard.approvalQuote').replace('{number}',response.quote_number)} · {formatDateTime(response.responded_at)}</span></div>
             <Link to={`/quotes/${encodeURIComponent(response.quote_id)}`} title={t('dashboard.openApprovalQuote')}>{t('dashboard.openApprovalQuote')}</Link>
+            <button type="button" className={styles.handledButton} disabled={handlingResponseIds.includes(response.response_id)} onClick={()=>void markResponseHandled(response.response_id)} title={t('dashboard.markApprovalHandled')}>{handlingResponseIds.includes(response.response_id)?t('dashboard.approvalSaving'):t('dashboard.markApprovalHandled')}</button>
           </li>)}</ul>
-        </section>}
+        </details>}
         <div className="stat-grid">
           <StatCard
             icon="items"

@@ -1,5 +1,26 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-10-28 · Rediseño del email de cliente
+
+- Se adapta el estilo editorial de la referencia a los dos emails que el CRM envía al cliente: enlace de aprobación de presupuesto y aviso de vencimiento de factura.
+- La cabecera muestra el aviso de remitente y el nombre de empresa junto al logo compacto; paleta y logo siguen siendo configurables y compartidos. Los dos diseños usan composiciones distintas según el color de cabecera.
+- El CTA mantiene apariencia de botón con contraste calculado, y el pie clicable de MoiraOrdo aparece una vez. El preview usa el mismo renderizador de los correos enviados.
+- Sin cambios de base de datos ni migraciones. Pendiente validar visualmente en la pestaña Emails y probar entrega controlada antes de producción.
+
+## 2026-10-28 · Respuestas de presupuestos en el dashboard
+
+- El bloque de respuestas recientes puede plegarse con el control nativo de disclosure.
+- Cada miembro puede marcar una respuesta como tratada; se oculta solo para ese usuario y se conserva la respuesta original del cliente.
+- La marca se guarda en `quote_approval_response_handling` con comprobación de empresa, rol y módulo de facturación.
+- Nueva migración: `database/migrations/BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql`, después de `BILLING_QUOTE_APPROVAL_REVISIONS.sql`. Pendiente de aplicar antes de desplegar el panel actualizado.
+
+## 2026-10-28 · Roadmap de migración SEO para items existentes
+
+- Se documenta un proceso por proyecto SPA: inventario, preflight/export, propuesta SEO con revisión humana, SQL controlado, rutas por slug, compatibilidad UUID, HTML inicial indexable, sitemap/caché y verificación gradual.
+- Se añade un prompt transferible para que el chat IA de cada sitio genere propuestas solo a partir de un export público aprobado, sin ejecutar SQL ni consultar otros tenants.
+- Se añade una plantilla SQL transaccional que actualiza exclusivamente slug y metadatos SEO de items publicados, revalida empresa/tipo/estado y rechaza slugs inválidos o colisionados.
+- No se generaron valores SEO reales: falta un export aprobado de los items publicados de cada sitio. No se consultó ni modificó Supabase, no se cambió código de los sitios cliente, no se desplegó y no se hizo commit.
+
 Este documento inicia el registro de decisiones de esta nueva etapa; no pretende reconstruir ni sustituir el inventario histórico del panel.
 
 ## Peticiones
@@ -23,6 +44,10 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 **[P30] 26/10/2026.** La empresa selecciona el idioma predeterminado de sus emails al cliente (español por defecto o inglés); la misma selección rige los enlaces de presupuesto y recordatorios de vencimiento. Se mantienen ambas traducciones editables en el catálogo.
 
 **[P31] 26/10/2026.** Los campos de formulario deben conservar un indicador de foco visible con teclado incluso cuando sus reglas base anulan `outline` en `:focus`.
+
+**[P32] 28/10/2026.** Las pruebas visuales y funcionales con datos de empresa se harán exclusivamente en `WatchEcommerceDemo`; no cambiar de empresa ni inspeccionar o modificar datos de otros tenants durante las pruebas.
+
+**[P33] 28/10/2026.** Rediseñar la pestaña de Contactos y pipeline para reducir vacíos repetidos, dar jerarquía a métricas y filtros y hacer que el estado inicial explique el flujo del CRM. Mantener el kanban operativo cuando haya contactos y conservar móvil/tablet/escritorio.
 
 **[P7] 24/10/2026.** Continuar con el siguiente punto del MVP: fase 3, autoguardado y recuperación de borradores de facturas/presupuestos.
 
@@ -83,6 +108,11 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 | D43 | P21 | El endpoint público de CRM falla cerrado si no puede confirmar que el módulo está configurado y activo para la empresa; la ausencia de su fila también devuelve 503. | Evitar aceptar solicitudes durante configuraciones parciales que omitan el control de módulos. |
 
 ## Changelog
+
+- **28/10/2026 [Documento de inicio CRM]:** se crea `company-site-snippet/MoiraOrdoCRMStartingDocument.md` como mapa de las integraciones para nuevas webs: items/SEO, formularios CRM, analítica, blog, privacidad, variables Vercel, seguridad por tenant, pruebas y funciones que siguen en Admin.
+- **28/10/2026 [Responsive tablet]:** la cabecera del panel responde al ancho útil tras la barra lateral. Métricas CRM y presupuestos cambian de 3 a 2 y luego 1 columna; el texto de seguimiento y los importes pueden partir línea sin salir de sus tarjetas. Sin cambios de datos/SQL.
+- **28/10/2026 [SEO público de items]:** se documenta el contrato para conectar los metadatos de Items a rutas públicas, HTML inicial, canonical, Open Graph y sitemap en `company-site-snippet/ITEMS_SEO_INTEGRATION.md`. Auditoría de los tres sitios conocidos: contenido estático o modelos distintos; no se cambia su fuente sin decidir migración. Sin SQL ni cambios en esos sitios.
+- **28/10/2026 [Corrección de auditoría SEO Navagli]:** revisión puntual confirma que Navagli ya consume `public.items`, con `company_id` fijo y `item_type='proyecto-reforma-navagli'`; no usa una tabla de proyectos separada. La brecha es slug/SEO por registro, rutas por UUID, respuesta HTML inicial y sitemap sin esos items. Se corrigen el contrato y el roadmap. Sin cambios en el sitio ni SQL.
 
 - **26/10/2026 · aprobación de presupuestos:** el usuario ejecutó `BILLING_QUOTE_APPROVAL_PREFLIGHT.sql` actualizado y confirma todos los indicadores `true`. `npm run check:functions` compila 13/13 Edge Functions, incluidas las dos de aprobación y su renderer compartido. Sigue pendiente desplegarlas y hacer una prueba controlada; no se desplegó.
 - **26/10/2026 · configuración de emails:** el idioma ES/EN ahora es un ajuste común de empresa y selecciona la variante enviada por los emails de presupuesto y los recordatorios automáticos. Español queda como valor por defecto y compatibilidad de configuraciones existentes. No requiere SQL porque se guarda como propiedad del JSON de configuración ya existente; el resolver solo admite EN y trata cualquier otro valor como ES. La previsualización aún permite editar/ver ambos idiomas. Pendiente despliegue conjunto de panel y Edge.
@@ -177,3 +207,7 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 - **26/10/2026 · avisos de vencimiento, estado remoto:** el usuario confirmó que ejecutó `migrations/BILLING_DUE_REMINDERS.sql` y `migrations/BILLING_DUE_REMINDERS_CRON.sql` después de configurar los secretos Vault solicitados. No hay confirmación independiente del despliegue de `send-billing-due-reminders` ni de un envío real; ambos quedan pendientes de verificación.
 - **26/10/2026 · avisos de vencimiento, revisión local:** inspeccionada la revalidación de factura/módulo/saldo, la baja, el lease y la clave por generación de Resend. `npm test -- --run tests/database/billingDueReminders.test.js`: **5 pruebas PGlite correctas** (idempotencia de encolado, payload mínimo, baja, saldo/módulo y pausa/reanudación). No existe prueba automatizada de la llamada real a Resend; la aceptación incierta queda sin reintento automático por diseño.
 - **26/10/2026 [P31 · contraste de foco]:** la regresión de foco de Items y los campos comunes queda cubierta; se comprueba también el contraste mínimo 3:1 del anillo contra superficies claras/oscuras. Pruebas de accesibilidad: **5 correctas** en dos archivos; `npm run lint` correcto. Sigue pendiente la auditoría visual autenticada.
+- **28/10/2026 [P32 · alcance de pruebas y fase 4]:** el usuario confirma que las únicas pruebas con datos de empresa deben hacerse en `WatchEcommerceDemo`. Confirma desplegadas `send-quote-approval-link`, `notify-quote-approval-response` y `send-billing-due-reminders`; aceptación/rechazo y correos de presupuesto se probaron de extremo a extremo; el aviso de vencimiento está pendiente de prueba real. Revisión visual autenticada de Contactos, listado/editor de presupuestos y facturación/avisos en 375/768/1024/1280 px. Se corrigió localmente el quiebre de números/clientes de las tablas estrechas y se ampliaron a 44 px los objetivos móviles de menú, búsqueda y perfil. Sin desbordamiento del documento; scroll intencional de tablas/kanban permanece dentro de regiones accesibles. Una prueba de accesibilidad estructural pasa (4/4), lint pasa y build pasa con aviso del chunk principal de 683,38 kB. Pendiente validación del usuario antes del #5; sin SQL, commit ni despliegue.
+- **28/10/2026 [P33 · rediseño de Contactos y pipeline]:** se reemplaza el doble vacío del CRM (una frase repetida en cada etapa y otra tarjeta general) por un estado inicial guiado con etapas visuales; añade resumen de contactos/seguimientos/solicitudes por revisar, filtros en una barra unificada y una salida clara cuando no hay coincidencias. Se refina la jerarquía visual de columnas y fichas y se distingue el título de página del título de navegación. Capturas autenticadas en `WatchEcommerceDemo` a 375/768/1024/1280 px sin scroll horizontal del documento. Prueba estructural (1/1), ESLint y build correctos; el bundle principal queda en 684,23 kB y mantiene su aviso de tamaño. Sin SQL, cambios de datos, commit ni despliegue; el usuario validó el diseño y pidió continuar.
+- **28/10/2026 [P34 · CRM, verificación secuencial de formularios]:** aprobado por el usuario el rediseño CRM del P33. Se revisa el contrato local de formularios y su integración con la creación/vinculación de contactos; 20 pruebas dirigidas correctas (`api/lead`, pipeline CRM y servicio de solicitudes). Las pruebas usan datos sintéticos locales. El usuario confirma que ejecutó `database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase; no se hizo verificación independiente. No se enviaron solicitudes ni emails.
+- **28/10/2026 [P35 · CRM, integración en webs públicas]:** se incorporan `/api/lead` y `src/lib/leads.js` en los dos sitios MoiraOrdo, conectando sus formularios a solicitudes CRM con consentimiento versionado, ruta/referrer/UTM y `source_item` en los formularios abiertos desde servicios. Los emails internos existentes se conservan y se envían después de guardar el lead; un fallo del email no invalida el guardado CRM. Navagli ya tenía alta CRM y validación de tenant/módulo; se corrige su mapeo de UTM a `source_utm_*` y se guarda fecha/origen de consentimiento. Pruebas simuladas: 7/7; bundles cliente y SSR correctos; ESLint focalizado correcto. ESLint global sigue fallando por reglas preexistentes en componentes/páginas no tocados. Sin envíos reales, cambios de BD, despliegues ni commits. Solo falta configurar Vercel y probar con `WatchEcommerceDemo`; el usuario valida antes de continuar al siguiente punto.

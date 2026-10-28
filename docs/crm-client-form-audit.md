@@ -1,6 +1,18 @@
 # Auditoría de formularios públicos para CRM · 26/10/2026
 
-Alcance: lectura de los formularios/endpoints disponibles en los proyectos hermanos. No se leyeron `.env`, credenciales ni datos de clientes. No se modificaron estos proyectos porque están fuera del workspace editable de esta tarea.
+## Estado de seguimiento · 28/10/2026
+
+El usuario confirma que ejecutó `database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase; no se hizo una comprobación remota independiente. Se localizaron los proyectos `C:\development\webs-joselyn\moira_ordo`, `C:\development\webs-joselyn\moiraOrdoNew` y `C:\development\webs-joselyn\Navagli\Navagli`.
+
+Se conectaron localmente los formularios de los dos sitios MoiraOrdo a `api/lead.js` y `src/lib/leads.js`; ambos guardan primero la solicitud en el CRM y conservan su aviso interno por email. Navagli ya tenía el endpoint y la llamada desde el formulario; se corrigió el mapeo UTM para escribir `source_utm_source`, `source_utm_medium`, `source_utm_term` y `source_utm_content`, y se completó `consent_at`/`consent_source`.
+
+Pruebas simuladas de los endpoints: 7/7; builds cliente de los tres sitios y SSR de `moiraOrdoNew` correctos; ESLint focalizado correcto. El lint global falla en código preexistente de `moira_ordo` (`CookieBanner.jsx`, `LanguageContext.jsx`) y `Navagli` (`Header.jsx`, `AboutPage.jsx`, `AsesoramientoProfesionalPage.jsx`). Los artefactos de build se escribieron temporalmente y se eliminaron; no se sobrescribieron `dist` existentes.
+
+No se desplegaron cambios ni se enviaron formularios o emails reales. Variables necesarias en cada proyecto Vercel: `VITE_COMPANY_ID` del tenant; `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` solo en servidor. No se leyeron `.env` ni se tocaron secretos. La prueba E2E pendiente debe hacerse solo con `WatchEcommerceDemo`, usando datos ficticios y sin enviar emails reales.
+
+La tabla siguiente registra la situación observada en la auditoría inicial del 26/10. Se inspeccionaron formularios/endpoints; no se leyeron `.env`, credenciales ni datos de clientes.
+
+## Situación observada en auditoría inicial · 26/10/2026
 
 | Proyecto | Flujo actual | Brechas frente a `company-site-snippet/LEADS_INTEGRATION.md` |
 |---|---|---|
@@ -20,3 +32,9 @@ No se debe marcar CRM/formularios cliente como completado mientras estos flujos 
 ## Actualización del contrato compartido · 26/10/2026
 
 `company-site-snippet/api/lead.ts` ahora falla cerrado también cuando falta la fila `crm` en `company_modules`, y no acepta el formulario en ese estado. La prueba del endpoint confirma el 503 y que no se inserta el lead. Esto corrige el contrato nuevo; no cambia los endpoints que hoy usan los sitios hermanos, incluido `Navagli`, hasta que sustituyan/adopten el snippet. La prueba de API obtiene 9/9 casos correctos; no equivale a una prueba de integración en Vercel.
+
+## Actualización de integración local · 28/10/2026
+
+La afirmación del informe inicial de que los proyectos estaban fuera del workspace editable describía el bloqueo de aquella revisión. Después se localizaron las carpetas y se actualizaron **localmente** `moira_ordo`, `moiraOrdoNew` y `Navagli` con el contrato descrito arriba. No se desplegó a Vercel ni se validaron las variables de producción. Si esos son los repos que alimentan los despliegues, no hay que encargar a otro proyecto que vuelva a implementar el cambio; hay que revisar/sincronizar los cambios locales, configurar variables por tenant y desplegar tras validarlos. Si Producción usa otro clon, ese clon debe recibir los cambios equivalentes de `/api/lead`, helper `submitLead`, consentimiento/versionado, origen (incluido `source_item`), UTM y comprobación del módulo CRM.
+
+La guía general viva para proyectos nuevos está en `company-site-snippet/MoiraOrdoCRMStartingDocument.md`. La única prueba con datos reales autorizada en esta tarea sigue siendo `WatchEcommerceDemo`; los tests locales de los sitios usaron mocks y datos sintéticos.

@@ -215,6 +215,8 @@ const Contacts = () => {
   const filteredContacts = useMemo(() => board.contacts.filter(contact => (!followUpsOnly || contact.next_follow_up_at) && (!needle ||
     [contact.name, contact.email, contact.phone, contact.source_path, contact.source_item, contact.source_utm_campaign]
       .some(value => String(value || '').toLocaleLowerCase().includes(needle)))), [board.contacts, needle, followUpsOnly])
+  const followUpCount = board.contacts.filter(contact => contact.next_follow_up_at).length
+  const showInitialEmptyState = board.contacts.length === 0 && !needle && !followUpsOnly
 
   const saveContact = (saved) => {
     setBoard(current => ({ ...current, contacts: current.contacts.map(contact => contact.id === saved.id ? saved : contact) }))
@@ -293,16 +295,21 @@ const Contacts = () => {
 
   if (!selectedCompany) return <div className="page-content"><p>{t('dashboard.selectCompanyDescription')}</p></div>
 
-  return <div className="page-content page-content-wide">
-    <PageHeader title={t('crm.title')} description={t('crm.description')} actions={canEdit && <button className="ghost-button" type="button" aria-expanded={configOpen} onClick={() => setConfigOpen(open => !open)}><Icon name="list" size={16} />{t('crm.configureStages')}</button>} />
+  return <div className={`page-content page-content-wide ${styles.page}`}>
+    <PageHeader title={t('crm.pageTitle')} description={t('crm.description')} actions={canEdit && <button className="ghost-button" type="button" aria-expanded={configOpen} onClick={() => setConfigOpen(open => !open)}><Icon name="list" size={16} />{t('crm.configureStages')}</button>} />
     {state === 'loading' && <p role="status">{t('common.loading')}</p>}
     {state === 'error' && <div className="error-state" role="alert"><span>{t('crm.loadError')}</span><button type="button" onClick={() => setReloadKey(key => key + 1)}>{t('feedback.retry')}</button></div>}
     {state === 'ready' && <>
-      <div className={styles.toolbar}>
-        <label className={styles.search}><span className="sr-only">{t('crm.search')}</span><Icon name="search" size={16} /><input className="input" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('crm.search')} /></label>
-        <span className={styles.total}>{t('crm.contactsCount').replace('{count}', filteredContacts.length)}</span>
-        <label className={styles.followUpFilter}><input type="checkbox" checked={followUpsOnly} onChange={e => setFollowUpsOnly(e.target.checked)} />{t('crm.followUpsOnly')}</label>
-      </div>
+      <section className={styles.overview} aria-label={t('crm.overview')}>
+        <div className={styles.metric} data-tone="primary"><span className={styles.metricIcon}><Icon name="users" size={19} /></span><span className={styles.metricCopy}><strong>{board.contacts.length}</strong><span>{t('crm.metricContacts')}</span></span></div>
+        <div className={styles.metric} data-tone="warning"><span className={styles.metricIcon}><Icon name="clock" size={19} /></span><span className={styles.metricCopy}><strong>{followUpCount}</strong><span>{t('crm.metricFollowUps')}</span></span></div>
+        <div className={styles.metric} data-tone="success"><span className={styles.metricIcon}><Icon name="mail" size={19} /></span><span className={styles.metricCopy}><strong>{board.reviews.length}</strong><span>{t('crm.metricReviews')}</span></span></div>
+      </section>
+
+      <section className={styles.toolbar} aria-label={t('crm.filters')}>
+        <label className={styles.search}><Icon name="search" size={18} /><span className="sr-only">{t('crm.search')}</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('crm.search')} /></label>
+        <label className={styles.followUpFilter}><input type="checkbox" checked={followUpsOnly} onChange={e => setFollowUpsOnly(e.target.checked)} /><span>{t('crm.followUpsOnly')}</span></label>
+      </section>
 
       {configOpen && canEdit && <section className={styles.stageSettings} aria-labelledby="crm-stage-settings-title">
         <h2 id="crm-stage-settings-title">{t('crm.configureStages')}</h2>
@@ -328,10 +335,22 @@ const Contacts = () => {
         </li>)}</ul>
       </section>}
 
-      {board.stages.length === 0 ? <div className="card"><EmptyState icon="users" title={t('crm.noStages')} description={t('crm.noStagesHint')} /></div> : <div className={styles.board} role="region" aria-label={t('crm.pipeline')} tabIndex={0}>
+      {board.stages.length === 0 ? <div className={styles.emptyShell}><EmptyState icon="list" title={t('crm.noStages')} description={t('crm.noStagesHint')} /></div> : showInitialEmptyState ? <section className={styles.emptyPipeline} aria-labelledby="crm-empty-title">
+        <div className={styles.emptyIntro}>
+          <span className={styles.emptyIcon}><Icon name="users" size={25} /></span>
+          <div><span className={styles.eyebrow}>{t('crm.pipelineReady')}</span><h2 id="crm-empty-title">{t('crm.emptyTitle')}</h2><p>{t('crm.emptyHint')}</p></div>
+        </div>
+        <div className={styles.stagePreview}>
+          <h3>{t('crm.stagePreview')}</h3>
+          <ol>{board.stages.map((stage, index) => <li key={stage.id}><span>{String(index + 1).padStart(2, '0')}</span><strong>{stageLabel(stage,t)}</strong></li>)}</ol>
+        </div>
+      </section> : filteredContacts.length === 0 ? <section className={styles.noMatches} aria-live="polite">
+        <span className={styles.noMatchesIcon}><Icon name="search" size={21} /></span><div><h2>{t('crm.noMatches')}</h2><p>{t('crm.noMatchesHint')}</p></div>
+        <button className="ghost-button" type="button" onClick={() => { setSearch(''); setFollowUpsOnly(false) }}>{t('crm.clearFilters')}</button>
+      </section> : <div className={styles.board} role="region" aria-label={t('crm.pipeline')} tabIndex={0}>
         {board.stages.map(stage => {
           const contacts = filteredContacts.filter(contact => contact.stage_id === stage.id)
-          return <section className={styles.column} key={stage.id} aria-labelledby={`crm-column-${stage.id}`}>
+          return <section className={styles.column} key={stage.id} data-stage-kind={stage.is_won ? 'won' : stage.is_lost ? 'lost' : 'open'} aria-labelledby={`crm-column-${stage.id}`}>
             <header><h2 id={`crm-column-${stage.id}`}>{stageLabel(stage,t)}</h2><span>{contacts.length}</span></header>
             {contacts.length === 0 ? <p className={styles.columnEmpty}>{t('crm.noContactsInStage')}</p> : <ul>{contacts.map(contact => <li key={contact.id} className={styles.card}>
               <button className={styles.cardOpen} type="button" onClick={() => setSelectedContact(contact)}><strong>{contact.name}</strong><span>{contact.email || contact.phone || t('crm.noContactInfo')}</span>{contact.source_path && <small>{contact.source_path}</small>}{contact.source_item && <small>{t('crm.item')}: {contact.source_item}</small>}{contact.source_utm_campaign && <small>{t('crm.campaign')}: {contact.source_utm_campaign}</small>}{contact.next_follow_up_at && <small className={new Date(contact.next_follow_up_at) < new Date() ? styles.followUpOverdue : styles.followUpDue}>{new Date(contact.next_follow_up_at) < new Date() ? t('crm.followUpOverdue') : t('crm.nextFollowUp')}: {formatDateTime(contact.next_follow_up_at)}</small>}</button>
@@ -343,7 +362,6 @@ const Contacts = () => {
           </section>
         })}
       </div>}
-      {board.contacts.length === 0 && board.reviews.length === 0 && <div className="card"><EmptyState icon="users" title={t('crm.empty')} description={t('crm.emptyHint')} /></div>}
     </>}
     {selectedContact && <ContactModal key={selectedContact.id} contact={selectedContact} stages={board.stages} members={board.members} canEdit={canEdit} companyId={companyId} t={t} toast={toast} onClose={() => setSelectedContact(null)} onSaved={saveContact} />}
   </div>

@@ -2,11 +2,17 @@
 
 Plan para las diez capacidades solicitadas. Es una planificación de trabajo local, no indica que las funciones estén desplegadas. Las migraciones nuevas se aplicarán por separado y solo con verificación y autorización de despliegue.
 
-## Punto de reanudación · 26/10/2026
+## Punto de reanudación · 28/10/2026
 
-1. **Cerrar aprobación de presupuestos (#2):** el preflight remoto del usuario devolvió todo `true`; localmente pasan las pruebas de panel/BD (9) y compilan las 13 Edge Functions. Falta desplegar `send-quote-approval-link` y `notify-quote-approval-response` y verificar aceptación/rechazo y emails con destinatarios de prueba.
-2. **Después, cerrar avisos de vencimiento (#3):** el usuario confirmó los SQL `migrations/BILLING_DUE_REMINDERS.sql` y `migrations/BILLING_DUE_REMINDERS_CRON.sql` y la configuración de Vault; pasan 5 pruebas PGlite. Falta confirmar despliegue de `send-billing-due-reminders` y probar cron, correo e idempotencia.
-3. **Continuar accesibilidad/responsive (#4):** realizar capturas autenticadas a 375/768/1024/1280 px y corregir los hallazgos. El navegador local disponible redirige a `/login`; no hay sesión autenticada confirmada.
+1. **Aprobación de presupuestos (#2):** el usuario confirmó desplegadas `send-quote-approval-link` y `notify-quote-approval-response`, y probó aceptación/rechazo y correos de extremo a extremo. Las respuestas recientes del dashboard ahora se pueden plegar y marcar como tratadas por usuario; falta aplicar `BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` antes de desplegar esta mejora del panel.
+2. **Avisos de vencimiento (#3):** el usuario confirmó desplegada `send-billing-due-reminders`; falta la prueba de envío real y el usuario informará el resultado.
+3. **Accesibilidad/responsive (#4), validado por el usuario:** revisión visual autenticada de Contactos/pipeline, listado y editor de presupuestos, y facturación/avisos a 375/768/1024/1280 px. Solo se usó `WatchEcommerceDemo`. Se corrigió el quiebre de números/clientes en tablas estrechas, los controles del encabezado móvil son de 44 px y el CRM recibió un estado inicial guiado, métricas compactas y filtros unificados. No hay scroll horizontal del documento; el kanban y las tablas se desplazan dentro de sus regiones accesibles. El usuario aprobó el rediseño de Contactos y pidió continuar.
+4. **CRM (#5), integración de código local lista para revisar:** el usuario confirmó que ejecutó `CRM_LEAD_ITEM_ATTRIBUTION.sql`. Se conectaron los formularios de los dos sitios MoiraOrdo al CRM, manteniendo su notificación actual, y se corrigió en Navagli el mapeo UTM/consentimiento a columnas CRM. Pruebas simuladas y builds pasan. No se desplegó ni se enviaron formularios reales; la prueba real pendiente debe usar únicamente `WatchEcommerceDemo`.
+5. **Responsive tablet:** se corrigen los desbordamientos de cabecera, Seguimientos y métricas de Presupuestos con reglas basadas en el ancho útil del panel. En el navegador autenticado se verificó Contactos y Presupuestos a 768 px, con la empresa `WatchEcommerceDemo`; falta validación visual del usuario y revisión en los otros anchos.
+6. **Guía de nuevos proyectos:** creada `company-site-snippet/MoiraOrdoCRMStartingDocument.md` con los contratos y límites comprobados. Mantenerla alineada con las guías específicas y migraciones.
+7. **SEO público de items (punto #6 del backlog):** el panel y `CONTENT_SEO_FIELDS.sql` ya contienen los metadatos. Contrato técnico: `company-site-snippet/ITEMS_SEO_INTEGRATION.md`; migración gradual por sitio SPA, prompt para su chat de IA, preflight de solo lectura y SQL de lote: `company-site-snippet/ITEMS_SEO_MIGRATION_ROADMAP.md`, `database/maintenance/ITEMS_SEO_PREFLIGHT.sql` y `database/templates/ITEMS_SEO_VALUES_TEMPLATE.sql`. `moira_ordo` (legacy) y `moiraOrdoNew` no usan items dinámicos; Navagli ya consume `items`, pero aún no usa SEO por slug, HTML inicial ni sitemap de items. No cambiar rutas ni datos sin validación.
+
+**Alcance obligatorio de pruebas con datos de empresa:** probar exclusivamente en la empresa `WatchEcommerceDemo`. No cambiar a otras empresas ni usar sus datos en pruebas visuales o funcionales.
 
 No ejecutar SQL adicional para estos dos circuitos si los objetos ya están aplicados. Si se comprueba que falta un archivo, seguir el orden de `database/README.md` y anotar cuál se ejecutó.
 
@@ -31,13 +37,31 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 
 - [x] Unificar contactos y actividad: formulario/notas/email/llamadas/visitas, facturas y presupuestos aparecen ordenados en un timeline; la revisión manual conserva allí el mensaje original de la solicitud.
 - [x] Mostrar en la ficha y revisión manual toda la atribución disponible: ruta/página, referrer, campaña y UTM source/medium/term/content.
-- [x] Añadir `source_item` opcional para identificar el item público que originó la solicitud; sincronizarlo también al resolver coincidencias manuales y borrarlo al anonimizar. Migración local `CRM_LEAD_ITEM_ATTRIBUTION.sql`; pendiente de aplicar en remoto.
+- [x] Añadir `source_item` opcional para identificar el item público que originó la solicitud; sincronizarlo también al resolver coincidencias manuales y borrarlo al anonimizar. El usuario confirmó que ejecutó `CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase (28/10/2026); no se verificó la base remota independientemente.
 - [x] Mostrar `source_item` también en la bandeja de solicitudes con coincidencia ambigua; la consulta de Supabase ahora incluye el campo y tiene regresión en `services/crmService.test.js`.
 - [x] Vincular solicitudes entrantes por email/teléfono, aislado por empresa; asignar responsable y guardar ruta, referrer, UTM y campaña.
 - [x] Pipeline kanban por empresa con etapas iniciales Nuevo → Contactado → Visita → Oferta → Cerrado/Perdido; renombrar, reordenar, crear y archivar etapas vacías.
 - [x] Deduplicación segura. Email/teléfono con contactos diferentes requiere resolución manual explícita; no se fusionan registros.
 - [x] Migraciones aditivas, RLS y pruebas PGlite negativas entre empresas/roles; el backfill crea/enlaza contactos y mantiene cada lead original.
-- [ ] Probar el flujo desde cada formulario cliente con consentimiento/versionado y UTM; desplegar migración tras revisar backup/estado remoto. La inspección de código detecta integraciones desiguales en los proyectos hermanos; detalles en `docs/crm-client-form-audit.md`.
+- [ ] Configurar variables Vercel y desplegar los tres sitios; después probar un envío ficticio solo con `WatchEcommerceDemo`, verificando que se crea/vincula el contacto y llega la atribución. No enviar emails reales. La migración `CRM_LEAD_ITEM_ATTRIBUTION.sql` está confirmada por el usuario.
+
+### Verificación secuencial · 5. CRM y formularios cliente · 28/10/2026
+
+- **Contrato local:** `company-site-snippet/api/lead.ts` fija el tenant a `VITE_COMPANY_ID`, falla cerrado si falta la configuración del módulo CRM, guarda consentimiento solo junto a su versión, y conserva ruta, referrer, item y UTM. La API no acepta un `crm_contact_id` del navegador; el enlace/creación del contacto lo decide el trigger del servidor.
+- **Pruebas locales:** `api/lead.test.ts`, `crmContactsPipeline.test.js` y `crmService.test.js`: 20 pruebas correctas. Usan datos sintéticos/locales, no filas de una empresa real.
+- **Implementación local:** los dos formularios de MoiraOrdo ahora guardan primero en el CRM y después conservan su aviso existente. Navagli ya tenía integración y control de tenant/módulo; se corrigieron los nombres UTM que enviaba a columnas inexistentes y se añadieron fecha/origen del consentimiento.
+- **Pruebas locales:** 7 pruebas simuladas de los tres endpoints pasan; lint focalizado de las APIs modificadas y los bundles Vite de los tres sitios pasan. No se usaron datos de empresa ni se enviaron emails. El lint global de `moira_ordo` y `Navagli` sigue reportando errores preexistentes en `CookieBanner.jsx`, `LanguageContext.jsx`, `Header.jsx` y dos páginas informativas; no se modificaron esos archivos.
+- **Configuración pendiente:** cada despliegue Vercel debe tener `VITE_COMPANY_ID` de su tenant y los secretos de servidor `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`. No se leyeron `.env` ni se configuraron variables.
+- **Estado remoto:** el usuario confirma que ejecutó `database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase (28/10/2026). No se consultó ni modificó la base remota; el estado se registra como confirmación del usuario, no como verificación independiente.
+- **Límite de esta entrega:** los tres proyectos cliente están fuera del workspace editable actual. No se cambiaron archivos fuera del proyecto, no se mandaron emails y no se hicieron envíos de prueba.
+- **Para cerrar el punto:** configurar variables por proyecto, desplegar los sitios y comprobar el formulario usando solo `WatchEcommerceDemo`; el test de datos deberá usar datos ficticios y no enviar emails reales. El punto queda detenido para validación del usuario.
+
+### Verificación secuencial · 6. Contenido y SEO para items · 28/10/2026
+
+- **Admin/BD:** el editor de items ya expone slug, título SEO, descripción y URL OG; `CONTENT_SEO_FIELDS.sql` define validación y slug único por empresa. El usuario confirma haber ejecutado la migración en Supabase; el estado remoto no se volvió a consultar.
+- **Contrato público añadido:** `company-site-snippet/ITEMS_SEO_INTEGRATION.md` define consultas por tenant y estado, lectura segura de medios, campos/fallbacks, HTML inicial indexable, canonical, sitemap, caché, slugs y comprobaciones negativas. Blog continúa aplazado y separado.
+- **Auditoría de webs conocidas:** `moira_ordo` es legacy y `moiraOrdoNew` el sitio vigente; ambos tienen contenido estático/local y no usan Items. **Navagli sí lee `public.items`**, filtrando por `company_id` y `item_type='proyecto-reforma-navagli'`, además de sus atributos y medios.
+- **Siguiente trabajo de SEO para Navagli:** usar el `slug` y los campos SEO existentes, pasar detalle de UUID a slug con redirección de compatibilidad, añadir respuesta HTML server-side para crawlers y meter los items publicados en el sitemap. Antes, revisar/fijar SEO de sus items y comprobar slugs; no requiere migrar filas a otra tabla. No se han cambiado sus rutas ni se ejecutó SQL remoto.
 
 ## Fase 3 · Privacidad del CRM (MVP coordinado con CRM)
 
@@ -56,11 +80,11 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Añadir actualización automática del panel de presupuesto, aviso de respuestas recientes en el dashboard y envío del resultado a administradores activos con enlace directo al documento.
 - [x] Permitir generar enlace y enviarlo al email guardado del cliente. `ADMIN_APP_URL` configurado por el usuario en secretos de Edge.
 - [x] El usuario ejecutó el preflight actualizado `maintenance/BILLING_QUOTE_APPROVAL_PREFLIGHT.sql` y confirma todos los indicadores en `true`. `npm run check:functions` local compila ambas funciones (13/13 Edge Functions del repositorio).
-- [ ] Desplegar `send-quote-approval-link` y `notify-quote-approval-response`, y probar Vercel/correo de punta a punta con destinatarios de prueba.
+- [x] El usuario confirmó el despliegue de `send-quote-approval-link` y `notify-quote-approval-response`, y probó aceptación/rechazo y correos de punta a punta.
 - [x] Avisos de vencimiento configurables localmente: offsets, hora de Madrid, baja por factura, deduplicación, reintentos/idempotencia, panel de fallos y purga.
 - [x] El usuario autorizó enviar a Resend solo email, número, vencimiento y saldo; la cola no persiste esos datos y el emisor los relee tras comprobar pago, baja y módulo.
 - [x] El usuario confirmó la ejecución de `migrations/BILLING_DUE_REMINDERS.sql` y `migrations/BILLING_DUE_REMINDERS_CRON.sql`, tras configurar ambos secretos Vault.
-- [ ] Confirmar el despliegue de `send-billing-due-reminders` y probar correo/idempotencia de extremo a extremo con un buzón controlado. La compilación local no demuestra el despliegue.
+- [x] El usuario confirmó el despliegue de `send-billing-due-reminders`; queda pendiente la prueba real de envío/cancelación/idempotencia y el usuario comunicará el resultado.
 - [x] Resumen semanal agregado automático por email a administradores activos: lunes 09:00 Madrid, sin pestaña, módulos respetados, cola semanal, idempotencia y purga.
 - [x] El usuario confirma que aplicó `WEEKLY_SUMMARY_EMAIL.sql`, `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` y `WEEKLY_SUMMARY_EMAIL_CRON.sql`, configuró secretos y desplegó `send-weekly-summary`; falta comprobar una entrega real controlada.
 - [x] Documentar destinatarios, datos enviados, retención e idempotencia en `docs/emails.md`.
@@ -72,7 +96,7 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - **Lógica SQL:** la primera versión admitía una respuesta única por presupuesto y dejaba obsoleta la decisión tras una revisión. `BILLING_QUOTE_APPROVAL_REVISIONS.sql` elimina esa unicidad por presupuesto, mantiene una respuesta inmutable por enlace y devuelve la respuesta más reciente. Un presupuesto revisado debe volver a enviarse antes de crear otro enlace.
 - **Emails:** se añadieron `send-quote-approval-link` y `notify-quote-approval-response`; el primero envía el enlace al cliente, el segundo informa a administradores activos con ruta al documento. `ADMIN_APP_URL` confirmado en secretos por el usuario. Los datos y destinos están documentados en `docs/emails.md`.
 - **Supabase:** el usuario confirma que ejecutó el SQL de revisiones y el preflight actualizado; todas las comprobaciones devolvieron `true`, incluidas las columnas de envío/aviso y los permisos de las RPC.
-- **Pendiente:** desplegar las dos Edge Functions y completar una aceptación/rechazo controlada en Vercel y Resend. La interfaz visual y responsive completa sigue pendiente de revisar en navegador en anchos 375/768/1024/1280.
+- **Cierre remoto confirmado por el usuario (28/10/2026):** `send-quote-approval-link` y `notify-quote-approval-response` están desplegadas; acepta/rechaza presupuestos y confirma emails de extremo a extremo. La revisión visual sigue su propia fase transversal.
 
 ## Fase 5 · Módulos por empresa y búsqueda global (MVP)
 
@@ -113,7 +137,7 @@ El estado local de implementación y los pasos de activación están en `docs/em
 
 ## Fase transversal · Accesibilidad, móvil y fiabilidad (continua)
 
-- [ ] Auditoría visual del panel a 375, 768, 1024 y 1280 px; corregir desbordamiento, tablas, navegación y formularios. Revisión estática de filas alineadas al final: corregidos márgenes de `.field` en aprobación, CRM y privacidad; igualadas explícitamente las alturas del input y botones en aprobación, CRM, contactos, plantillas/catálogo billing y cobros. El navegador integrado sí alcanza localhost, pero redirige a `/login` y no hay sesión autenticada disponible; quedan pendientes capturas y comprobación real de las pantallas protegidas.
+- [ ] Revisión visual autenticada lista para validación a 375/768/1024/1280 px en Contactos/pipeline, listado/editor de presupuestos y facturación/avisos. `WatchEcommerceDemo` fue el único tenant usado. Se corrigió el quiebre de números/clientes en tablas estrechas, se ampliaron a 44 px los objetivos del menú, búsqueda y perfil, y se rediseñó el estado vacío y la jerarquía del CRM. No se detectó desbordamiento del documento en las capturas; las regiones de kanban/tablas conservan su scroll horizontal, con nombre accesible y foco de teclado. Detener aquí para que el usuario valide antes del punto #5.
 - [ ] Computer Use en Windows detuvo la captura al no poder determinar con confianza la URL activa; no se obtuvo evidencia visual y no se interactuó con la página.
 - [x] Corregida la regla móvil global que ocultaba encabezados y convertía todas las tablas nativas en tarjetas: ahora solo afecta a la lista div-based de Items. Facturación, profundidad de scroll y alta masiva conservan tablas semánticas; sus regiones con scroll horizontal tienen nombre accesible y foco de teclado. Regresión en `tests/accessibility/mobileSemanticTables.test.js`.
 - [x] Contraste de tokens comunes de texto, estado y límites de controles comprobado con umbrales WCAG AA; los temas claro/oscuro pasan la prueba `tests/accessibility/colorTokens.test.js`. Los botones del panel reciben tooltip derivado de texto visible, etiqueta accesible o `<label>` asociado. La auditoría AST detectó y corrigió los botones solo-icono sin nombre de acciones de usuario y contraseña, con etiquetas ES/EN; los botones decorativos del calendario quedan fuera del árbol accesible.

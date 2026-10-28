@@ -13,6 +13,17 @@ export async function fetchRecentQuoteApprovalResponses(companyId){
   return data||[]
 }
 
+export async function markQuoteApprovalResponseHandled(companyId,responseId,handled=true){
+  if(!companyId||!responseId)throw new Error('Missing company or quote response')
+  const{data:{user},error:authError}=await supabase.auth.getUser()
+  if(authError)throw authError
+  if(!user)throw new Error('Authentication required')
+  const{error}=await supabase.rpc('set_quote_approval_response_handled',{
+    p_user:user.id,p_company:companyId,p_response:responseId,p_handled:handled,
+  })
+  if(error)throw error
+}
+
 /**
  * Todo lo que el Dashboard necesita de una empresa, en una sola llamada.
  * Cada bloque va por separado: si la analítica falla (o la empresa aún no la
