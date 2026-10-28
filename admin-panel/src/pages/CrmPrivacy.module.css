@@ -35,6 +35,8 @@
 .retentionCounts p { display: grid; gap: .2rem; min-width: 0; margin: 0; padding: .7rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
 .retentionCounts strong { font-size: 1.25rem; }
 .retentionCounts span { color: var(--text-secondary); font-size: .8rem; line-height: 1.4; }
+.retentionCounts a { justify-self: start; color: var(--primary-color); font-size: .78rem; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.retentionCounts a:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; border-radius: 2px; }
 .retentionError { margin: 0; color: var(--danger-color); }
 .retentionSaved,.success { color: var(--success-color); }
 .retentionSaved { margin: 0; }

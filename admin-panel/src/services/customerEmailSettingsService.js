@@ -1,10 +1,11 @@
 import {supabase} from '../lib/supabaseClient'
+import {upgradeDefaultCustomerEmailBodies} from '../lib/customerEmailTemplate'
 
 export async function loadCustomerEmailSettings(companyId){
   const{data,error}=await supabase.rpc('get_company_customer_email_settings',{p_company:companyId})
   if(error)throw error
   if(!data||typeof data!=='object')throw new Error('Customer email settings unavailable')
-  return data
+  return upgradeDefaultCustomerEmailBodies(data)
 }
 
 export async function saveCustomerEmailSettings(companyId,settings){

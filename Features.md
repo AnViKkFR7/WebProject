@@ -1,18 +1,40 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-10-28 · Estado visual de edición SEO
+
+- La ficha de item comunica si el SEO está bloqueado o si la edición está habilitada, con estilos distintos, botón con espaciado/alineación y texto accesible; los campos bloqueados usan fondo y borde diferenciados sin reducir la legibilidad.
+- La sección común de SEO refuerza el estilo de solo lectura para que el estado también se entienda cuando no hay permiso de edición.
+- Sin cambios de datos ni SQL.
+
 ## 2026-10-28 · Rediseño del email de cliente
 
 - Se adapta el estilo editorial de la referencia a los dos emails que el CRM envía al cliente: enlace de aprobación de presupuesto y aviso de vencimiento de factura.
 - La cabecera muestra el aviso de remitente y el nombre de empresa junto al logo compacto; paleta y logo siguen siendo configurables y compartidos. Los dos diseños usan composiciones distintas según el color de cabecera.
 - El CTA mantiene apariencia de botón con contraste calculado, y el pie clicable de MoiraOrdo aparece una vez. El preview usa el mismo renderizador de los correos enviados.
-- Sin cambios de base de datos ni migraciones. Pendiente validar visualmente en la pestaña Emails y probar entrega controlada antes de producción.
+- Sin cambios de base de datos ni migraciones. El usuario valida visualmente los emails y confirma desplegadas las Edge Functions `send-quote-approval-link` y `send-billing-due-reminders`. La prueba real de envío/idempotencia de recordatorios continúa pendiente.
+
+## 2026-10-28 · Accesibilidad de enlaces en emails
+
+- El renderer del CTA de aprobación conserva la semántica de enlace; los enlaces editados adicionales mantienen estilo normal en vez de convertirse todos en botones.
+- No se cambió el contenido transmitido ni el esquema. El usuario valida el aspecto final y confirma el despliegue de ambas Edge Functions de envío a clientes.
+
+## 2026-10-28 · Diferenciar presupuesto y vencimiento
+
+- La propuesta conserva una ficha ligera con número y vigencia y el botón de revisión como acción principal.
+- El aviso de factura adopta la composición editorial del ejemplo: titular serif, introducción y tarjeta de saldo con factura/vencimiento; no comparte la tarjeta de propuesta ni el CTA de aprobación.
+- Los valores por defecto guardados previamente se actualizan al cargarse solo si coinciden exactamente con la plantilla de fábrica anterior. El contenido personalizado se conserva. El renderizador de Edge hace la misma compatibilidad sin migración SQL.
 
 ## 2026-10-28 · Respuestas de presupuestos en el dashboard
 
 - El bloque de respuestas recientes puede plegarse con el control nativo de disclosure.
 - Cada miembro puede marcar una respuesta como tratada; se oculta solo para ese usuario y se conserva la respuesta original del cliente.
 - La marca se guarda en `quote_approval_response_handling` con comprobación de empresa, rol y módulo de facturación.
-- Nueva migración: `database/migrations/BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql`, después de `BILLING_QUOTE_APPROVAL_REVISIONS.sql`. Pendiente de aplicar antes de desplegar el panel actualizado.
+- Migración `database/migrations/BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` aplicada por el usuario después de `BILLING_QUOTE_APPROVAL_REVISIONS.sql`; el usuario valida el comportamiento del dashboard. No se altera la respuesta inmutable del cliente.
+
+## 2026-10-28 · Validación de respuestas recientes
+
+- El usuario confirma que ejecutó `BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` y validó el plegado y el marcado como tratado del dashboard.
+- Próximo pendiente operativo: probar el envío real, baja e idempotencia de los avisos de vencimiento con una factura controlada de `WatchEcommerceDemo`.
 
 ## 2026-10-28 · Roadmap de migración SEO para items existentes
 
@@ -211,3 +233,10 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 - **28/10/2026 [P33 · rediseño de Contactos y pipeline]:** se reemplaza el doble vacío del CRM (una frase repetida en cada etapa y otra tarjeta general) por un estado inicial guiado con etapas visuales; añade resumen de contactos/seguimientos/solicitudes por revisar, filtros en una barra unificada y una salida clara cuando no hay coincidencias. Se refina la jerarquía visual de columnas y fichas y se distingue el título de página del título de navegación. Capturas autenticadas en `WatchEcommerceDemo` a 375/768/1024/1280 px sin scroll horizontal del documento. Prueba estructural (1/1), ESLint y build correctos; el bundle principal queda en 684,23 kB y mantiene su aviso de tamaño. Sin SQL, cambios de datos, commit ni despliegue; el usuario validó el diseño y pidió continuar.
 - **28/10/2026 [P34 · CRM, verificación secuencial de formularios]:** aprobado por el usuario el rediseño CRM del P33. Se revisa el contrato local de formularios y su integración con la creación/vinculación de contactos; 20 pruebas dirigidas correctas (`api/lead`, pipeline CRM y servicio de solicitudes). Las pruebas usan datos sintéticos locales. El usuario confirma que ejecutó `database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase; no se hizo verificación independiente. No se enviaron solicitudes ni emails.
 - **28/10/2026 [P35 · CRM, integración en webs públicas]:** se incorporan `/api/lead` y `src/lib/leads.js` en los dos sitios MoiraOrdo, conectando sus formularios a solicitudes CRM con consentimiento versionado, ruta/referrer/UTM y `source_item` en los formularios abiertos desde servicios. Los emails internos existentes se conservan y se envían después de guardar el lead; un fallo del email no invalida el guardado CRM. Navagli ya tenía alta CRM y validación de tenant/módulo; se corrige su mapeo de UTM a `source_utm_*` y se guarda fecha/origen de consentimiento. Pruebas simuladas: 7/7; bundles cliente y SSR correctos; ESLint focalizado correcto. ESLint global sigue fallando por reglas preexistentes en componentes/páginas no tocados. Sin envíos reales, cambios de BD, despliegues ni commits. Solo falta configurar Vercel y probar con `WatchEcommerceDemo`; el usuario valida antes de continuar al siguiente punto.
+- **28/10/2026 [Solicitudes · ficha del lead]:** se reorganiza el modal en bloques de contacto, mensaje y seguimiento, con jerarquía visual, adaptación móvil y estilos propios. Las URLs HTTP/HTTPS del mensaje y una página de origen absoluta se convierten en enlaces accesibles que abren en otra pestaña con `noopener noreferrer`; rutas relativas se mantienen como texto informativo. Sin cambios de BD, pruebas con datos ni despliegues.
+- **28/10/2026 [Emails de cliente · separación de diseños]:** el diseño «Color de marca» adquiere una composición distinta a «Editorial»: cabecera con acento corporativo, panel de titular tintado con borde de marca, tipografía sans-serif con más peso y CTA geométrico; «Editorial» conserva titular serif y composición limpia. Se mantiene la paleta y el logo configurables. Sin cambios de BD ni envío de correos.
+- **28/10/2026 [Items · SEO]:** los campos SEO y su vista previa en el detalle del item se pueden contraer y expandir desde la cabecera, con control accesible y etiquetas ES/EN. La sección aparece expandida por defecto. Sin cambios de BD.
+- **28/10/2026 [Roadmap · SEO determinista]:** se añade como tarea futura un botón para proponer slug, título y descripción SEO a partir de los datos ya existentes del item, sin API de IA ni llamadas externas, con límites de longitud, preservación de campos ya editados y aceptación antes de guardar. CRM/forms se registran como desplegados y probados por confirmación del usuario; el siguiente punto es el SEO público, cuya implementación requiere cambiar el sitio web consumidor de `items`, fuera de este repositorio.
+- **28/10/2026 [Privacidad CRM · retención]:** comienza la revisión de retención. El código actual solo calcula conteos y no programa borrados; solicitudes pendientes son las ambiguas (`review_required`) y contactos inactivos consideran actividad CRM, vínculos de documentos y seguimientos futuros. Se crea `docs/CRM_RETENTION_POLICY_DECISION.md` con alcance técnico y una matriz para que la empresa responsable y su asesoría definan periodos, eventos, acciones y excepciones. Sin cambios SQL ni automatización destructiva.
+- **28/10/2026 [Privacidad CRM · decisión de retención]:** el usuario elige exclusivamente revisión manual. El panel mantiene umbrales orientativos por empresa y anonimización individual con confirmación; no habrá purgas automáticas ni cron. La interfaz ES/EN lo declara explícitamente y los conteos llevan a la bandeja de solicitudes ambiguas o al buscador de contactos. No requiere SQL; los periodos legales de conservación siguen fuera de estos umbrales técnicos.
+- **28/10/2026 [Items · propuesta SEO sin IA]:** el editor propone slug/título/descripción localmente a partir del título/resumen. Presenta vista de cambios y solo aplica tras aceptación; preserva valores SEO ya rellenados y respeta límites de texto. No genera imagen OG ni usa red ni servicios externos. Sin migración SQL.

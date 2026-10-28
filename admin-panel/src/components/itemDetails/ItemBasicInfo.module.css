@@ -1,0 +1,95 @@
+.seoCard {
+  display: grid;
+  gap: 1rem;
+}
+
+.seoToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: .9rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+}
+
+.seoToolbarLocked {
+  border-color: color-mix(in srgb, var(--text-secondary) 32%, var(--border-color));
+  background: color-mix(in srgb, var(--bg-secondary) 72%, var(--bg-card));
+}
+
+.seoToolbarEditing {
+  border-color: color-mix(in srgb, var(--primary-color) 42%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 6%, var(--bg-card));
+}
+
+.seoState {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.seoStateIcon {
+  display: grid;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.seoToolbarEditing .seoStateIcon {
+  border-color: color-mix(in srgb, var(--primary-color) 30%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 11%, var(--bg-card));
+  color: var(--primary-color);
+}
+
+.seoStateCopy { display: grid; min-width: 0; gap: .15rem; }
+.seoStateCopy strong { color: var(--text-primary); font-size: .92rem; }
+.seoStateCopy small { color: var(--text-secondary); font-size: .8rem; line-height: 1.4; }
+
+.seoToggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 44px;
+  padding: .65rem 1rem;
+  border: 1px solid var(--primary-button-bg);
+  border-radius: var(--radius-md);
+  background: var(--primary-button-bg);
+  color: #fff;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.seoToggle:hover { border-color: var(--primary-hover); background: var(--primary-hover); }
+.seoToggle:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+.seoToggle:active { box-shadow: inset 0 1px 2px rgb(0 0 0 / 18%); }
+
+.seoToggleLock {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.seoToggleLock:hover { border-color: var(--primary-color); background: var(--bg-hover); color: var(--primary-color); }
+
+@media (max-width: 600px) {
+  .seoToolbar { align-items: stretch; flex-direction: column; }
+  .seoToggle { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seoToggle { transition: none; }
+}

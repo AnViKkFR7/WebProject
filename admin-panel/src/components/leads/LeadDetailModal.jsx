@@ -4,6 +4,27 @@ import { formatDateTime } from '../../lib/dates'
 import { LEAD_STATUSES } from '../../lib/leads'
 import Modal from '../ui/Modal'
 import Icon from '../ui/Icon'
+import styles from './LeadDetailModal.module.css'
+
+const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi
+
+const renderLinkedText = (value) => {
+  if (!value) return null
+  const parts = []
+  let cursor = 0
+  for (const match of value.matchAll(URL_PATTERN)) {
+    const raw = match[0]
+    const trailing = raw.match(/[),.!?;:]+$/)?.[0] || ''
+    const href = trailing ? raw.slice(0, -trailing.length) : raw
+    const start = match.index
+    if (start > cursor) parts.push(value.slice(cursor, start))
+    parts.push(<a key={`${start}-${href}`} href={href} target="_blank" rel="noopener noreferrer">{href}</a>)
+    if (trailing) parts.push(trailing)
+    cursor = start + raw.length
+  }
+  if (cursor < value.length) parts.push(value.slice(cursor))
+  return parts
+}
 
 /** Ficha de una solicitud: datos de contacto, mensaje, estado y notas internas. */
 const LeadDetailModal = ({ lead, canEdit, saving, onSave, onDelete, onClose }) => {
@@ -37,44 +58,50 @@ const LeadDetailModal = ({ lead, canEdit, saving, onSave, onDelete, onClose }) =
         </>
       )}
     >
-      <dl className="planning-form">
+      <div className={styles.content}>
+      <section className={styles.contactCard} aria-label={t('leads.contactDetails')}>
+        <div className={styles.sectionHeading}><Icon name="users" size={16} /><h4>{t('leads.contactDetails')}</h4></div>
+        <dl className={styles.details}>
         {lead.email && (
-          <div className="detail-row">
+          <div className={styles.detailRow}>
             <dt>{t('leads.email')}</dt>
             <dd><a href={`mailto:${lead.email}`}>{lead.email}</a></dd>
           </div>
         )}
         {lead.phone && (
-          <div className="detail-row">
+          <div className={styles.detailRow}>
             <dt>{t('leads.phone')}</dt>
             <dd><a href={`tel:${lead.phone}`}>{lead.phone}</a></dd>
           </div>
         )}
         {lead.source_path && (
-          <div className="detail-row">
+          <div className={styles.detailRow}>
             <dt>{t('leads.sourcePage')}</dt>
-            <dd><code className="attr-row-key">{lead.source_path}</code></dd>
+            <dd>{/^https?:\/\//i.test(lead.source_path)
+              ? <a href={lead.source_path} target="_blank" rel="noopener noreferrer" className={styles.url}>{lead.source_path}<Icon name="external" size={13} /></a>
+              : <code className={styles.path}>{lead.source_path}</code>}</dd>
           </div>
         )}
         {lead.source_campaign && (
-          <div className="detail-row">
+          <div className={styles.detailRow}>
             <dt>{t('leads.campaign')}</dt>
-            <dd>{lead.source_campaign}</dd>
+            <dd><span className={styles.campaign}>{lead.source_campaign}</span></dd>
           </div>
         )}
-      </dl>
+        </dl>
+      </section>
 
       {lead.message && (
-        <div className="field" style={{ marginTop: '1rem' }}>
-          <span className="field-label">{t('leads.message')}</span>
-          <p className="lead-message">{lead.message}</p>
-        </div>
+        <section className={styles.messageCard}>
+          <div className={styles.sectionHeading}><Icon name="mail" size={16} /><h4>{t('leads.message')}</h4></div>
+          <p className={styles.message}>{renderLinkedText(lead.message)}</p>
+        </section>
       )}
 
       <form
         id={formId}
         onSubmit={(e) => { e.preventDefault(); onSave(lead.id, { status, notes: notes.trim() || null }) }}
-        style={{ marginTop: '1rem' }}
+        className={styles.form}
       >
         <div className="field">
           <label htmlFor="lead-status" className="field-label">{t('leads.status')}</label>
@@ -105,6 +132,7 @@ const LeadDetailModal = ({ lead, canEdit, saving, onSave, onDelete, onClose }) =
           <p className="field-help">{t('leads.notesHelp')}</p>
         </div>
       </form>
+      </div>
     </Modal>
   )
 }

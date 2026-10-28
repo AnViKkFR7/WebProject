@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import Icon from '../ui/Icon'
 import SeoFields from '../seo/SeoFields'
+import styles from './ItemBasicInfo.module.css'
 
 const ItemBasicInfo = ({ 
   itemData, 
@@ -11,6 +13,7 @@ const ItemBasicInfo = ({
   onToggleEditable
 }) => {
   const { t } = useLanguage()
+  const [seoCollapsed, setSeoCollapsed] = useState(false)
 
   const STATUS_OPTIONS = [
     { value: 'draft', label: t('items.draft') },
@@ -221,11 +224,27 @@ const ItemBasicInfo = ({
         </div>
       </div>
     </div>
-    <div className="section-card">
+    <div className={`section-card ${styles.seoCard}`}>
       {canEdit && (
-        <button type="button" className="ghost-button small" onClick={() => onToggleEditable('seo')} aria-expanded={Boolean(editableFields?.seo)}>
-          <Icon name="edit" size={16} />{t(editableFields?.seo ? 'seo.lockFields' : 'seo.editFields')}
-        </button>
+        <div className={`${styles.seoToolbar} ${editableFields?.seo ? styles.seoToolbarEditing : styles.seoToolbarLocked}`}>
+          <div className={styles.seoState}>
+            <span className={styles.seoStateIcon}><Icon name={editableFields?.seo ? 'edit' : 'lock'} size={18}/></span>
+            <span className={styles.seoStateCopy} aria-live="polite">
+              <strong>{t(editableFields?.seo ? 'seo.editingStatus' : 'seo.lockedStatus')}</strong>
+              <small>{t(editableFields?.seo ? 'seo.editingDescription' : 'seo.lockedDescription')}</small>
+            </span>
+          </div>
+          <button
+            type="button"
+            className={`${styles.seoToggle} ${editableFields?.seo ? styles.seoToggleLock : ''}`}
+            onClick={() => onToggleEditable('seo')}
+            aria-expanded={Boolean(editableFields?.seo)}
+            title={t(editableFields?.seo ? 'seo.lockFields' : 'seo.editFields')}
+          >
+            <Icon name={editableFields?.seo ? 'lock' : 'edit'} size={16}/>
+            {t(editableFields?.seo ? 'seo.lockFields' : 'seo.editFields')}
+          </button>
+        </div>
       )}
       <SeoFields
         values={itemData}
@@ -234,6 +253,8 @@ const ItemBasicInfo = ({
         summary={itemData.summary}
         section="items"
         disabled={!canEdit || !editableFields?.seo}
+        collapsed={seoCollapsed}
+        onToggleCollapse={() => setSeoCollapsed(value => !value)}
       />
     </div>
     </>

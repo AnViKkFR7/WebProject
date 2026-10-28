@@ -1,0 +1,69 @@
+.content {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.contactCard,
+.messageCard {
+  min-width: 0;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.contactCard { background: color-mix(in srgb, var(--bg-secondary) 42%, var(--bg-card)); }
+.messageCard { background: color-mix(in srgb, var(--primary-color) 4%, var(--bg-card)); }
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .8rem;
+  color: var(--primary-color);
+}
+
+.sectionHeading h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+  margin: 0;
+}
+
+.detailRow { min-width: 0; }
+.detailRow dt { margin-bottom: .2rem; color: var(--text-secondary); font-size: .75rem; }
+.detailRow dd { min-width: 0; margin: 0; color: var(--text-primary); font-size: .9rem; overflow-wrap: anywhere; }
+.detailRow a, .message a { color: var(--primary-color); text-decoration: underline; text-underline-offset: 2px; }
+.detailRow a:focus-visible, .message a:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 2px; }
+.url { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; overflow-wrap: anywhere; }
+.path { display: inline-block; max-width: 100%; padding: .15rem .4rem; border-radius: var(--radius-sm); background: var(--bg-hover); color: var(--text-secondary); font-size: .8rem; overflow-wrap: anywhere; }
+.campaign { display: inline-flex; max-width: 100%; padding: .25rem .55rem; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card)); color: var(--text-primary); overflow-wrap: anywhere; }
+
+.message {
+  margin: 0;
+  padding: .95rem 1rem;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.form { display: grid; gap: 1rem; padding-top: .15rem; }
+.form :global(.field) { margin: 0; }
+.form textarea { resize: vertical; min-height: 6rem; }
+
+@media (max-width: 520px) {
+  .contactCard, .messageCard { padding: .875rem; }
+  .details { grid-template-columns: minmax(0, 1fr); }
+}

@@ -10,17 +10,43 @@ export const defaultCustomerEmailSettings = () => ({
   brand:{layout:'classic',logo:'',emailLanguage:'es',palette:{id:'graphite',accent:'#334155',ink:'#20252b',muted:'#58616d',paper:'#ffffff',surface:'#f1f3f5'}},
   templates:{
     quote_approval:{
-      es:{subject:'Presupuesto {{quote_number}} · {{company_name}}',preheader:'Revisa y responde al presupuesto que te ha enviado {{company_name}}.',html:'<p>Hola {{customer_name}},</p><p>Ya puedes revisar el presupuesto <strong>{{quote_number}}</strong>.</p><p>Acepta o rechaza la propuesta desde el siguiente enlace:</p><p><a href="{{approval_url}}">Revisar presupuesto</a></p><p>El enlace caduca el {{expires_at}}.</p>'},
-      en:{subject:'Quote {{quote_number}} from {{company_name}}',preheader:'Review and respond to the quote from {{company_name}}.',html:'<p>Hello {{customer_name}},</p><p>Your quote <strong>{{quote_number}}</strong> is ready to review.</p><p>Accept or reject the offer using the following link:</p><p><a href="{{approval_url}}">Review quote</a></p><p>This link expires on {{expires_at}}.</p>'},
+      es:{subject:'Presupuesto {{quote_number}} · {{company_name}}',preheader:'Revisa y responde al presupuesto que te ha enviado {{company_name}}.',html:'<p>Hola {{customer_name}},</p><p>Hemos preparado una propuesta para ti. Revisa los detalles y responde desde el botón cuando quieras.</p><p><a href="{{approval_url}}">Revisar presupuesto</a></p>'},
+      en:{subject:'Quote {{quote_number}} from {{company_name}}',preheader:'Review and respond to the quote from {{company_name}}.',html:'<p>Hello {{customer_name}},</p><p>We have prepared a proposal for you. Review the details and send your response using the button.</p><p><a href="{{approval_url}}">Review quote</a></p>'},
     },
     invoice_due:{
-      es:{subject:'Aviso de vencimiento · Factura {{invoice_number}}',preheader:'Hay un saldo pendiente de {{balance}} en la factura {{invoice_number}}.',html:'<p>Te recordamos que la factura <strong>{{invoice_number}}</strong> venció el <strong>{{due_date}}</strong>.</p><p>Saldo pendiente: <strong>{{balance}}</strong>.</p><p>Si ya has realizado el pago, puedes ignorar este mensaje.</p>'},
-      en:{subject:'Payment reminder · Invoice {{invoice_number}}',preheader:'Invoice {{invoice_number}} has an outstanding balance of {{balance}}.',html:'<p>This is a reminder that invoice <strong>{{invoice_number}}</strong> was due on <strong>{{due_date}}</strong>.</p><p>Outstanding balance: <strong>{{balance}}</strong>.</p><p>If you have already paid, please ignore this message.</p>'},
+      es:{subject:'Aviso de vencimiento · Factura {{invoice_number}}',preheader:'Saldo pendiente {{balance}} · Factura {{invoice_number}}.',html:'<p>Te enviamos este aviso porque la factura sigue pendiente de pago.</p><p>Si ya has realizado el pago, puedes ignorar este mensaje. Si tienes alguna duda, ponte en contacto con la empresa.</p>'},
+      en:{subject:'Payment reminder · Invoice {{invoice_number}}',preheader:'Outstanding balance {{balance}} · Invoice {{invoice_number}}.',html:'<p>We are sending this reminder because the invoice is still awaiting payment.</p><p>If you have already paid, please ignore this message. If you have any questions, contact the company.</p>'},
     },
   },
 })
 
 export const resolveCustomerEmailLanguage=brand=>brand?.emailLanguage==='en'?'en':'es'
+
+const legacyDefaultHtml={
+  quote_approval:{
+    es:'<p>Hola {{customer_name}},</p><p>Ya puedes revisar el presupuesto <strong>{{quote_number}}</strong>.</p><p>Acepta o rechaza la propuesta desde el siguiente enlace:</p><p><a href="{{approval_url}}">Revisar presupuesto</a></p><p>El enlace caduca el {{expires_at}}.</p>',
+    en:'<p>Hello {{customer_name}},</p><p>Your quote <strong>{{quote_number}}</strong> is ready to review.</p><p>Accept or reject the offer using the following link:</p><p><a href="{{approval_url}}">Review quote</a></p><p>This link expires on {{expires_at}}.</p>',
+  },
+  invoice_due:{
+    es:'<p>Te recordamos que la factura <strong>{{invoice_number}}</strong> venció el <strong>{{due_date}}</strong>.</p><p>Saldo pendiente: <strong>{{balance}}</strong>.</p><p>Si ya has realizado el pago, puedes ignorar este mensaje.</p>',
+    en:'<p>This is a reminder that invoice <strong>{{invoice_number}}</strong> was due on <strong>{{due_date}}</strong>.</p><p>Outstanding balance: <strong>{{balance}}</strong>.</p><p>If you have already paid, please ignore this message.</p>',
+  },
+}
+
+/** Upgrade exact built-in bodies without changing any user-edited email copy. */
+export function upgradeDefaultCustomerEmailBodies(settings){
+  if(!settings||typeof settings!=='object')return settings
+  let templates=settings.templates
+  for(const kind of emailTemplateKinds)for(const locale of emailTemplateLanguages){
+    const current=templates?.[kind]?.[locale]
+    const replacement=fallbackSettings.templates[kind][locale].html
+    if(current?.html===legacyDefaultHtml[kind][locale]){
+      if(templates===settings.templates)templates={...templates}
+      templates[kind]={...templates[kind], [locale]:{...current,html:replacement}}
+    }
+  }
+  return templates===settings.templates?settings:{...settings,templates}
+}
 
 const safeTags=new Set(['p','div','h1','h2','h3','strong','b','em','i','u','ul','ol','li','br','hr','blockquote','table','thead','tbody','tr','td','th','span','a'])
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))
@@ -98,13 +124,15 @@ export function renderCustomerBillingEmail({kind,language='es',companyName,data=
   const company=String(companyName||data.company_name||'La empresa').slice(0,200)
   const variables=customerEmailVariables[kind]
   const values={...data,company_name:company}
+  const configuredHtml=String(chosen.html||fallback.html)
+  const bodySource=configuredHtml===legacyDefaultHtml[kind][locale]?fallback.html:configuredHtml
   validatePlaceholders(String(chosen.subject||''),variables)
   validatePlaceholders(String(chosen.preheader||''),variables)
-  validatePlaceholders(String(chosen.html||fallback.html),variables)
+  validatePlaceholders(bodySource,variables)
   const subject=normalizeSubject(fillTemplate(subjectValues(chosen),values,variables,false))
   const preheaderText=fillTemplate(String(chosen.preheader||'').slice(0,240),values,variables,false)
   const preheader=escapeText(preheaderText)
-  const body=fillTemplate(sanitizeCustomerEmailHtml(chosen.html||fallback.html),values,variables)
+  const body=fillTemplate(sanitizeCustomerEmailHtml(bodySource),values,variables)
   const logo=safeLogo(brand.logo)
   const headerColor=brand.layout==='bold'?palette.accent:palette.ink
   const senderTextColor=contrast(headerColor,'#ffffff')>=contrast(headerColor,'#000000')?'#ffffff':'#000000'
@@ -114,24 +142,42 @@ export function renderCustomerBillingEmail({kind,language='es',companyName,data=
   const senderNotice=locale==='en'?'This message is from':'Este mensaje te lo envía'
   const powered=locale==='en'?'Digital service powered by':'Recurso digital powered by'
   const poweredHtml=`${powered} <a href="https://www.moiraordo.es" style="color:${palette.muted};text-decoration:underline">MoiraOrdo</a>`
-  const styledBody=body.replace(/<a href="([^"]+)">([\s\S]*?)<\/a>/gi,(_,href,label)=>`<a href="${href}" class="action-link" role="button" style="display:inline-block;padding:14px 24px;border:1px solid ${palette.accent};border-radius:30px;background:${palette.accent};color:${buttonTextColor};font:700 14px/1.4 Arial,Helvetica,sans-serif;text-align:center;text-decoration:none">${label}</a>`)
+  const buttonRadius=brand.layout==='bold'?'7px':'30px'
+  const styledBody=body.replace(/<a href="([^"]+)">([\s\S]*?)<\/a>/gi,(_,href,label)=>{
+    if(kind==='quote_approval'&&href===escapeHtml(data.approval_url||''))return `<a href="${href}" class="action-link" style="display:inline-block;padding:14px 24px;border:1px solid ${palette.accent};border-radius:${buttonRadius};background:${palette.accent};color:${buttonTextColor};font:700 14px/1.4 Arial,Helvetica,sans-serif;text-align:center;text-decoration:none">${label}</a>`
+    return `<a href="${href}" style="color:${palette.accent};text-decoration:underline;overflow-wrap:anywhere">${label}</a>`
+  })
   const logoCell=logoMarkup?`<td width="88" valign="middle" style="width:88px;padding:0 18px 0 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#ffffff;border-radius:9px"><tr><td style="padding:8px">${logoMarkup}</td></tr></table></td>`:''
   const senderCopy=`<div style="font:700 10px/16px Arial,Helvetica,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:${senderTextColor}">${senderNotice}</div><div style="margin-top:3px;font:700 20px/26px Arial,Helvetica,sans-serif;color:${senderTextColor};overflow-wrap:anywhere;word-break:break-word">${escapeHtml(company)}</div>`
-  const headline=kind==='quote_approval'
-    ?(locale==='en'?'Your proposal is ready':'Tu propuesta está lista')
-    :(locale==='en'?'An invoice needs your attention':'Tienes un saldo pendiente')
-  const eyebrow=kind==='quote_approval'
-    ?(locale==='en'?'QUOTE · CUSTOMER APPROVAL':'PRESUPUESTO · RESPUESTA DEL CLIENTE')
-    :(locale==='en'?'INVOICE · PAYMENT REMINDER':'FACTURA · AVISO DE VENCIMIENTO')
+  const headline=locale==='en'?'Your proposal is ready':'Tu propuesta está lista'
+  const eyebrow=locale==='en'?'QUOTE · CUSTOMER APPROVAL':'PRESUPUESTO · RESPUESTA DEL CLIENTE'
+  const summaryHtml=kind==='quote_approval'
+    ?`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;border:1px solid ${palette.surface};border-left:4px solid ${palette.accent};background:${palette.surface}"><tr><td style="padding:15px 18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr><td valign="top" style="width:50%;padding-right:10px"><p style="margin:0 0 5px;font:700 10px/15px Arial,Helvetica,sans-serif;letter-spacing:1.3px;text-transform:uppercase;color:${palette.muted}">${locale==='en'?'QUOTE':'PRESUPUESTO'}</p><p style="margin:0;font:700 17px/24px Arial,Helvetica,sans-serif;color:${palette.ink};overflow-wrap:anywhere">${escapeText(data.quote_number)}</p></td><td valign="top" style="width:50%;padding-left:10px"><p style="margin:0 0 5px;font:700 10px/15px Arial,Helvetica,sans-serif;letter-spacing:1.3px;text-transform:uppercase;color:${palette.muted}">${locale==='en'?'VALID UNTIL':'VÁLIDO HASTA'}</p><p style="margin:0;font:15px/24px Arial,Helvetica,sans-serif;color:${palette.ink};overflow-wrap:anywhere">${escapeText(data.expires_at)}</p></td></tr></table></td></tr></table>`
+    :`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;border:1px solid ${palette.surface};border-left:4px solid ${palette.accent};background:${palette.surface}"><tr><td style="padding:17px 20px"><p style="margin:0 0 7px;font:700 10px/15px Arial,Helvetica,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:${palette.accent}">${locale==='en'?'PAYMENT SUMMARY':'RESUMEN DEL PAGO'}</p><p style="margin:0 0 4px;font:700 10px/15px Arial,Helvetica,sans-serif;letter-spacing:1.3px;text-transform:uppercase;color:${palette.muted}">${locale==='en'?'OUTSTANDING BALANCE':'SALDO PENDIENTE'}</p><p style="margin:0;font:400 30px/38px Georgia,'Times New Roman',serif;color:${palette.ink};overflow-wrap:anywhere">${escapeText(data.balance)}</p><p style="margin:12px 0 0;padding-top:10px;border-top:1px solid ${palette.surface};font:13px/21px Arial,Helvetica,sans-serif;color:${palette.ink};overflow-wrap:anywhere">${locale==='en'?'Invoice':'Factura'} <strong>${escapeText(data.invoice_number)}</strong><br>${locale==='en'?'Due date':'Fecha de vencimiento'}: <strong>${escapeText(data.due_date)}</strong></p></td></tr></table>`
+  const summaryText=kind==='quote_approval'
+    ?`${locale==='en'?'Quote':'Presupuesto'} ${String(data.quote_number||'')} · ${locale==='en'?'Valid until':'Válido hasta'} ${String(data.expires_at||'')}`
+    :`${locale==='en'?'Outstanding balance':'Saldo pendiente'} ${String(data.balance||'')} · ${locale==='en'?'Invoice':'Factura'} ${String(data.invoice_number||'')} · ${locale==='en'?'Due':'Vencimiento'} ${String(data.due_date||'')}`
+  const invoiceEyebrow=locale==='en'?'INVOICE · PAYMENT REMINDER':'FACTURA · AVISO DE VENCIMIENTO'
+  const invoiceHeadline=locale==='en'?'A balance to review':'Hay un saldo pendiente'
+  const invoiceIntro=locale==='en'?'This invoice is still awaiting payment. Here is a summary for you to review.':'Esta factura sigue pendiente de pago. Te dejamos el resumen para que puedas revisarla.'
+  const heroEyebrow=kind==='quote_approval'?eyebrow:invoiceEyebrow
+  const heroHeadline=kind==='quote_approval'?headline:invoiceHeadline
+  const heroIntro=kind==='invoice_due'?`<p style="margin:14px 0 0;font:14px/23px Arial,Helvetica,sans-serif;color:${palette.muted}">${invoiceIntro}</p>`:''
+  const contentSection=brand.layout==='bold'
+    ?`<tr><td class="side-pad" bgcolor="${palette.paper}" style="padding:26px 34px 30px;background-color:${palette.paper}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0;background:${palette.surface};border-left:7px solid ${palette.accent};border-radius:0 12px 12px 0"><tr><td style="padding:24px 22px"><p style="display:inline-block;margin:0 0 12px;padding:5px 9px;border-radius:4px;background:${palette.paper};font:700 10px/15px Arial,Helvetica,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:${palette.accent}">${heroEyebrow}</p><h1 class="hero-title" style="margin:0;font:700 31px/37px Arial,Helvetica,sans-serif;letter-spacing:-.7px;color:${palette.ink}">${heroHeadline}<span style="color:${palette.accent}">.</span></h1>${heroIntro}${summaryHtml}</td></tr></table></td></tr>`
+    :kind==='quote_approval'
+      ?`<tr><td class="side-pad" bgcolor="${palette.paper}" style="padding:30px 34px 25px;background-color:${palette.paper}"><p style="margin:0 0 12px;font:700 10px/16px Arial,Helvetica,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:${palette.accent}">${eyebrow}</p><h1 class="hero-title" style="margin:0;font:400 38px/44px Georgia,'Times New Roman',serif;letter-spacing:-1.2px;color:${palette.ink}">${headline}<span style="color:${palette.accent}">.</span></h1>${summaryHtml}</td></tr>`
+      :`<tr><td class="side-pad" bgcolor="${palette.paper}" style="padding:30px 34px 25px;background-color:${palette.paper}"><p style="margin:0 0 12px;font:700 10px/16px Arial,Helvetica,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:${palette.accent}">${invoiceEyebrow}</p><h1 class="hero-title" style="margin:0;font:400 38px/44px Georgia,'Times New Roman',serif;letter-spacing:-1.2px;color:${palette.ink}">${invoiceHeadline}<span style="color:${palette.accent}">.</span></h1><p style="margin:14px 0 0;font:14px/23px Arial,Helvetica,sans-serif;color:${palette.muted}">${invoiceIntro}</p>${summaryHtml}</td></tr>`
   const shell=`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;border:1px solid ${palette.surface};border-radius:18px;border-collapse:separate;overflow:hidden;background:${palette.paper}">
     <tr><td class="side-pad" bgcolor="${headerColor}" style="padding:26px 34px;background-color:${headerColor};border-radius:17px 17px 0 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;border-collapse:collapse"><tr>${logoCell}<td valign="middle" style="min-width:0;overflow-wrap:anywhere;word-break:break-word">${senderCopy}</td></tr></table></td></tr>
-    <tr><td class="side-pad" bgcolor="${palette.paper}" style="padding:32px 34px 24px;background-color:${palette.paper}"><p style="margin:0 0 14px;font:700 10px/16px Arial,Helvetica,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:${palette.accent}">${eyebrow}</p><h1 class="hero-title" style="margin:0;font:400 38px/44px Georgia,'Times New Roman',serif;letter-spacing:-1.2px;color:${palette.ink}">${headline}<span style="color:${palette.accent}">.</span></h1></td></tr>
-    <tr><td class="side-pad" bgcolor="#ffffff" style="padding:24px 34px 30px;border-top:1px solid ${palette.surface};background-color:#ffffff;color:${palette.ink};font:15px/1.7 Arial,Helvetica,sans-serif;overflow-wrap:anywhere;word-break:break-word">${styledBody}</td></tr>
+    ${contentSection}
+    <tr><td class="side-pad" bgcolor="${palette.paper}" style="padding:24px 34px 30px;border-top:1px solid ${palette.surface};background-color:${palette.paper};color:${palette.ink};font:15px/1.7 Arial,Helvetica,sans-serif;overflow-wrap:anywhere;word-break:break-word">${styledBody}</td></tr>
     <tr><td height="14" bgcolor="${palette.paper}" style="height:14px;background-color:${palette.paper};border-radius:0 0 17px 17px"></td></tr>
   </table>`
   const html=`<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(subject)}</title><style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}table{border-collapse:collapse}@media screen and (max-width:640px){.outer-pad{padding:18px 10px!important}.side-pad{padding-left:24px!important;padding-right:24px!important}.hero-title{font-size:33px!important;line-height:39px!important}.action-link{display:block!important;text-align:center!important}}</style></head><body style="margin:0;padding:0;background-color:${palette.surface};color:${palette.ink};font-family:Arial,Helvetica,sans-serif"><div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${preheader}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${palette.surface}"><tr><td class="outer-pad" align="center" style="padding:34px 18px">${shell}<p style="margin:17px auto 0;font:10px/17px Arial,Helvetica,sans-serif;color:${palette.muted};text-align:center">${poweredHtml}</p></td></tr></table></body></html>`
   const plainBody=htmlToText(body)
-  const text=`${senderNotice} ${company}\n\n${plainBody}\n\n${powered} MoiraOrdo (https://www.moiraordo.es)`
+  const textTitle=kind==='quote_approval'?headline:(locale==='en'?'A balance to review':'Hay un saldo pendiente')
+  const text=`${senderNotice} ${company}\n\n${textTitle}.\n${summaryText}\n\n${plainBody}\n\n${powered} MoiraOrdo (https://www.moiraordo.es)`
   const jpeg=logo.startsWith('data:image/jpeg;')
   const attachments=logo&&!preview?[{filename:jpeg?'company-logo.jpg':'company-logo.png',content:logo.split(',')[1],content_id:'company-email-logo',content_type:jpeg?'image/jpeg':'image/png'}]:[]
   return {subject,preheader:preheaderText,html,text,attachments}

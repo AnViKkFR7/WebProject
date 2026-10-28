@@ -45,6 +45,10 @@
 .form-section-heading > div { min-width: 0; }
 .form-section-heading :is(h2,h3,h4) { margin: 0; font-size: .84rem; line-height: 1.35; font-weight: 700; letter-spacing: -.01em; color: var(--text-primary); }
 .form-section-heading p { margin: .2rem 0 0; font-size: .72rem; color: var(--text-secondary); line-height: 1.5; }
+.form-section-toggle { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; flex: 0 0 auto; min-height: 40px; margin-left: auto; padding: .4rem .65rem; border: 1px solid var(--form-border); border-radius: 9px; background: var(--bg-card); color: var(--text-secondary); font: inherit; font-size: .75rem; font-weight: 650; cursor: pointer; }
+.form-section-toggle:hover { border-color: var(--section-tone); color: var(--text-primary); background: var(--bg-hover); }
+.form-section-toggle:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.form-section-content[hidden] { display: none; }
 .form-section-step { margin-left: auto; align-self: flex-start; font-variant-numeric: tabular-nums; font-size: .7rem; font-weight: 650; color: var(--section-tone); opacity: .7; }
 .form-section-content { padding: 1rem; }
 .form-section-content > :first-child { margin-top: 0; }

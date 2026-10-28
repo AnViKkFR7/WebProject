@@ -4,13 +4,14 @@ Plan para las diez capacidades solicitadas. Es una planificación de trabajo loc
 
 ## Punto de reanudación · 28/10/2026
 
-1. **Aprobación de presupuestos (#2):** el usuario confirmó desplegadas `send-quote-approval-link` y `notify-quote-approval-response`, y probó aceptación/rechazo y correos de extremo a extremo. Las respuestas recientes del dashboard ahora se pueden plegar y marcar como tratadas por usuario; falta aplicar `BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` antes de desplegar esta mejora del panel.
-2. **Avisos de vencimiento (#3):** el usuario confirmó desplegada `send-billing-due-reminders`; falta la prueba de envío real y el usuario informará el resultado.
+1. **Aprobación de presupuestos (#2):** el usuario confirma aplicada `BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` y validado el dashboard: respuestas plegables y tratamiento persistente por usuario.
+2. **Avisos de vencimiento (#3), siguiente validación:** `send-billing-due-reminders` está desplegada; falta la prueba real de entrega, baja y control de duplicados. Usar exclusivamente `WatchEcommerceDemo` y una factura de prueba controlada.
 3. **Accesibilidad/responsive (#4), validado por el usuario:** revisión visual autenticada de Contactos/pipeline, listado y editor de presupuestos, y facturación/avisos a 375/768/1024/1280 px. Solo se usó `WatchEcommerceDemo`. Se corrigió el quiebre de números/clientes en tablas estrechas, los controles del encabezado móvil son de 44 px y el CRM recibió un estado inicial guiado, métricas compactas y filtros unificados. No hay scroll horizontal del documento; el kanban y las tablas se desplazan dentro de sus regiones accesibles. El usuario aprobó el rediseño de Contactos y pidió continuar.
-4. **CRM (#5), integración de código local lista para revisar:** el usuario confirmó que ejecutó `CRM_LEAD_ITEM_ATTRIBUTION.sql`. Se conectaron los formularios de los dos sitios MoiraOrdo al CRM, manteniendo su notificación actual, y se corrigió en Navagli el mapeo UTM/consentimiento a columnas CRM. Pruebas simuladas y builds pasan. No se desplegó ni se enviaron formularios reales; la prueba real pendiente debe usar únicamente `WatchEcommerceDemo`.
+4. **CRM (#5), integración de formularios:** el usuario confirma que ya configuró/desplegó los sitios y completó las pruebas previstas con `WatchEcommerceDemo`. Se registra como validación comunicada por el usuario; no repetimos ni inspeccionamos esos sitios desde este proyecto CRM.
 5. **Responsive tablet:** se corrigen los desbordamientos de cabecera, Seguimientos y métricas de Presupuestos con reglas basadas en el ancho útil del panel. En el navegador autenticado se verificó Contactos y Presupuestos a 768 px, con la empresa `WatchEcommerceDemo`; falta validación visual del usuario y revisión en los otros anchos.
 6. **Guía de nuevos proyectos:** creada `company-site-snippet/MoiraOrdoCRMStartingDocument.md` con los contratos y límites comprobados. Mantenerla alineada con las guías específicas y migraciones.
-7. **SEO público de items (punto #6 del backlog):** el panel y `CONTENT_SEO_FIELDS.sql` ya contienen los metadatos. Contrato técnico: `company-site-snippet/ITEMS_SEO_INTEGRATION.md`; migración gradual por sitio SPA, prompt para su chat de IA, preflight de solo lectura y SQL de lote: `company-site-snippet/ITEMS_SEO_MIGRATION_ROADMAP.md`, `database/maintenance/ITEMS_SEO_PREFLIGHT.sql` y `database/templates/ITEMS_SEO_VALUES_TEMPLATE.sql`. `moira_ordo` (legacy) y `moiraOrdoNew` no usan items dinámicos; Navagli ya consume `items`, pero aún no usa SEO por slug, HTML inicial ni sitemap de items. No cambiar rutas ni datos sin validación.
+7. **SEO público de items (punto #6, fase separada de sitios cliente):** la parte CRM está preparada: panel y `CONTENT_SEO_FIELDS.sql` contienen los metadatos; el contrato y la guía de migración están en `company-site-snippet/ITEMS_SEO_INTEGRATION.md` y `company-site-snippet/ITEMS_SEO_MIGRATION_ROADMAP.md`, con preflight de solo lectura y plantilla SQL. El sitio público deberá consultar items publicados por `company_id` y `item_type`, resolver detalle por `slug` con compatibilidad UUID, renderizar título/description/OG/canonical en el HTML inicial y añadirlos al sitemap; después comprobar fallback, 404, colisiones y aislamiento. Navagli es el único proyecto conocido que consume esos items; su código no se inspecciona ni cambia desde este chat CRM.
+8. **Emails a clientes:** el usuario valida visualmente los diseños y confirma desplegadas `send-quote-approval-link` y `send-billing-due-reminders` con el renderer actualizado. El test de envío de recordatorios sigue pendiente.
 
 **Alcance obligatorio de pruebas con datos de empresa:** probar exclusivamente en la empresa `WatchEcommerceDemo`. No cambiar a otras empresas ni usar sus datos en pruebas visuales o funcionales.
 
@@ -20,6 +21,7 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 
 - [x] Convertir Blog en gestor con estados borrador/publicado/archivado, búsqueda, edición y aislamiento por empresa; conservar permisos existentes.
 - [x] Añadir slug, metadatos SEO y fecha de primera publicación para items y posts.
+- [x] Añadir al editor de Items una acción «Generar propuesta SEO» sin IA: construir slug/título/descripción localmente a partir de título/resumen, respetar límites, preservar campos con contenido, previsualizar y exigir aceptación antes de guardar. No consulta buscadores ni envía datos a servicios externos. La imagen OG queda manual.
 - [x] Crear contrato Markdown para que los sitios clientes implementen `/blog`, `/blog/:slug` y metadatos públicos.
 - [x] Añadir preflight SQL de solo lectura para posts publicados sin slug y colisiones antes de activar rutas públicas.
 - [x] El usuario confirma que aplicó `CONTENT_SEO_FIELDS.sql`; el preflight remoto devolvió «Success. No rows returned» (sin posts publicados con slug inválido ni duplicados). RLS no fue comprobada independientemente.
@@ -43,7 +45,7 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Pipeline kanban por empresa con etapas iniciales Nuevo → Contactado → Visita → Oferta → Cerrado/Perdido; renombrar, reordenar, crear y archivar etapas vacías.
 - [x] Deduplicación segura. Email/teléfono con contactos diferentes requiere resolución manual explícita; no se fusionan registros.
 - [x] Migraciones aditivas, RLS y pruebas PGlite negativas entre empresas/roles; el backfill crea/enlaza contactos y mantiene cada lead original.
-- [ ] Configurar variables Vercel y desplegar los tres sitios; después probar un envío ficticio solo con `WatchEcommerceDemo`, verificando que se crea/vincula el contacto y llega la atribución. No enviar emails reales. La migración `CRM_LEAD_ITEM_ATTRIBUTION.sql` está confirmada por el usuario.
+- [x] Configurar variables Vercel, desplegar los sitios y probar el flujo con `WatchEcommerceDemo`; el usuario confirma que ya está hecho. No se repitió la prueba desde este repositorio.
 
 ### Verificación secuencial · 5. CRM y formularios cliente · 28/10/2026
 
@@ -51,10 +53,10 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - **Pruebas locales:** `api/lead.test.ts`, `crmContactsPipeline.test.js` y `crmService.test.js`: 20 pruebas correctas. Usan datos sintéticos/locales, no filas de una empresa real.
 - **Implementación local:** los dos formularios de MoiraOrdo ahora guardan primero en el CRM y después conservan su aviso existente. Navagli ya tenía integración y control de tenant/módulo; se corrigieron los nombres UTM que enviaba a columnas inexistentes y se añadieron fecha/origen del consentimiento.
 - **Pruebas locales:** 7 pruebas simuladas de los tres endpoints pasan; lint focalizado de las APIs modificadas y los bundles Vite de los tres sitios pasan. No se usaron datos de empresa ni se enviaron emails. El lint global de `moira_ordo` y `Navagli` sigue reportando errores preexistentes en `CookieBanner.jsx`, `LanguageContext.jsx`, `Header.jsx` y dos páginas informativas; no se modificaron esos archivos.
-- **Configuración pendiente:** cada despliegue Vercel debe tener `VITE_COMPANY_ID` de su tenant y los secretos de servidor `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`. No se leyeron `.env` ni se configuraron variables.
+- **Configuración y prueba:** el usuario confirma que la configuración/despliegue y la prueba con `WatchEcommerceDemo` ya se completaron. Este chat no accedió a Vercel, secretos ni datos remotos.
 - **Estado remoto:** el usuario confirma que ejecutó `database/migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql` en Supabase (28/10/2026). No se consultó ni modificó la base remota; el estado se registra como confirmación del usuario, no como verificación independiente.
 - **Límite de esta entrega:** los tres proyectos cliente están fuera del workspace editable actual. No se cambiaron archivos fuera del proyecto, no se mandaron emails y no se hicieron envíos de prueba.
-- **Para cerrar el punto:** configurar variables por proyecto, desplegar los sitios y comprobar el formulario usando solo `WatchEcommerceDemo`; el test de datos deberá usar datos ficticios y no enviar emails reales. El punto queda detenido para validación del usuario.
+- **Cierre:** el usuario confirma que ya realizó la configuración/despliegue y pruebas. La implementación queda registrada como validada por el usuario, no por observación independiente del entorno remoto.
 
 ### Verificación secuencial · 6. Contenido y SEO para items · 28/10/2026
 
@@ -69,8 +71,16 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Exportación JSON y anonimización explícita de datos CRM por contacto, con resumen del alcance, permiso de administrador e idempotencia.
 - [x] Proteger registros de facturación e historial que no deban borrarse como efecto lateral de borrar un contacto.
 - [x] Configurar por empresa plazos para revisar solicitudes sin vincular y contactos inactivos, con conteos orientativos sin borrado automático.
-- [ ] El responsable del tratamiento debe fijar los plazos y criterios aplicables; no se automatizan purgas sin esa decisión y revisión legal/operativa.
+- [x] Decisión del usuario (28/10/2026): conservar solo revisión manual. Los periodos configurables señalan casos y nunca disparan borrado ni anonimización; toda anonimización requiere acción explícita de un administrador. No hay purga ni cron CRM.
+- [ ] La empresa puede documentar por separado su política legal de conservación. Los umbrales técnicos del panel no sustituyen esa política ni recomiendan plazos.
 - [x] Conectar facturas/presupuestos a contactos para que el historial/exportación pueda incluirlos; la anonimización elimina el vínculo y preserva los documentos emitidos.
+
+### Inicio de cierre · política de retención · 28/10/2026
+
+- Auditoría local: los umbrales configurables solo producen conteos. Solicitudes pendientes significa exclusivamente coincidencias ambiguas (`review_required`); contactos inactivos se calculan desde creación/actividad/vínculo de documento y omiten seguimientos futuros.
+- Exportación/anonimización son operaciones individuales, administrativas y confirmadas; los documentos emitidos se preservan y se retiran sus vínculos. No hay cron de borrado CRM.
+- El usuario confirma modo exclusivamente manual. No hacen falta nuevas migraciones ni cron para esta decisión; el panel ya calcula conteos por umbral y permite revisar/anonymizar fichas de forma individual y confirmada.
+- La política legal de conservación sigue siendo responsabilidad de la empresa y puede documentarse aparte. No se inventan plazos; no se activa ni se programa ninguna purga.
 
 ## Fase 4 · Operaciones de facturación y comunicación (MVP)
 
@@ -118,6 +128,7 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Configurar el idioma predeterminado de envío por empresa (ES/EN), usado tanto por presupuestos como por recordatorios automáticos. El idioma de edición/previsualización permite seguir modificando ambas traducciones.
 - [x] Guardar hasta diez revisiones por empresa con autor/fecha y ofrecer restaurar una versión anterior; la restauración genera una nueva revisión.
 - [ ] Mantener contratos de email accesibles y compatibles en los clientes principales: HTML usa estilos inline y no carga fuentes externas ni JavaScript. Revisar tablas/layout, orden de lectura, textos alternativos y modo oscuro real.
+- [x] En revisión estática, mantener los enlaces de navegación con semántica de enlace; aplicar el estilo CTA solo al enlace de aprobación. Validación de clientes de correo externos sigue pendiente.
 - [x] Catálogo inicial de emails existentes al cliente: enlace de aprobación de presupuesto y aviso de vencimiento de factura. No incluye emails internos de dashboard, Planning o resumen semanal.
 - [x] Añadir bloque superior «Este mensaje te lo envía {empresa}» con contraste AA y pie «Recurso digital powered by MoiraOrdo». Mantener el remitente técnico verificado de MoiraOrdo, sin falsificar remitentes.
 - [ ] Definir si se quiere un pie legal común y qué datos mostrar. El registro `companies` tiene email, teléfono y web, pero NIF/dirección fiscal solo existen en la copia del emisor por documento; el renderer actual no los recibe. No inyectar esos datos en Resend sin decisión explícita sobre contenido y alcance.
@@ -126,6 +137,12 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Añadir migración aditiva, preflight de solo lectura, secuencia SQL, documentación y renderizador común a las funciones Edge. Casos unitarios de sanitización, idioma, texto, logo y layout.
 - [ ] Ejecutar la migración y preflight en Supabase; desplegar frontend/Edge y verificar envío controlado e idempotencia de extremo a extremo.
 - [ ] Aplicar migración/preflight en Supabase y desplegar; validar Gmail, Outlook, Apple Mail y 375/768/1024/1280 px con capturas reales y accesibilidad.
+
+### Cierre visual de emails · 28/10/2026
+
+- El usuario valida visualmente los emails y confirma desplegadas `send-quote-approval-link` y `send-billing-due-reminders` con el renderer actualizado.
+- No se afirma una prueba de entrega/idempotencia de recordatorios. El envío real de `send-billing-due-reminders` sigue pendiente de validación del usuario.
+- La revisión visual se cierra con esta validación; posibles incidencias específicas de un cliente se tratarán como correcciones puntuales.
 
 ### Alcance de emails confirmado por código
 

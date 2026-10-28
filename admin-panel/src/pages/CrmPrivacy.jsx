@@ -3,6 +3,7 @@ import { useCompany } from '../contexts/CompanyContext'
 import { useFeedback } from '../contexts/FeedbackContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { Link } from 'react-router-dom'
 import { crmPrivacyService } from '../services/crmPrivacyService'
 import Icon from '../components/ui/Icon'
 import PageHeader from '../components/ui/PageHeader'
@@ -129,8 +130,8 @@ export default function CrmPrivacy() {
           <label className="field"><span className="field-label">{t('crmPrivacy.inactiveContactDays')}</span><input className="input" type="number" min="1" max="3650" step="1" value={retentionReady ? retention.inactive_contact_days : ''} onChange={event => { setRetention(previous => ({ ...previous, inactive_contact_days: event.target.value })); setRetentionSaved(false) }} disabled={!retentionReady || retentionLoading || retentionSaving} placeholder={t('crmPrivacy.noRetentionPeriod')} /><small>{t('crmPrivacy.inactiveContactHelp')}</small></label>
         </div>
         <div className={styles.retentionCounts} aria-live="polite">
-          <p><strong>{retentionReady && retention.unresolved_lead_days !== '' ? retention.unresolved_leads_for_review || 0 : '—'}</strong><span>{t('crmPrivacy.unresolvedLeadsDue')}</span></p>
-          <p><strong>{retentionReady && retention.inactive_contact_days !== '' ? retention.inactive_contacts_for_review || 0 : '—'}</strong><span>{t('crmPrivacy.inactiveContactsDue')}</span></p>
+          <p><strong>{retentionReady && retention.unresolved_lead_days !== '' ? retention.unresolved_leads_for_review || 0 : '—'}</strong><span>{t('crmPrivacy.unresolvedLeadsDue')}</span><Link to="/contacts">{t('crmPrivacy.reviewRequests')}</Link></p>
+          <p><strong>{retentionReady && retention.inactive_contact_days !== '' ? retention.inactive_contacts_for_review || 0 : '—'}</strong><span>{t('crmPrivacy.inactiveContactsDue')}</span><a href="#crm-privacy-search">{t('crmPrivacy.searchContact')}</a></p>
         </div>
         {retentionLoading && <p role="status">{t('common.loading')}</p>}
         {retentionError && <p className={styles.retentionError} role="alert">{t(retentionError === 'load' ? 'crmPrivacy.retentionLoadError' : 'crmPrivacy.retentionSaveError')}</p>}
@@ -138,7 +139,7 @@ export default function CrmPrivacy() {
         <button className="primary-button" type="submit" disabled={!retentionReady || retentionLoading || retentionSaving}>{retentionSaving ? t('common.savingChanges') : t('crmPrivacy.saveRetention')}</button>
       </form>
     </section>
-    <form className={styles.search} onSubmit={search}>
+    <form id="crm-privacy-search" className={styles.search} onSubmit={search}>
       <label className="field"><span className="field-label">{t('crmPrivacy.searchLabel')}</span><input className="input" value={query} onChange={event => setQuery(event.target.value)} minLength={2} maxLength={100} required /></label>
       <button className="primary-button" type="submit" disabled={loading || query.trim().length < 2}><Icon name="search" size={16} />{t('crmPrivacy.search')}</button>
     </form>
