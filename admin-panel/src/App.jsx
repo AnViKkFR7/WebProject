@@ -22,8 +22,11 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
 const Items = lazy(() => import('./pages/Items.jsx'))
 const ItemDetail = lazy(() => import('./pages/ItemDetail.jsx'))
 const Analytics = lazy(() => import('./pages/Analytics.jsx'))
+const AnalyticsHub = lazy(() => import('./pages/AnalyticsHub.jsx'))
+const AnalyticsIntegrations = lazy(() => import('./pages/AnalyticsIntegrations.jsx'))
 const MyData = lazy(() => import('./pages/MyData.jsx'))
 const Companies = lazy(() => import('./pages/Companies.jsx'))
+const DirectoryParty = lazy(() => import('./pages/DirectoryParty.jsx'))
 const Users = lazy(() => import('./pages/Users.jsx'))
 const Leads = lazy(() => import('./pages/Leads.jsx'))
 const Contacts = lazy(() => import('./pages/Contacts.jsx'))
@@ -59,9 +62,13 @@ const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="/cookies-policy" element={<CookiesPolicy />} />
                 <Route path="/items" element={<RequireModule module="items"><Items /></RequireModule>} />
                 <Route path="/items/:itemId" element={<RequireModule module="items"><ItemDetail /></RequireModule>} />
-                <Route path="/analytics" element={<RequireModule module="analytics"><Analytics /></RequireModule>} />
+                <Route path="/analytics" element={<RequireModule module="analytics"><AnalyticsHub /></RequireModule>}>
+                  <Route path="web" element={<Analytics embedded />} />
+                  <Route path="integrations" element={<AnalyticsIntegrations />} />
+                </Route>
                 <Route path="/my-data" element={<RequireModule module="items"><MyData /></RequireModule>} />
                 <Route path="/companies" element={<RequireModule module={['billing','planning']}><Companies /></RequireModule>} />
+                <Route path="/companies/:partyId" element={<RequireModule module={['billing','planning']}><DirectoryParty /></RequireModule>} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<CompanySettings />}>
                   <Route path="general" element={<CompanyGeneralSettings />} />

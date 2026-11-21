@@ -98,6 +98,15 @@ serve(async (req) => {
       }
     }
 
+    // El servicio omite RLS, incluido el filtro de módulos: se comprueba aquí que Catálogo siga activo.
+    const { data: itemsEnabled, error: moduleError } = await supabaseAdmin.rpc('is_company_module_enabled', { _company_id: media.items.company_id, _module_key: 'items' })
+    if (moduleError || itemsEnabled !== true) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: the catalog module is disabled for this company' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 5. Only delete objects in the authorized item's canonical namespace.
     // Unknown/legacy URLs may be detached, but never authorize Storage cleanup.
     const storagePath = ownedItemMediaPath(media.url_externa, supabaseUrl, media.items.company_id, media.item_id)

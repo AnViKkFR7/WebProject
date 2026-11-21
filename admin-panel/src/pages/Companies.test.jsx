@@ -26,3 +26,16 @@ it.each([false,true])('shows the shared directory and only offers Planning when 
   expect(host.textContent).toContain('Shared customer')
   expect(Boolean(host.querySelector('a[href="/planning"]'))).toBe(planning)
 })
+it('filters by relationship and legal form from the URL and links each card to its record',async()=>{
+  mocks.modules={billing:true,planning:true}
+  mocks.load.mockResolvedValue([
+    {id:'client-a',company_id:'tenant-a',name:'Shared customer'},
+    {id:'photo',company_id:'tenant-a',name:'Lucía Pérez',legal_form:'individual',is_client:false,is_collaborator:true,collaborator_role:'Fotografía'},
+  ])
+  await act(async()=>root.render(<MemoryRouter initialEntries={['/companies?relation=collaborators&type=individual']}><Companies/></MemoryRouter>))
+  expect(host.textContent).toContain('Lucía Pérez')
+  expect(host.textContent).not.toContain('Shared customer')
+  expect(host.querySelector('a[href="/companies/photo"]')).not.toBeNull()
+  expect(host.querySelector('button[aria-pressed="true"]').textContent).toBe('directory.collaborators')
+  expect(host.textContent).toContain('directory.newCollaborator')
+})

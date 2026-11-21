@@ -1,5 +1,32 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-21 · Analítica en pestañas y vinculaciones previstas
+
+- «Analítica» pasa a tener pestañas como «Ajustes de empresa»: «Webs» (`/analytics/web`, la analítica de siempre, sin cambios de datos) y «Vinculaciones» (`/analytics/integrations`). `/analytics` abre la primera.
+- Vinculaciones muestra Google Analytics 4, Meta (Facebook e Instagram), Google Business Profile y Apple Business Connect como «Pendiente de activar», con lo que se verá de cada una y qué falta. No hay botón de conectar hasta que exista la conexión real.
+- Viabilidad (consultada el 21/11/2026):
+  - Google Analytics 4: OAuth con permiso de solo lectura en un proyecto de Google Cloud; Google revisa los permisos sensibles (3–5 días hábiles según su documentación). Cada empresa conecta su propia cuenta.
+  - Meta: aplicación de Meta con verificación de empresa y revisión de permisos (`pages_read_engagement`, `instagram_manage_insights`…). Instagram tiene que ser cuenta profesional unida a una página.
+  - Google Business Profile: solicitud de acceso a la API (Google indica hasta 14 días); quien conecta debe gestionar la ficha.
+  - Apple Business Connect: la API solo se abre a partners aprobados; de momento se gestiona en su web.
+- Diseño previsto para conectar: los tokens solo en servidor (Edge Functions), cifrados y por empresa; solo admins conectan o desconectan; el panel nunca recibe tokens.
+- Verificación: 838/838 pruebas (3 nuevas de la pestaña), lint y build; revisado en navegador en escritorio y móvil sin desbordes.
+
+## 2026-11-21 · Auditoría de seguridad entre empresas (rama `security/auditoria-aislamiento`)
+
+- Revisión completa de aislamiento (RLS, funciones privilegiadas, Storage, Edge Functions, navegador, secretos y entradas públicas). Sin vías explotables hoy. Informe y tabla de hallazgos en `ROADMAP-AUDITORIA-SEGURIDAD.md`.
+- Correcciones: nueva `ITEM_MEDIA_PUBLIC_READ_FIX.sql` quita una política de lectura abierta en `item_media` que solo tapaba por casualidad el filtro de módulos; `upload-item-media` y `delete-item-media` comprueban que Catálogo esté activo y la subida usa la extensión del tipo validado.
+- Nuevo `database/maintenance/SECURITY_AUDIT_CHECKS.sql` (solo lectura) para contrastar producción con el repositorio.
+- Verificación: prueba SQL nueva sobre la base completa (sin políticas abiertas, medios de borradores ocultos a anónimos y a otra empresa, barrido de todas las tablas con `company_id` como otra empresa y como anónimo) que falla sin la migración; prueba de denegación con módulo desactivado en el borrado de medios.
+## 2026-11-21 · Clientes y colaboradores (rama `feature/clientes-colaboradores`)
+
+- Análisis de CRM: Odoo usa un único contacto (`res.partner`) con «es empresa» y rangos de cliente/proveedor; Salesforce separa cuentas de persona y de empresa y añade un tipo de relación; HubSpot clasifica empresas por tipo (cliente, partner, proveedor); Holded y Zoho marcan el tipo de contacto. Decisión: un único directorio por empresa donde cada ficha es cliente, colaborador o ambas cosas, y persona física o empresa. Así no se duplican datos cuando un colaborador también compra, y facturas y agenda siguen apuntando a la misma tabla.
+- Nueva migración `CLIENT_DIRECTORY_RELATIONSHIPS.sql` sobre `client_company`: `legal_form` (company/individual), `is_client`, `is_collaborator` (al menos uno), `collaborator_role` y `notes`. Las fichas existentes quedan como cliente/empresa. Escritura por la RPC `save_directory_party` (admin/editor, módulo agenda o facturación, empresa comprobada en servidor) y resumen por `get_directory_party_summary` (miembros activos; cada bloque solo con su módulo activo).
+- Ficha `/companies/:id`: datos, facturado, pendiente y vencidas, presupuestos, tareas y próxima tarea, movimientos por cobrar/pagar y facturación de los últimos 12 meses. Las facturas guardan una copia del cliente y no un enlace, así que se asocian por NIF/CIF normalizado o, si la ficha no tiene, por nombre exacto; la ficha lo indica.
+- Listado: filtros Todos/Clientes/Colaboradores y Todo tipo/Empresa/Persona física en la URL, búsqueda sin tildes por nombre, NIF, especialidad, contacto o email, insignias y enlace a la ficha. El formulario cambia etiquetas según el tipo (razón social/CIF frente a nombre/NIF) y solo pide persona de contacto a empresas y especialidad a colaboradores. Al facturar solo se ofrecen fichas marcadas como cliente.
+- Verificación: 829/829 pruebas (6 SQL nuevas con denegaciones entre empresas, viewer, anónimo, miembro suspendido y módulos desactivados; filtros; ficha; listado), lint, build y 14/14 funciones. En navegador con datos reales (WatchEcommerceDemo), escritorio y móvil: listado, filtros, ficha y formulario. Corregido en la revisión: el selector de tipo del formulario heredaba el tamaño de botón de icono. Sin la migración, la ficha muestra sus datos y avisa de que no puede cargar la actividad; el resumen con datos reales queda pendiente de aplicar la SQL.
+- `CLIENT_DIRECTORY_RELATIONSHIPS.sql` aplicada en producción por el usuario el 21/11/2026. Comprobado después en navegador con datos reales de WatchEcommerceDemo: la ficha muestra facturado, cobrado, vencidas, presupuestos, tareas, movimientos y el gráfico mensual; textos en singular cuando el número es 1.
+
 ## 2026-11-21 · Rediseño «Glass» y cambios de flujo (fusionado en `main`)
 
 - Capa visual translúcida `admin-panel/src/styles/glass.css` (tokens claro/oscuro, menú flotante, barra superior y modales de cristal, controles píldora, segmentados tipo iOS). Sin cambios de datos ni de permisos. Detalle y fases en `ROADMAP-REDISENO.md`.

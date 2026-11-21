@@ -46,6 +46,7 @@ Implementación local completada en [P8]. `BILLING_DIRECTORY_CATALOG.sql` está 
 - [x] Buscar/seleccionar cliente y guardar nuevos datos sin abandonar el documento; copiar sus datos al borrador. Actualizado `Features.md`.
 - [x] Catálogo de servicios/partidas con descripción, unidad, precio e impuestos; selección/búsqueda rápida y edición puntual en el documento. Actualizado `Features.md`.
 - [x] Archivar referencias sin romper documentos históricos; pruebas contra referencias cruzadas entre compañías. Actualizado `docs/testing.md`.
+- [x] Ampliación 21/11/2026: distinguir clientes y colaboradores, persona física o empresa, y ficha con actividad (facturas, presupuestos, agenda). `CLIENT_DIRECTORY_RELATIONSHIPS.sql` comprobada en PostgreSQL local y aplicada en destino el 21/11/2026. Actualizado `Features.md`.
 
 ## Fase 5 · Duplicación y plantillas
 

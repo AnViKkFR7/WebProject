@@ -31,7 +31,7 @@ const StatCard = ({ label, value }) => (
   </div>
 )
 
-const Analytics = () => {
+const Analytics = ({ embedded = false }) => {
   const { selectedCompany } = useCompany()
   const { t } = useLanguage()
   const canManageEvents = selectedCompany?.userRole === 'admin' || selectedCompany?.userRole === 'editor'
@@ -141,14 +141,17 @@ const Analytics = () => {
     : eventDefinitions.find((d) => d.key === key)?.label || key)
 
   return (
-    <div className="page">
+    <div className={embedded ? undefined : 'page'}>
       <div className="page-content">
-        <div className="page-header">
-          <div>
-            <h2>{t('analytics.title')}</h2>
-            <p>{t('analytics.description')}</p>
+        {/* Dentro de la pestaña el título lo pone AnalyticsHub */}
+        {!embedded && (
+          <div className="page-header">
+            <div>
+              <h2>{t('analytics.title')}</h2>
+              <p>{t('analytics.description')}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Rango de fechas: presets simples, cómodos en móvil (un tap, sin picker) */}
         <div style={{

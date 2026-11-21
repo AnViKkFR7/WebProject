@@ -25,14 +25,25 @@ export async function getClientCompaniesByCompany(companyId) {
   return data
 }
 
-// Crear una nueva empresa cliente
-export async function createClientCompany(company) {
-  const { data, error } = await supabase.rpc('save_client_company', {
-    p_company:company.company_id,p_id:null,p_name:company.name,p_tax_id:company.tax_id || '',p_billing_address:company.billing_address || '',
-    p_email:company.email || '',p_phone:company.phone || '',p_responsible:company.responsible || '',p_color:company.color || '#1976d2',
-  })
+// Datos de la ficha tal como los valida save_directory_party (cliente/colaborador, persona/empresa)
+export const partyPayload = party => ({
+  name:party.name || '',tax_id:party.tax_id || '',billing_address:party.billing_address || '',email:party.email || '',
+  phone:party.phone || '',responsible:party.responsible || '',color:party.color || '#1976d2',
+  legal_form:party.legal_form === 'individual' ? 'individual' : 'company',
+  is_client:party.is_client !== false,is_collaborator:party.is_collaborator === true,
+  collaborator_role:party.collaborator_role || '',notes:party.notes || '',
+})
+
+async function saveParty(tenantId,id,party) {
+  const { data, error } = await supabase.rpc('save_directory_party',{p_company:tenantId,p_id:id,p_party:partyPayload(party)})
   if (error) throw error
+  if (!data || data.company_id !== tenantId) throw new Error('Invalid directory response')
   return data
+}
+
+// Crear una ficha (cliente, colaborador o ambos)
+export async function createClientCompany(company) {
+  return saveParty(company.company_id,null,company)
 }
 
 // Eliminar una empresa cliente
@@ -54,13 +65,23 @@ export async function getClientCompaniesFlexible(userId, isAdmin) {
   return data
 }
 
-// Actualizar una empresa cliente
+// Actualizar una ficha
 export async function updateClientCompany(companyId, updates) {
-  const { data, error } = await supabase.rpc('save_client_company', {
-    p_company:updates.company_id,p_id:companyId,p_name:updates.name,p_tax_id:updates.tax_id || '',p_billing_address:updates.billing_address || '',
-    p_email:updates.email || '',p_phone:updates.phone || '',p_responsible:updates.responsible || '',p_color:updates.color || '#1976d2',
-  })
+  return saveParty(updates.company_id,companyId,updates)
+}
+
+// Una ficha concreta de la empresa seleccionada (RLS limita a sus miembros)
+export async function getDirectoryParty(tenantId,id) {
+  const { data, error } = await supabase.from('client_company').select('*').eq('company_id',tenantId).eq('id',id).is('archived_at',null).maybeSingle()
   if (error) throw error
+  return data
+}
+
+// Resumen de actividad de la ficha: facturas, presupuestos, agenda y movimientos (calculado en servidor)
+export async function getDirectoryPartySummary(tenantId,id) {
+  const { data, error } = await supabase.rpc('get_directory_party_summary',{p_company:tenantId,p_id:id})
+  if (error) throw error
+  if (!data || data.party_id !== id) throw new Error('Invalid directory summary')
   return data
 }
 
