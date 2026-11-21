@@ -91,7 +91,8 @@ El bootstrap exige PostgreSQL 15+, Auth/Storage y roles de Supabase ya inicializ
 67. `migrations/COMPANY_USER_INVITATION_STATE.sql`.
 68. `migrations/COMPANY_USER_PROVISIONING_RECOVERY.sql`.
 69. `migrations/BLOG_MEDIA_EDITOR.sql`.
-70. `bootstrap/FINAL_ACCESS.sql`.
+70. `migrations/ITEM_MEDIA_PUBLIC_READ_FIX.sql`.
+71. `bootstrap/FINAL_ACCESS.sql`.
 
 La inicialización de Planning aporta las cinco tablas ausentes en el esquema base. `attached_file` y `client_company_members` se conservan como compatibilidad histórica, con RLS y sin acceso de navegador: no son una vía alternativa de permisos. El cierre del bootstrap concede privilegios explícitos, mantiene escrituras sensibles por RPC y no concede TRUNCATE a anon/authenticated.
 
@@ -154,6 +155,7 @@ Fuera de la instalación automática:
 | `migrations/PLANNING_REMINDERS.sql` | Recordatorios por email de Planning. | Parte A ya; parte B (el cron) cuando el dominio esté verificado en Resend. |
 | `migrations/ANALYTICS_PRIVACY_UPGRADE.sql` | Visitantes anónimos con sal diaria, fuentes de tráfico e idioma. Sustituye el `session_id` que generaba el navegador. | Antes de desplegar el snippet nuevo en las webs. |
 | `migrations/BLOG_MEDIA_EDITOR.sql` | Imágenes del blog (hasta 3 por artículo): bucket `blog-media` con límite de 5 MB, permisos de Storage por empresa/rol/módulo y validación de `blog_media`. | Antes de desplegar el panel con el editor de blog nuevo. |
+| `migrations/ITEM_MEDIA_PUBLIC_READ_FIX.sql` | Auditoría de seguridad (endurecimiento): quita la política abierta `item_media_public_select` (`using(true)`). Hoy no se explota porque el filtro de módulos oculta los borradores ajenos, pero la protección dependía de ese efecto colateral. Las webs y el panel siguen igual. | Cuando convenga; no depende de ningún despliegue del panel. |
 | `migrations/ANALYTICS_ENGAGEMENT.sql` | Scroll, tiempo en página, páginas 404 y las conversiones reservadas (teléfono, email, formulario). | Después de la anterior. **Luego vuelve a ejecutar `schema/ANALYTICS_AGGREGATION.sql`**: la función nueva rellena las columnas que crea esta migración. |
 
 ## Estado de identidad visual · 24/10/2026 [P3]

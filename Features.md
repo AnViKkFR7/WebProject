@@ -1,5 +1,12 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-21 · Auditoría de seguridad entre empresas (rama `security/auditoria-aislamiento`)
+
+- Revisión completa de aislamiento (RLS, funciones privilegiadas, Storage, Edge Functions, navegador, secretos y entradas públicas). Sin vías explotables hoy. Informe y tabla de hallazgos en `ROADMAP-AUDITORIA-SEGURIDAD.md`.
+- Correcciones: nueva `ITEM_MEDIA_PUBLIC_READ_FIX.sql` quita una política de lectura abierta en `item_media` que solo tapaba por casualidad el filtro de módulos; `upload-item-media` y `delete-item-media` comprueban que Catálogo esté activo y la subida usa la extensión del tipo validado.
+- Nuevo `database/maintenance/SECURITY_AUDIT_CHECKS.sql` (solo lectura) para contrastar producción con el repositorio.
+- Verificación: prueba SQL nueva sobre la base completa (sin políticas abiertas, medios de borradores ocultos a anónimos y a otra empresa, barrido de todas las tablas con `company_id` como otra empresa y como anónimo) que falla sin la migración; prueba de denegación con módulo desactivado en el borrado de medios.
+
 ## 2026-11-21 · Rediseño «Glass» y cambios de flujo (fusionado en `main`)
 
 - Capa visual translúcida `admin-panel/src/styles/glass.css` (tokens claro/oscuro, menú flotante, barra superior y modales de cristal, controles píldora, segmentados tipo iOS). Sin cambios de datos ni de permisos. Detalle y fases en `ROADMAP-REDISENO.md`.

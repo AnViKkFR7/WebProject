@@ -225,3 +225,28 @@ Procedimiento, contrato y límites en `docs/auditoria-cierre-18-21.md`. Los hall
 - [ ] Aplicar COMPANY_USER_PROVISIONING_RECOVERY.sql, desplegar create-user/panel y validar servicios reales.
 
 Procedimiento: docs/correcciones-revision-posterior.md.
+
+## Auditoría 21/11/2026 · aislamiento de datos entre empresas
+
+**Alcance.** Toda la aplicación tal como está en el repositorio (`main` + migraciones del bootstrap): 54 tablas con RLS, 130 funciones SECURITY DEFINER, Storage (3 buckets), 14 Edge Functions, almacenamiento del navegador, variables `VITE_`, secretos en git y entradas públicas (aprobación de presupuestos, leads, webs). No se ha consultado la base de datos de producción: para eso está `database/maintenance/SECURITY_AUDIT_CHECKS.sql` (solo lectura).
+
+**Método.** Inventario del catálogo de PostgreSQL sobre el bootstrap completo en PGlite (RLS, políticas permisivas/restrictivas, grants de anon/authenticated, `search_path`, claves ajenas entre tablas de empresa), lectura de cada Edge Function y de los RPC públicos o con parámetro de usuario, y pruebas de denegación con usuarios de otra empresa y anónimos.
+
+**Resultado.** No se ha encontrado ninguna vía explotable hoy para leer o modificar datos de otra empresa.
+
+| # | Gravedad | Hallazgo | Estado |
+|---|---|---|---|
+| A | Media (latente) | `item_media_public_select` con `using(true)` anulaba las políticas que limitan la lectura a lo publicado o a miembros. No se explota porque la política restrictiva de módulos consulta `items` y esa consulta respeta su RLS, pero la protección dependía de un efecto colateral. | Corregido: `ITEM_MEDIA_PUBLIC_READ_FIX.sql` + prueba que falla sin ella |
+| B | Baja | `upload-item-media` y `delete-item-media` usan la clave de servicio (sin RLS) y no comprobaban que Catálogo siguiera activo: un editor podía subir o borrar fotos con el módulo desactivado. | Corregido en ambas funciones + prueba de denegación |
+| C | Baja | `upload-item-media` tomaba la extensión del nombre que manda el navegador (`foto.html` con tipo `image/jpeg`). El tipo ya se validaba, así que se servía como imagen. | Corregido: extensión derivada del tipo validado |
+| D | Decisión | `update_company_member` permite a un editor ascender a un viewer a editor (no a admin). Es coherente con el código y sus pruebas, pero conviene confirmarlo. | Pendiente de decisión del usuario |
+| E | Informativo | Las Edge Functions responden CORS `*`. Usan token Bearer, no cookies, así que no hay CSRF; restringir el origen sería solo defensa adicional. | Sin cambio |
+| F | Informativo | `is_company_module_enabled` es ejecutable por anon: con un UUID de empresa revela qué módulos tiene activos. Lo necesitan las políticas públicas. | Sin cambio |
+
+**Comprobado sin hallazgos.** Ninguna tabla sin RLS; todas las SECURITY DEFINER fijan `search_path`; anon solo lee 8 tablas de contenido publicado y no escribe en ninguna; las 8 claves ajenas simples entre tablas de empresa tienen su compuesta con `company_id` o solo se escriben por RPC que filtran por empresa; los RPC con parámetro de usuario exigen `p_user = auth.uid()`; la aprobación de presupuestos usa token de 256 bits guardado como hash, caducidad, revocación y bloqueo de fila; los leads públicos solo entran por servicio con límite por empresa; `listar-usuarios`, `create-user`, `invite-user`, `crear-empresa` y `cambiar-rol-usuario` exigen admin de plataforma (`app_metadata`, no editable por el usuario) o rol en la empresa; las Edge Functions de cron exigen secreto; `media-planner` es privado con políticas por empresa; los borradores del navegador se guardan por usuario y empresa en `sessionStorage` y se borran al cerrar sesión o cambiar de usuario; el bundle solo usa la URL y la clave pública; `.env` no está en git y no hay claves en el repositorio.
+
+- [x] Inventario del catálogo, revisión de Edge Functions, RPC públicos y almacenamiento del navegador.
+- [x] Correcciones A, B y C con pruebas (`tests/database/tenantIsolationAudit.test.js`, `tests/itemMediaDeletion.test.js`).
+- [ ] Aplicar `ITEM_MEDIA_PUBLIC_READ_FIX.sql` y desplegar `upload-item-media` y `delete-item-media`.
+- [ ] Ejecutar `database/maintenance/SECURITY_AUDIT_CHECKS.sql` en producción y comparar con lo esperado.
+- [ ] Decidir el punto D.

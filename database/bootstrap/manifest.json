@@ -217,6 +217,9 @@
       "path": "migrations/BLOG_MEDIA_EDITOR.sql"
     },
     {
+      "path": "migrations/ITEM_MEDIA_PUBLIC_READ_FIX.sql"
+    },
+    {
       "path": "bootstrap/FINAL_ACCESS.sql"
     }
   ],
