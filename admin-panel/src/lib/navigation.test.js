@@ -11,7 +11,10 @@ describe('navigation — título de la página en la topbar', () => {
     expect(navKeyForPath('/my-data')).toBe('myData')
     expect(navKeyForPath('/quotes')).toBe('quotes')
     expect(navKeyForPath('/invoicing')).toBe('invoicing')
-    expect(navKeyForPath('/settings/weekly-summary')).toBeNull()
+    expect(navKeyForPath('/settings')).toBe('companySettings')
+    expect(navKeyForPath('/settings/modules')).toBe('companySettings')
+    expect(navKeyForPath('/settings/emails')).toBe('companySettings')
+    expect(navKeyForPath('/settingsx')).toBeNull()
   })
 
   it('no confunde prefijos ni inventa títulos', () => {
@@ -33,18 +36,15 @@ describe('navigation — menú según rol', () => {
     expect(groupKeys(null, true)).toContain('administration')
   })
 
-  it('solo muestra la configuración de módulos al admin de plataforma', () => {
-    const editor = visibleNavGroups(permissionsFor('editor'), { billing: false })
-    expect(editor.flatMap(group => group.items).some(item => item.to === '/invoicing')).toBe(false)
-    expect(editor.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(false)
-    const companyAdmin = visibleNavGroups(permissionsFor('admin'), { billing: false })
-    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(false)
-    const platformAdmin = visibleNavGroups(permissionsFor(null, true), { billing: false })
-    expect(platformAdmin.flatMap(group => group.items).some(item => item.to === '/settings/modules')).toBe(true)
-    expect(platformAdmin.flatMap(group => group.items).some(item => item.to === '/settings/privacy')).toBe(true)
-    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/privacy')).toBe(true)
-    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/settings/weekly-summary')).toBe(false)
-    expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/invoicing')).toBe(false)
+  it('agrupa los ajustes de empresa en una sola entrada, solo para administradores', () => {
+    const links = (role, admin, modules) => visibleNavGroups(permissionsFor(role, admin), modules).flatMap(group => group.items).map(item => item.to)
+    expect(links('editor', false, { billing: false })).not.toContain('/settings')
+    expect(links('editor', false, { billing: false })).not.toContain('/invoicing')
+    expect(links('admin', false, { billing: false })).toContain('/settings')
+    expect(links(null, true, { billing: false })).toContain('/settings')
+    for (const old of ['/settings/modules', '/settings/privacy', '/settings/emails']) {
+      expect(links(null, true)).not.toContain(old)
+    }
   })
 })
 

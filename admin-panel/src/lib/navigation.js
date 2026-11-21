@@ -16,11 +16,11 @@ export const NAV_GROUPS = [
   {
     key: 'operation',
     items: [
-      { to: '/leads', key: 'leads', icon: 'mail', module: 'crm' },
-      { to: '/contacts', key: 'contacts', icon: 'users', module: 'crm' },
+      { to: '/leads', key: 'leads', icon: 'inbox', module: 'crm' },
+      { to: '/contacts', key: 'contacts', icon: 'contacts', module: 'crm' },
       { to: '/planning', key: 'planning', icon: 'planning', module: 'planning' },
-      { to: '/quotes', key: 'quotes', icon: 'file', module: 'billing' },
-      { to: '/invoicing', key: 'invoicing', icon: 'file', module: 'billing' },
+      { to: '/quotes', key: 'quotes', icon: 'quote', module: 'billing' },
+      { to: '/invoicing', key: 'invoicing', icon: 'invoice', module: 'billing' },
       { to: '/analytics', key: 'analytics', icon: 'analytics', module: 'analytics' },
     ],
   },
@@ -30,9 +30,8 @@ export const NAV_GROUPS = [
     items: [
       { to: '/users', key: 'users', icon: 'users' },
       { to: '/companies', key: 'companies', icon: 'companies', module: ['billing','planning'] },
-      { to: '/settings/modules', key: 'modules', icon: 'grid', requires: 'canManageModules' },
-      { to: '/settings/privacy', key: 'privacy', icon: 'lock', requires: 'canManagePrivacy' },
-      { to: '/settings/emails', key: 'emailSettings', icon: 'mail', requires: 'canManagePrivacy', module: 'billing' },
+      // Módulos, Emails a clientes y Privacidad son pestañas de esta sección (lib/companySettings.js).
+      { to: '/settings', key: 'companySettings', icon: 'sliders', requires: 'canManagePrivacy' },
     ],
   },
 ]
@@ -42,7 +41,6 @@ const EXTRA_TITLES = [
   { to: '/privacy-policy', key: 'privacyPolicy' },
   { to: '/legal-notice', key: 'legalNotice' },
   { to: '/cookies-policy', key: 'cookiesPolicy' },
-  { to: '/settings/emails', key: 'emailSettings' },
 ]
 
 /** Grupos visibles según permisos */

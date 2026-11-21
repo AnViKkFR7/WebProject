@@ -1,10 +1,13 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCompany } from '../contexts/CompanyContext'
 import { usePermissions } from '../hooks/usePermissions'
 import { useCompanyModules } from '../hooks/useCompanyModules'
+import { useNewLeadsCount } from '../hooks/useNewLeadsCount'
 import { visibleNavGroups } from '../lib/navigation'
 import CompanySwitcher from './CompanySwitcher'
 import Icon from './ui/Icon'
+import SlidingIndicator from './ui/SlidingIndicator'
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, setIsTabletCollapsed }) => {
   const { t } = useLanguage()
@@ -12,22 +15,37 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
   const { modules, loading: modulesLoading } = useCompanyModules()
   const visibleModules = modulesLoading ? Object.fromEntries(Object.keys(modules).map(key => [key, false])) : modules
   const closeMobile = () => setIsMobileMenuOpen(false)
+  const { selectedCompany } = useCompany()
+  const { pathname } = useLocation()
+  const newLeads = useNewLeadsCount(selectedCompany?.id, visibleModules.crm !== false && !modulesLoading, pathname)
+  const badgeFor = item => (item.key === 'leads' && newLeads > 0 ? newLeads : 0)
+  const badgeLabel = count => t('leads.newBadge').replace('{count}', count)
 
-  const renderLink = (item) => (
+  const renderLink = (item) => {
+    const badge = badgeFor(item)
+    const label = t(`nav.${item.key}`)
+    return (
     <NavLink
       key={item.to}
       to={item.to}
       end={item.to === '/'}
       onClick={closeMobile}
       className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-      title={isTabletCollapsed ? t(`nav.${item.key}`) : undefined}
+      title={isTabletCollapsed ? (badge ? `${label} · ${badgeLabel(badge)}` : label) : undefined}
     >
       <span className="nav-icon" aria-hidden="true">
         <Icon name={item.icon} />
       </span>
-      <span className="nav-label">{t(`nav.${item.key}`)}</span>
+      <span className="nav-label">{label}</span>
+      {badge > 0 && (
+        <span className="nav-badge">
+          <span aria-hidden="true">{badge > 99 ? '99+' : badge}</span>
+          <span className="visually-hidden">{badgeLabel(badge)}</span>
+        </span>
+      )}
     </NavLink>
-  )
+    )
+  }
 
   return (
     <aside className={`sidebar ${isTabletCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-visible' : ''}`}>
@@ -44,6 +62,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, isTabletCollapsed, set
       <CompanySwitcher onSwitch={closeMobile} />
 
       <nav className="sidebar-nav" aria-label={t('sidebar.navLabel')}>
+        <SlidingIndicator activeSelector=".nav-link.active" itemSelector=".nav-link" className="nav-indicator" />
         {visibleNavGroups(permissions, visibleModules).map((group) => (
           group.key === 'main' ? (
             <div key={group.key} className="nav-group">{group.items.map(renderLink)}</div>

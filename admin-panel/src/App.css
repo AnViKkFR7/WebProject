@@ -4066,6 +4066,17 @@ button.user-chip-mobile {
   .attr-row-switches { grid-column: 3 / -1; grid-row: 2; }
 }
 
+/* Lo que cuenta es el ancho del panel, no el de la ventana: con la vista previa
+   al lado (≥1400 px) el panel puede quedar estrecho y el nombre se quedaba sin sitio. */
+.attr-panel { container-type: inline-size; }
+@container (max-width: 640px) {
+  .attr-row {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    row-gap: 0.5rem;
+  }
+  .attr-row-switches { grid-column: 3 / -1; grid-row: 2; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+}
+
 /* --- Vista previa del formulario --- */
 .form-preview {
   padding: 1.25rem;

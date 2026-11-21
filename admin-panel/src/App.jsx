@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route, Outlet } from 'react-router-dom'
 import './App.css'
 import './styles/forms.css'
+import './styles/glass.css'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import AuthGuard from './components/AuthGuard.jsx'
 import RouteFallback from './components/RouteFallback.jsx'
@@ -26,6 +27,8 @@ const Companies = lazy(() => import('./pages/Companies.jsx'))
 const Users = lazy(() => import('./pages/Users.jsx'))
 const Leads = lazy(() => import('./pages/Leads.jsx'))
 const Contacts = lazy(() => import('./pages/Contacts.jsx'))
+const CompanySettings = lazy(() => import('./pages/CompanySettings.jsx'))
+const CompanyGeneralSettings = lazy(() => import('./components/settings/CompanyGeneralSettings.jsx'))
 const ModuleSettings = lazy(() => import('./pages/ModuleSettings.jsx'))
 const CrmPrivacy = lazy(() => import('./pages/CrmPrivacy.jsx'))
 const CustomerEmailSettings = lazy(() => import('./pages/CustomerEmailSettings.jsx'))
@@ -60,9 +63,12 @@ const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="/my-data" element={<RequireModule module="items"><MyData /></RequireModule>} />
                 <Route path="/companies" element={<RequireModule module={['billing','planning']}><Companies /></RequireModule>} />
                 <Route path="/users" element={<Users />} />
-                <Route path="/settings/modules" element={<ModuleSettings />} />
-                <Route path="/settings/privacy" element={<CrmPrivacy />} />
-                <Route path="/settings/emails" element={<RequireModule module="billing"><CustomerEmailSettings /></RequireModule>} />
+                <Route path="/settings" element={<CompanySettings />}>
+                  <Route path="general" element={<CompanyGeneralSettings />} />
+                  <Route path="modules" element={<ModuleSettings />} />
+                  <Route path="privacy" element={<CrmPrivacy />} />
+                  <Route path="emails" element={<RequireModule module="billing"><CustomerEmailSettings /></RequireModule>} />
+                </Route>
                 <Route path="/leads" element={<RequireModule module="crm"><Leads /></RequireModule>} />
                 <Route path="/contacts" element={<RequireModule module="crm"><Contacts /></RequireModule>} />
                 <Route path="/blog" element={<RequireModule module="blog"><Blog /></RequireModule>} />

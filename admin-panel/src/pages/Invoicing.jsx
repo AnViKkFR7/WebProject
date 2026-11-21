@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDocumentNavigation } from '../hooks/useDocumentNavigation'
 import { useBillingPaletteLibrary } from '../hooks/useBillingPaletteLibrary'
 import DocumentEditorPage from '../components/DocumentEditorPage'
@@ -19,7 +19,7 @@ import Modal from '../components/ui/Modal'
 import Icon from '../components/ui/Icon'
 import DocumentAppearance from '../components/DocumentAppearance'
 import DocumentTotalsBar from '../components/DocumentTotalsBar'
-import DocumentActionButton from '../components/ui/DocumentActionButton'
+import DocumentActionButton, { DocumentActionLink } from '../components/ui/DocumentActionButton'
 import { withBillingAppearance } from '../lib/billingAppearance'
 import DocumentDraftRecovery from '../components/DocumentDraftRecovery'
 import { draftFingerprint } from '../lib/documentDrafts'
@@ -46,6 +46,7 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
   const { canEdit,canManageModules } = usePermissions()
   const paletteLibrary=useBillingPaletteLibrary(company.id,canEdit)
   const { toast, confirm } = useFeedback()
+  const navigate = useNavigate()
   const [invoices, setInvoices] = useState([])
   const [profile, setProfile] = useState({ ...emptyProfile, name: company.name })
   const [profileVersion, setProfileVersion] = useState(0)
@@ -341,7 +342,10 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
     try {
       const saved = await convertQuote(company.id,quote)
       if (!active.current) return
-      setInvoices(prev => prev.map(i => i.id === saved.id ? saved : i)); setEditor(null); go('',{completed:true})
+      setInvoices(prev => prev.map(i => i.id === saved.id ? saved : i)); setEditor(null)
+      // Siguiente paso natural: revisar y emitir la factura recién creada.
+      if (saved.invoice_id) navigate(`/invoicing/${encodeURIComponent(saved.invoice_id)}`)
+      else go('',{completed:true})
       toast.success(label('converted'))
     } catch(error) { reportOperationalFailure('billing','document_conversion_failed',error); if (active.current) toast.error(label('saveError')) } finally { setSaving(false) }
   }
@@ -387,7 +391,7 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
       <div className="invoice-toolbar"><input type="search" className="input" aria-label={label('search')} placeholder={label('search')} value={query} onChange={e => changeFilter('q',e.target.value)}/><select className="select" aria-label={label('status')} value={status} onChange={e => changeFilter('status',e.target.value)}>{['all', ...statuses].map(s => <option key={s} value={s}>{label(s)}</option>)}</select>{!isQuote&&<select className="select" aria-label={t('billingFinance.filter')} value={paymentFilter} onChange={event=>changeFilter('payment',event.target.value)}>{['all','overdue','outstanding','partial','paid','credit','rectified'].map(value=><option key={value} value={value}>{t(`billingFinance.states.${value}`)}</option>)}</select>}</div>
       {finance.error&&!isQuote&&<p className="field-error" role="alert">{t('billingFinance.loadError')}</p>}
       <div className="card invoice-list">{!visible.length ? <p>{label('empty')}</p> : <div className="invoice-table-scroll" role="region" aria-label={label('title')} tabIndex={0}><table className="invoice-table"><thead><tr>{['number','customer','date','total',...(!isQuote?['balance']:[]),'status'].map(k => <th key={k} scope="col">{k==='balance'?t('billingFinance.balance'):label(k)}</th>)}<th scope="col">{t('common.actions')}</th></tr></thead><tbody>{visible.map(i => <tr key={i.id}>
-        <td><button className="ghost-button" onClick={() => start(i)}>{i.number}</button></td><td>{i.document.customer.name}</td><td>{i.document.date}{!isQuote&&financialById.get(i.id)?.due_date&&<small className="invoice-due">{t('billingFinance.due')} {financialById.get(i.id).due_date}</small>}</td><td>{money(invoiceTotals(i.document.lines,i.document.withholding).total)}</td>{!isQuote&&<td>{financialById.has(i.id)?money(financialById.get(i.id).balance):'—'}</td>}<td><span className={`invoice-status invoice-status-${i.status}`}>{label(i.status)}</span>{!isQuote&&financialById.has(i.id)&&<small className="invoice-payment-state">{t(`billingFinance.states.${financialById.get(i.id).payment_state}`)}</small>}</td><td><div className="invoice-row-actions"><button className="ghost-button" aria-label={`${label('download')} ${i.number}`} onClick={() => download(i)}><Icon name="download" size={16}/></button>{canEdit && <button className="ghost-button" aria-label={`${label('duplicate')} ${i.number}`} onClick={()=>startDuplicate(i)}><Icon name="copy" size={16}/></button>}{canEdit&&!isQuote&&['issued','paid'].includes(i.status)&&!i.rectifies_invoice_id&&<button className="ghost-button" aria-label={`${t('rectification.start')} ${i.number}`} title={t('rectification.start')} onClick={()=>startRectification(i)}><Icon name="file" size={16}/></button>}</div></td>
+        <td><button className="ghost-button" onClick={() => start(i)}>{i.number}</button></td><td>{i.document.customer.name}</td><td>{i.document.date}{!isQuote&&financialById.get(i.id)?.due_date&&<small className="invoice-due">{t('billingFinance.due')} {financialById.get(i.id).due_date}</small>}</td><td>{money(invoiceTotals(i.document.lines,i.document.withholding).total)}</td>{!isQuote&&<td>{financialById.has(i.id)?money(financialById.get(i.id).balance):'—'}</td>}<td><span className={`invoice-status invoice-status-${i.status}`}>{label(i.status)}</span>{!isQuote&&financialById.has(i.id)&&<small className="invoice-payment-state">{t(`billingFinance.states.${financialById.get(i.id).payment_state}`)}</small>}</td><td><div className="invoice-row-actions"><button className="ghost-button" aria-label={`${label('download')} ${i.number}`} onClick={() => download(i)}><Icon name="download" size={16}/></button>{canEdit && <button className="ghost-button" aria-label={`${label('duplicate')} ${i.number}`} onClick={()=>startDuplicate(i)}><Icon name="copy" size={16}/></button>}{canEdit&&!isQuote&&['issued','paid'].includes(i.status)&&!i.rectifies_invoice_id&&<button className="ghost-button" aria-label={`${t('rectification.start')} ${i.number}`} title={t('rectification.start')} onClick={()=>startRectification(i)}><Icon name="file" size={16}/></button>}{isQuote&&canEdit&&i.status==='accepted'&&<button className="ghost-button" aria-label={label('convertNamed').replace('{number}',i.number)} title={label('convert')} disabled={saving} onClick={()=>convert(i)}><Icon name="invoice" size={16}/></button>}{isQuote&&i.status==='invoiced'&&i.invoice_id&&<Link className="ghost-button" aria-label={`${label('openInvoice')} · ${i.number}`} title={label('openInvoice')} to={`/invoicing/${encodeURIComponent(i.invoice_id)}`}><Icon name="invoice" size={16}/></Link>}</div></td>
       </tr>)}</tbody></table></div>}</div>
     </>}
     </>}
@@ -424,10 +428,14 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
       {editor && <DocumentActionButton disabled={saving || logoBusy || !validInvoice(editor.doc)} onClick={() => download({ ...editor.invoice,document:editor.doc,number:editor.invoice?.number || (editor.rectificationSource ? `${profile.rectificationPrefix || 'FR'}-BORRADOR` : isQuote ? 'P-BORRADOR' : 'F-BORRADOR'),status:hasUnsavedChanges || !editor.invoice ? 'draft' : editor.status })}><Icon name="download" size={16}/>{label('download')}</DocumentActionButton>}
       {canEdit && editor?.invoice && <DocumentActionButton variant="outline" disabled={saving || logoBusy || hasUnsavedChanges} onClick={()=>startDuplicate(editor.invoice)}><Icon name="copy" size={16}/>{label('duplicate')}</DocumentActionButton>}
       {canEdit && editor?.invoice && !isQuote && ['issued','paid'].includes(editor.invoice.status) && !editor.invoice.rectifies_invoice_id && <DocumentActionButton variant="outline" disabled={saving||hasUnsavedChanges} onClick={()=>startRectification(editor.invoice)}><Icon name="file" size={16}/>{t('rectification.start')}</DocumentActionButton>}
-      {isQuote && canEdit && editor?.invoice?.status === 'accepted' && <button className="primary-button" disabled={saving || logoBusy || hasUnsavedChanges} onClick={() => convert(editor.invoice)}>{label('convert')}</button>}
+      {isQuote && canEdit && editor?.invoice?.status === 'accepted' && <button className="primary-button" disabled={saving || logoBusy || hasUnsavedChanges} onClick={() => convert(editor.invoice)}><Icon name="invoice" size={16}/>{label('convert')}</button>}
+      {isQuote && editor?.invoice?.status === 'invoiced' && editor.invoice.invoice_id && <DocumentActionLink to={`/invoicing/${encodeURIComponent(editor.invoice.invoice_id)}`}><Icon name="invoice" size={16}/>{label('openInvoice')}</DocumentActionLink>}
+      {!isQuote && editor?.doc?.sourceQuote && <DocumentActionLink to={`/quotes?q=${encodeURIComponent(editor.doc.sourceQuote)}`}><Icon name="quote" size={16}/>{t('invoicing.openQuote')}</DocumentActionLink>}
       {editor?.invoice && !locked && (isQuote || editor.invoice.status==='draft') && <DocumentActionButton variant="danger" disabled={saving || logoBusy} onClick={() => cancel(editor.invoice)}><Icon name="close" size={16}/>{label('cancelInvoice')}</DocumentActionButton>}
       {!locked && <button type="submit" form="invoice-editor" className="primary-button" disabled={saving || logoBusy}><Icon name="save" size={16}/>{t(saving ? 'common.savingChanges' : 'common.save')}</button>}    </>}>
       {hasUnsavedChanges && !draftProtected && <p className="field-help" role="status">{label('saveBeforeAction')}</p>}
+      {isQuote && canEdit && editor.invoice?.status === 'accepted' && <p className="form-note" role="status"><Icon name="info" size={16}/>{label('acceptedNext')}</p>}
+      {!isQuote && editor.doc?.sourceQuote && <p className="form-note"><Icon name="quote" size={16}/>{t('invoicing.fromQuote').replace('{number}',editor.doc.sourceQuote)} <Link to={`/quotes?q=${encodeURIComponent(editor.doc.sourceQuote)}`}>{t('invoicing.openQuote')}</Link></p>}
         {isQuote && canEdit && editor.invoice?.id && <section className={approvalStyles.panel} data-has-response={Boolean(quoteApproval.audit?.response)} aria-labelledby="quote-approval-admin-title">
         <div><h2 id="quote-approval-admin-title">{t('quoteApproval.adminTitle')}</h2><p>{t('quoteApproval.adminHelp')}</p></div>
         {editor.invoice.status === 'sent' && <label className={approvalStyles.emailChoice}><input type="checkbox" checked={sendApprovalEmail} onChange={event=>setSendApprovalEmail(event.target.checked)} disabled={quoteApproval.loading||hasUnsavedChanges||!editor.doc.customer.email}/><span>{t('quoteApproval.sendLinkEmail')}</span>{!editor.doc.customer.email&&<small>{t('quoteApproval.customerEmailRequired')}</small>}</label>}

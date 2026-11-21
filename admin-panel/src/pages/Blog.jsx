@@ -15,6 +15,7 @@ import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
 import styles from './Blog.module.css'
+import SlidingIndicator from '../components/ui/SlidingIndicator'
 
 const FILTERS = ['all', 'draft', 'published', 'archived']
 const EMPTY_FORM = {
@@ -298,6 +299,7 @@ const Blog = () => {
         <>
           <div className={styles.toolbar}>
             <div className="segmented" role="group" aria-label={t('blog.filterLabel')}>
+              <SlidingIndicator activeSelector="[aria-pressed='true']" />
               {FILTERS.map(filter => (
                 <button key={filter} type="button" onClick={() => setStatusFilter(filter)} aria-pressed={statusFilter === filter}>
                   {t(`blog.filter_${filter}`)}<span className={styles.count}>{counts[filter]}</span>

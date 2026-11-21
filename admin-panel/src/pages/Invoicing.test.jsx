@@ -33,7 +33,7 @@ const savedProfile = { ...emptyProfile,name:'Company A',taxId:'A123',address:'Ma
 const render = async (kind = 'invoice', entry) => {
   if (!router || currentKind !== kind) {
     currentKind = kind
-    router=createMemoryRouter([{path:kind==='quote'?'/quotes/*':'/invoicing/*',element:<TestWorkspace kind={kind}/>},{path:'/other',element:<p>Other</p>}],{initialEntries:[entry || (kind==='quote'?'/quotes':'/invoicing')]})
+    router=createMemoryRouter([{path:kind==='quote'?'/quotes/*':'/invoicing/*',element:<TestWorkspace kind={kind}/>},{path:'/other',element:<p>Other</p>},...(kind==='quote'?[{path:'/invoicing/:id',element:<p data-invoice-page>Invoice page</p>}]:[])],{initialEntries:[entry || (kind==='quote'?'/quotes':'/invoicing')]})
   }
   await act(async()=>{root.render(<RouterProvider router={router}/>);refresh?.()})
 }
@@ -96,12 +96,35 @@ describe('issuer forms and tenant switching',()=>{
     mocks.load.mockResolvedValue({ invoices:[quote],profile:savedProfile,profileVersion:3 })
     let resolve
     mocks.confirm.mockImplementation(()=>new Promise(done=>{ resolve=done }))
-    await render('quote');await click(button('P-000001'));await click(button('Convertir en factura'))
+    await render('quote');await click(button('P-000001'));await click(button('Crear factura'))
     expect(mocks.confirm).toHaveBeenCalled()
     mocks.company={ id:'company-b',name:'Company B' };mocks.load.mockResolvedValue({ invoices:[],profile:savedProfile,profileVersion:1 })
     await render('quote')
     await act(async()=>resolve(true))
     expect(mocks.convert).not.toHaveBeenCalled()
+  })
+  it('creates the invoice from an accepted quote in the list and opens it',async()=>{
+    const quote={ id:'q1',number:'P-000001',version:1,status:'accepted',document:{ issuer:savedProfile,customer:{ name:'Client',taxId:'C789',address:'City' },date:'2026-10-22',dueDate:'',withholding:0,lines:[{ description:'Service',quantity:1,price:100,discount:0,tax:21 }] } }
+    mocks.load.mockResolvedValue({ invoices:[quote],profile:savedProfile,profileVersion:3 })
+    mocks.confirm.mockResolvedValue(true)
+    mocks.convert.mockResolvedValue({ ...quote,status:'invoiced',version:2,invoice_id:'inv-9' })
+    await render('quote')
+    await click(container.querySelector('button[aria-label="Crear factura de P-000001"]'))
+    expect(mocks.convert).toHaveBeenCalledWith('company-a',quote)
+    expect(router.state.location.pathname).toBe('/invoicing/inv-9')
+    expect(container.querySelector('[data-invoice-page]')).toBeTruthy()
+  })
+  it('links an invoiced quote to its invoice and the invoice back to its quote',async()=>{
+    const invoiced={ id:'q1',number:'P-000001',version:2,status:'invoiced',invoice_id:'inv-9',document:{ issuer:savedProfile,customer:{ name:'Client',taxId:'C789',address:'City' },date:'2026-10-22',dueDate:'',withholding:0,lines:[{ description:'Service',quantity:1,price:100,discount:0,tax:21 }] } }
+    mocks.load.mockResolvedValue({ invoices:[invoiced],profile:savedProfile,profileVersion:3 })
+    await render('quote')
+    expect(container.querySelector('a[href="/invoicing/inv-9"]')).toBeTruthy()
+    await act(async()=>root.unmount()); root=createRoot(container); router=null
+    const invoice={ id:'inv-9',number:'F260001',version:1,status:'draft',document:{ ...invoiced.document,sourceQuote:'P-000001' } }
+    mocks.load.mockResolvedValue({ invoices:[invoice],profile:savedProfile,profileVersion:3 })
+    await render('invoice'); await click(button('F260001'))
+    expect(container.textContent).toContain('Creada a partir del presupuesto P-000001.')
+    expect(container.querySelector('a[href="/quotes?q=P-000001"]')).toBeTruthy()
   })
   it('does not offer document creation to viewers',async()=>{
     mocks.canEdit=false;await render()

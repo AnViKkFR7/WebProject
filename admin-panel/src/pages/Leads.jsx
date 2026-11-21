@@ -10,6 +10,7 @@ import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
 import LeadDetailModal from '../components/leads/LeadDetailModal'
+import SlidingIndicator from '../components/ui/SlidingIndicator'
 
 const FILTERS = ['all', ...LEAD_STATUSES]
 
@@ -126,6 +127,7 @@ const Leads = () => {
         <>
           <div className="lead-toolbar">
             <div className="segmented" role="group" aria-label={t('leads.filterByStatus')}>
+              <SlidingIndicator activeSelector="[aria-pressed='true']" />
               {FILTERS.map(value => (
                 <button
                   key={value}

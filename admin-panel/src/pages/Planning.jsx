@@ -29,6 +29,7 @@ import ClientCompanyModal from "../components/planning/ClientCompanyModal";
 import Icon from "../components/ui/Icon";
 import EmptyState from "../components/ui/EmptyState";
 import "../styles/planning.css";
+import SlidingIndicator from '../components/ui/SlidingIndicator';
 
 const emptyTaskForm = {
   title: "", description: "", client_company_id: "", type: "todo",
@@ -487,6 +488,7 @@ const PlanningWorkspace = () => {
 
         <div className="planning-sidebar">
           <div className="segmented" role="group" aria-label={t('planning.viewMode')}>
+            <SlidingIndicator activeSelector="[aria-pressed='true']" />
             {[["calendar", 'planning.switcherCalendar'], ["billing", 'planning.switcherBilling'], ["emailFailures", 'planning.switcherEmailFailures']].map(([key, labelKey]) => (
               <button
                 key={key}

@@ -16,6 +16,7 @@ import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import { usePermissions } from '../hooks/usePermissions'
 import { displayLabel } from '../lib/attributeLabel'
+import SlidingIndicator from '../components/ui/SlidingIndicator'
 
 const VIEW_MODE_KEY = 'items_view_mode_v2'
 
@@ -457,6 +458,7 @@ const Items = () => {
         actions={(
           <>
             <div className="segmented" role="group" aria-label={t('items.viewMode')}>
+              <SlidingIndicator activeSelector="[aria-pressed='true']" />
               <button
                 type="button"
                 onClick={() => setViewMode('rows')}

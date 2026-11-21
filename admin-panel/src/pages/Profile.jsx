@@ -1,36 +1,25 @@
-import { useEffect, useState } from 'react'
 import { NavLink, Navigate, useParams } from 'react-router-dom'
-import { companyService } from '../services/companyService'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useCompany } from '../contexts/CompanyContext'
 import PageHeader from '../components/ui/PageHeader'
+import SlidingIndicator from '../components/ui/SlidingIndicator'
 import PersonalTab from '../components/profile/PersonalTab'
 import SecurityTab from '../components/profile/SecurityTab'
-import CompanyTab from '../components/profile/CompanyTab'
 
 // La pestaña vive en la URL (/profile/security) para poder enlazarla desde el menú de usuario.
 // Crear empresa / usuario y asignar usuario se movieron a /users y al selector de empresa.
+// Lo relativo a la empresa vive en «Ajustes de empresa» (/settings); /profile/company redirige allí.
 const TABS = [
   { path: '', key: 'personal' },
   { path: 'security', key: 'security' },
-  { path: 'company', key: 'company' },
 ]
 
 const Profile = () => {
   const { t } = useLanguage()
   const { tab = '' } = useParams()
   const { selectedCompany, user } = useCompany()
-  const [memberProfile, setMemberProfile] = useState(null)
 
-  useEffect(() => {
-    if (!selectedCompany?.id) return undefined
-    let cancelled = false
-    companyService.getCurrentUserMemberProfile(selectedCompany.id)
-      .then((profile) => { if (!cancelled) setMemberProfile(profile) })
-      .catch((error) => console.error('Error cargando perfil del miembro:', error))
-    return () => { cancelled = true }
-  }, [selectedCompany?.id])
-
+  if (tab === 'company') return <Navigate to="/settings" replace />
   if (!TABS.some((item) => item.path === tab)) return <Navigate to="/profile" replace />
 
   return (
@@ -38,6 +27,7 @@ const Profile = () => {
       <PageHeader title={t('profile.title')} description={t('profile.description')} />
 
       <nav className="tabs-header" aria-label={t('profile.title')}>
+        <SlidingIndicator activeSelector=".tab-button.active" itemSelector=".tab-button" />
         {TABS.map((item) => (
           <NavLink
             key={item.key}
@@ -53,7 +43,6 @@ const Profile = () => {
       <main>
         {tab === '' && <PersonalTab selectedCompany={selectedCompany} currentUser={user} />}
         {tab === 'security' && <SecurityTab />}
-        {tab === 'company' && <CompanyTab selectedCompany={selectedCompany} memberProfile={memberProfile} />}
       </main>
     </div>
   )

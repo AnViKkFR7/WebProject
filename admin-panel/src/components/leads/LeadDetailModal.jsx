@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { formatDateTime } from '../../lib/dates'
 import { LEAD_STATUSES } from '../../lib/leads'
@@ -89,6 +90,22 @@ const LeadDetailModal = ({ lead, canEdit, saving, onSave, onDelete, onClose }) =
           </div>
         )}
         </dl>
+        {lead.crm_contact_id && (
+          <div className={styles.contactLink}>
+            <p>{t('leads.linkedContactHelp')}</p>
+            <Link className="ghost-button small" to={`/contacts?contact=${encodeURIComponent(lead.crm_contact_id)}`}>
+              <Icon name="contacts" size={14} />{t('leads.openContact')}
+            </Link>
+          </div>
+        )}
+        {!lead.crm_contact_id && lead.crm_match_state === 'review_required' && (
+          <div className={styles.contactLink}>
+            <p>{t('leads.reviewContactHelp')}</p>
+            <Link className="ghost-button small" to="/contacts">
+              <Icon name="contacts" size={14} />{t('leads.reviewContact')}
+            </Link>
+          </div>
+        )}
       </section>
 
       {lead.message && (
