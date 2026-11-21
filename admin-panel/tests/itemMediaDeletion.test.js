@@ -10,11 +10,12 @@ beforeAll(async()=>{
   const source=await readFile(new URL('../../supabase/functions/delete-item-media/index.ts',import.meta.url),'utf8')
   code=(await transform(source,{loader:'ts',format:'cjs'})).code
 })
-async function removeMedia({url=`${base}company-a/item-a/image.png`,role='editor',active=true,memberCompany='company-a',token=true,dbError=false}={}) {
+async function removeMedia({url=`${base}company-a/item-a/image.png`,role='editor',active=true,memberCompany='company-a',token=true,dbError=false,moduleEnabled=true}={}) {
+  const rpc=vi.fn(async()=>({data:moduleEnabled,error:null}))
   let handler
   const remove=vi.fn(async()=>({error:null}))
   const deleted=vi.fn()
-  const client={auth:{getUser:async()=>({data:{user:{id:'user-a',app_metadata:{}}},error:null})},storage:{from:()=>({remove})},from:table=>{
+  const client={rpc,auth:{getUser:async()=>({data:{user:{id:'user-a',app_metadata:{}}},error:null})},storage:{from:()=>({remove})},from:table=>{
     let deleting=false
     const filters={}
     const result=()=>({data:table==='company_members'?(active&&filters.is_active&&filters.company_id===memberCompany?{role}:null):{id:'media-a',item_id:'item-a',url_externa:url,items:{company_id:'company-a'}},error:null})
@@ -24,7 +25,7 @@ async function removeMedia({url=`${base}company-a/item-a/image.png`,role='editor
   const require=name=>name.includes('server.ts')?{serve:fn=>{handler=fn}}:name.includes('supabase-js')?{createClient:()=>client}:{ownedItemMediaPath}
   new Function('require','Deno',code)(require,{env:{get:key=>key==='SUPABASE_URL'?project:'test-key'}})
   const response=await handler(new Request(`${project}/delete`,{method:'POST',headers:token?{Authorization:'Bearer test'}:{},body:JSON.stringify({media_id:'media-a'})}))
-  return {response,body:await response.json(),remove,deleted}
+  return {response,body:await response.json(),remove,deleted,rpc}
 }
 it('deletes authorized media and defers its object to the transactional cleanup queue',async()=>{
   const result=await removeMedia()
@@ -53,5 +54,12 @@ it('denies missing authentication, inactive members and viewers before any delet
 it('never removes an object when the database rejects the deletion',async()=>{
   const result=await removeMedia({dbError:true})
   expect(result.response.status).toBe(400)
+  expect(result.remove).not.toHaveBeenCalled()
+})
+it('refuses to delete when the catalog module is disabled (service role skips the RLS module gate)',async()=>{
+  const result=await removeMedia({moduleEnabled:false})
+  expect(result.response.status).toBe(403)
+  expect(result.rpc).toHaveBeenCalledWith('is_company_module_enabled',{_company_id:'company-a',_module_key:'items'})
+  expect(result.deleted).not.toHaveBeenCalled()
   expect(result.remove).not.toHaveBeenCalled()
 })

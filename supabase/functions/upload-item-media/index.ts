@@ -129,9 +129,19 @@ serve(async (req) => {
       }
     }
 
+    // El servicio omite RLS, incluido el filtro de módulos: se comprueba aquí que Catálogo siga activo.
+    const { data: itemsEnabled, error: moduleError } = await supabaseAdmin.rpc('is_company_module_enabled', { _company_id: item.company_id, _module_key: 'items' })
+    if (moduleError || itemsEnabled !== true) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: the catalog module is disabled for this company' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 5. Subir archivo al Storage
     const timestamp = Date.now()
-    const fileExtension = file.name.split('.').pop()
+    // Extensión según el tipo ya validado, no según el nombre que manda el navegador.
+    const fileExtension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' } as Record<string, string>)[file.type]
     const storagePath = `${item.company_id}/${itemId}/${timestamp}_${crypto.randomUUID()}.${fileExtension}`
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
