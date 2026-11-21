@@ -376,7 +376,7 @@ const PlanningWorkspace = () => {
     );
   }
 
-  const calendarEvents = expandRecurringTasks(tasks)
+  const calendarEvents = expandRecurringTasks(tasks,range)
     .map(task => taskToCalendarEvent(task, clientCompanies))
     .filter(Boolean);
 
@@ -473,12 +473,12 @@ const PlanningWorkspace = () => {
                 ? <p className="planning-empty">{t('planning.selectCompanyPrompt')}</p>
                 : loadingBills
                   ? <p className="planning-empty">{t('planning.loadingBilling')}</p>
-                  : <BillingView
-                      bills={expandRecurringBills(bills)}
+                  : <><p className="planning-empty">{t('planning.billingWindow').replace('{from}',range?toDateOnly(range.from):'').replace('{to}',range?toDateOnly(range.to):'')}</p><BillingView
+                      bills={expandRecurringBills(bills,range?{from:toDateOnly(range.from),to:toDateOnly(range.to)}:null)}
                       clientCompanies={selectedCompanies}
                       onDelete={canEdit ? handleDeleteBill : undefined}
                       onEdit={canEdit ? handleEditBill : undefined}
-                    />}
+                    /></>}
             </div>
           ) : (
             <PlanningEmailFailures companyId={companyId} canEdit={canEdit} t={t}/>

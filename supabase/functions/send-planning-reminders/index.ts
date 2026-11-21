@@ -125,7 +125,7 @@ serve(async (req) => {
       if (!membership) { await fail('membership_inactive', false); continue }
 
       const { data: task, error: taskError } = await admin.from('planning_task')
-        .select('id,company_id,created_by,title,description,start_datetime,end_datetime,is_all_day,type,recurrence_type,client_company_id')
+        .select('id,company_id,created_by,title,description,start_datetime,end_datetime,is_all_day,type,recurrence_type,client_company_id,version')
         .eq('id', job.task_id).eq('company_id', job.company_id).maybeSingle()
       if (taskError) { await fail('task_lookup_failed'); continue }
       if (!task || task.created_by !== job.recipient_id) { await fail('task_unavailable', false); continue }
@@ -146,6 +146,12 @@ serve(async (req) => {
         minutes_before: job.minutes_before, occurrence_at: job.occurrence_at,
       }
       const message = buildPlanningReminder(reminder, task as ReminderTask, company.name || 'Tu compañía', clientName)
+      // Verify the exact version used to build this payload immediately before delivery.
+      const {data: current, error: validationError} = await admin.rpc('validate_planning_email_delivery', {
+        p_queue: job.queue_id, p_company: job.company_id, p_task: job.task_id, p_version: task.version,
+      })
+      if (validationError) { await fail('task_lookup_failed'); continue }
+      if (current !== true) continue
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {

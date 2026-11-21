@@ -35,6 +35,8 @@ describe('database migration runbook', () => {
       'COMPANY_MODULES_PLATFORM_ADMIN.sql',
       'BILLING_DUE_REMINDERS.sql',
       'COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql',
+      'COMPANY_CUSTOMER_EMAIL_REVISIONS_REPAIR.sql',
+      'COMPANY_MODULES_SCOPE_FIX.sql',
       'WEEKLY_SUMMARY_EMAIL.sql',
       'WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql',
       'BILLING_DUE_REMINDERS_CRON.sql',
@@ -74,5 +76,15 @@ describe('database migration runbook', () => {
     expect(customerEmailPreflight).not.toMatch(/\b(insert\s+into|update\s+\w|delete\s+from|truncate|drop\s+|alter\s+table)\b/i)
     expect(readme).toContain('maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql')
     expect(orderedSection.indexOf('migrations/COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql')).toBeGreaterThan(orderedSection.indexOf('migrations/BILLING_DUE_REMINDERS.sql'))
+  })
+
+  it('documents the late module-scope fix after the RPC dependencies and keeps its preflight read-only',()=>{
+    const position=file=>orderedSection.indexOf(`migrations/${file}`)
+    expect(position('COMPANY_MODULES_SCOPE_FIX.sql')).toBeGreaterThan(position('COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql'))
+    expect(position('COMPANY_MODULES_SCOPE_FIX.sql')).toBeGreaterThan(position('COMPANY_CUSTOMER_EMAIL_REVISIONS_REPAIR.sql'))
+    expect(position('COMPANY_MODULES_SCOPE_FIX.sql')).toBeGreaterThan(position('BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql'))
+    const preflight=readFileSync(new URL('../../../database/maintenance/COMPANY_MODULES_SCOPE_FIX_PREFLIGHT.sql',import.meta.url),'utf8')
+    expect(preflight).not.toMatch(/\b(insert\s+into|update\s+\w|delete\s+from|truncate|drop\s+|alter\s+table)\b/i)
+    expect(readme).toContain('maintenance/COMPANY_MODULES_SCOPE_FIX_PREFLIGHT.sql')
   })
 })

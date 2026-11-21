@@ -27,6 +27,9 @@ it('opens on the selected month, starts weeks on Monday and emits ISO dates',asy
   expect(document.querySelector('.calendar-popover')).toBeNull()
 })
 it('validates typed dates and honors required and min without saving stale valid values',async()=>{
+  // Con el campo vacío el calendario abre en el mes actual: se fija la fecha para que la prueba no caduque.
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-10-22T12:00:00'))
+  try {
   await render({required:true,min:'2026-10-22'})
   await enter('31/02/2026');expect(document.getElementById('date').checkValidity()).toBe(false);expect(changed).not.toHaveBeenCalled()
   await enter('21/10/2026');expect(document.getElementById('date').checkValidity()).toBe(false)
@@ -35,6 +38,7 @@ it('validates typed dates and honors required and min without saving stale valid
   await click(button('Abrir calendario: Fecha inicio'))
   expect(document.querySelector('[data-date="2026-10-21"]').disabled).toBe(true)
   expect(button('Borrar')).toBeUndefined()
+  } finally { vi.useRealTimers() }
 })
 it('closes just the calendar on Escape and supports keyboard navigation',async()=>{
   await render();await click(button('Abrir calendario: Fecha inicio'))

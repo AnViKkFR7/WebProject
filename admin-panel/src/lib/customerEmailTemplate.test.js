@@ -63,7 +63,7 @@ describe('customer billing email templates',()=>{
     expect(message.html).toContain('table-layout:fixed')
     expect(message.html).toContain('overflow-wrap:anywhere;word-break:break-word')
     expect(message.html).toContain('role="presentation"')
-    expect(message.html).toContain('background:#0f766e')
+    expect(message.html).toContain('background-color:#0f766e')
   })
 
   it('shows the selected logo in preview without a CID attachment and distinguishes layouts',()=>{
@@ -82,17 +82,17 @@ describe('customer billing email templates',()=>{
     expect(sent.html).toContain('src="cid:company-email-logo"')
     expect(sent.attachments).toHaveLength(1)
     expect(preview.html).not.toBe(bold.html)
-    expect(bold.html).toContain('background:#334155')
+    expect(bold.html).toContain('background-color:#334155')
     expect(bold.html).toContain('background:#ffffff;border-radius:9px')
-    expect(bold.html).toContain('OUTSTANDING BALANCE')
-    expect(bold.html).toContain('€20.00')
+    expect(bold.html).toContain('SALDO PENDIENTE')
+    expect(bold.html).toContain('5 €')
   })
 
   it('chooses accessible sender text for light accent colors',()=>{
     const settings=defaultCustomerEmailSettings()
     const message=renderCustomerBillingEmail({kind:'invoice_due',companyName:'Company',data:{invoice_number:'F-1',due_date:'01/01/2027',balance:'5 €'},brand:{...settings.brand,layout:'bold',palette:{...settings.brand.palette,accent:'#f8fafc'}},template:settings.templates.invoice_due.es})
     expect(message.html).toContain('background-color:#f8fafc')
-    expect(message.html).toContain('background:#f8fafc')
+    expect(message.html).toContain('background-color:#f8fafc')
     expect(message.html).toContain('color:#000000')
   })
 })

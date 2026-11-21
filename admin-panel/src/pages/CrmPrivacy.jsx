@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
 import { useFeedback } from '../contexts/FeedbackContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -38,8 +38,19 @@ export default function CrmPrivacy() {
   const [retentionError, setRetentionError] = useState('')
   const [retentionSaved, setRetentionSaved] = useState(false)
   const companyId = selectedCompany?.id
+  const companyIdRef = useRef(companyId)
+  const privacyRequestRef = useRef(0)
+  const retentionRequestRef = useRef(0)
+  companyIdRef.current = companyId
 
   useEffect(() => {
+    privacyRequestRef.current += 1
+    retentionRequestRef.current += 1
+    setQuery(''); setResults([]); setContact(null); setImpact(null)
+    setShowEraseConfirm(false); setConfirmed(false); setLoading(false); setError(''); setComplete(false)
+    setRetention({ unresolved_lead_days: '', inactive_contact_days: '', unresolved_leads_for_review: 0, inactive_contacts_for_review: 0 })
+    setRetentionCompanyId(null); setRetentionLoading(false); setRetentionSaving(false)
+    setRetentionError(''); setRetentionSaved(false)
     if (!companyId || !canManagePrivacy) return undefined
     let active = true
     setRetentionCompanyId(null)
@@ -54,61 +65,80 @@ export default function CrmPrivacy() {
   const saveRetention = async (event) => {
     event.preventDefault()
     if (!companyId) return
+    const requestId = ++retentionRequestRef.current
     setRetentionSaving(true); setRetentionError(''); setRetentionSaved(false)
     const days = value => value === '' ? null : Number(value)
     try {
       const saved = await crmPrivacyService.saveRetentionReview(companyId, days(retention.unresolved_lead_days), days(retention.inactive_contact_days))
+      if (requestId !== retentionRequestRef.current || companyIdRef.current !== companyId) return
       setRetention({ ...saved, unresolved_lead_days: saved.unresolved_lead_days ?? '', inactive_contact_days: saved.inactive_contact_days ?? '' })
       setRetentionCompanyId(companyId)
       setRetentionSaved(true)
-    } catch { setRetentionError('save') }
-    finally { setRetentionSaving(false) }
+    } catch { if (requestId === retentionRequestRef.current && companyIdRef.current === companyId) setRetentionError('save') }
+    finally { if (requestId === retentionRequestRef.current && companyIdRef.current === companyId) setRetentionSaving(false) }
   }
 
   const search = async (event) => {
     event.preventDefault()
     const term = query.trim()
     if (term.length < 2 || !companyId) return
+    const requestId = ++privacyRequestRef.current
     setLoading(true); setError(''); setContact(null); setImpact(null); setShowEraseConfirm(false); setConfirmed(false); setComplete(false)
-    try { setResults(await crmPrivacyService.searchContacts(companyId, term)) }
-    catch { setError(t('crmPrivacy.searchError')); setResults([]) }
-    finally { setLoading(false) }
+    try {
+      const found = await crmPrivacyService.searchContacts(companyId, term)
+      if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setResults(found)
+    } catch {
+      if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) { setError(t('crmPrivacy.searchError')); setResults([]) }
+    } finally { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setLoading(false) }
   }
 
   const selectContact = async (row) => {
+    if (!companyId) return
+    const requestId = ++privacyRequestRef.current
     setContact(row); setImpact(null); setShowEraseConfirm(false); setConfirmed(false); setComplete(false); setLoading(true); setError('')
-    try { setImpact(await crmPrivacyService.preview(companyId, row.id)) }
-    catch { setError(t('crmPrivacy.previewError')) }
-    finally { setLoading(false) }
+    try {
+      const preview = await crmPrivacyService.preview(companyId, row.id)
+      if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setImpact(preview)
+    } catch { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setError(t('crmPrivacy.previewError')) }
+    finally { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setLoading(false) }
   }
 
   const exportContact = async () => {
     if (!contact || !companyId) return
+    const requestId = ++privacyRequestRef.current
+    const contactId = contact.id
     setLoading(true); setError('')
     try {
-      const data = await crmPrivacyService.exportContact(companyId, contact.id)
+      const data = await crmPrivacyService.exportContact(companyId, contactId)
+      if (requestId !== privacyRequestRef.current || companyIdRef.current !== companyId) return
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `contacto-${contact.id}.json`
+      anchor.download = `contacto-${contactId}.json`
+      anchor.style.display = 'none'
+      document.body.append(anchor)
       anchor.click()
-      URL.revokeObjectURL(url)
+      anchor.remove()
+      globalThis.setTimeout(() => URL.revokeObjectURL(url), 1000)
       toast.success(t('crmPrivacy.exported'))
-    } catch { setError(t('crmPrivacy.exportError')) }
-    finally { setLoading(false) }
+    } catch { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setError(t('crmPrivacy.exportError')) }
+    finally { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setLoading(false) }
   }
 
   const anonymize = async () => {
     if (!contact || !companyId || !confirmed) return
+    const requestId = ++privacyRequestRef.current
+    const contactId = contact.id
     setLoading(true); setError('')
     try {
-      await crmPrivacyService.anonymize(companyId, contact.id, newRequestId())
-      setResults(current => current.filter(row => row.id !== contact.id))
+      await crmPrivacyService.anonymize(companyId, contactId, newRequestId())
+      if (requestId !== privacyRequestRef.current || companyIdRef.current !== companyId) return
+      setResults(current => current.filter(row => row.id !== contactId))
       setContact(null); setImpact(null); setShowEraseConfirm(false); setConfirmed(false); setComplete(true)
       toast.success(t('crmPrivacy.anonymized'))
-    } catch { setError(t('crmPrivacy.anonymizeError')) }
-    finally { setLoading(false) }
+    } catch { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setError(t('crmPrivacy.anonymizeError')) }
+    finally { if (requestId === privacyRequestRef.current && companyIdRef.current === companyId) setLoading(false) }
   }
 
   const retentionReady = retentionCompanyId === companyId
@@ -155,7 +185,7 @@ export default function CrmPrivacy() {
       </li>)}</ul>
     </section>}
     {contact && <section className={styles.detail} aria-labelledby="crm-privacy-contact-title">
-      <header><div><h2 id="crm-privacy-contact-title">{contact.name}</h2><p>{[contact.email, contact.phone].filter(Boolean).join(' · ')}</p></div><button className="ghost-button small" type="button" onClick={() => { setContact(null); setImpact(null); setShowEraseConfirm(false); setConfirmed(false) }}>{t('common.close')}</button></header>
+      <header><div><h2 id="crm-privacy-contact-title">{contact.name}</h2><p>{[contact.email, contact.phone].filter(Boolean).join(' · ')}</p></div><button className="ghost-button small" type="button" onClick={() => { privacyRequestRef.current += 1; setContact(null); setImpact(null); setShowEraseConfirm(false); setConfirmed(false); setLoading(false) }}>{t('common.close')}</button></header>
       {impact && <dl className={styles.impact}>
         <div><dt>{t('crmPrivacy.leads')}</dt><dd>{impact.lead_count}</dd></div>
         <div><dt>{t('crmPrivacy.activities')}</dt><dd>{impact.activity_count}</dd></div>

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ownedItemMediaPath } from '../_shared/itemMediaStorage.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -97,26 +98,9 @@ serve(async (req) => {
       }
     }
 
-    // 5. Extraer el path del Storage desde la URL.
-    // Formatos que puede tener url_externa según cómo se subió/migró la
-    // imagen: pública (".../object/public/items-media/<path>"), firmada
-    // (".../object/sign/items-media/<path>?token=...") o con el nombre del
-    // path URL-encoded. Nunca bloqueamos el borrado del registro solo
-    // porque no reconozcamos el formato — como mucho, se queda un archivo
-    // huérfano en Storage, que es preferible a que el usuario no pueda
-    // borrar la imagen desde el admin.
-    let storagePath = null
-    const marker = '/items-media/'
-    const markerIndex = media.url_externa.indexOf(marker)
-    if (markerIndex !== -1) {
-      const rawPath = media.url_externa.slice(markerIndex + marker.length)
-      const withoutQuery = rawPath.split('?')[0]
-      try {
-        storagePath = decodeURIComponent(withoutQuery)
-      } catch {
-        storagePath = withoutQuery
-      }
-    }
+    // 5. Only delete objects in the authorized item's canonical namespace.
+    // Unknown/legacy URLs may be detached, but never authorize Storage cleanup.
+    const storagePath = ownedItemMediaPath(media.url_externa, supabaseUrl, media.items.company_id, media.item_id)
 
     // 6. Borrar el registro de la base de datos
     // El trigger validate_item_media verificará que si es portada y hay más imágenes,
@@ -133,44 +117,12 @@ serve(async (req) => {
       )
     }
 
-    // 7. Borrar el archivo del Storage — solo si se pudo determinar el path.
-    // Si no (URL en un formato irreconocible), el registro ya está borrado
-    // igualmente y solo queda un archivo huérfano en el bucket.
-    if (!storagePath) {
-      console.error('[DELETE-ITEM-MEDIA] storage_path_unrecognized')
-      return new Response(
-        JSON.stringify({
-          success: true,
-          warning: 'Record deleted but storage cleanup was skipped (unrecognized URL format)'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const { error: storageError } = await supabaseAdmin.storage
-      .from('items-media')
-      .remove([storagePath])
-
-    if (storageError) {
-      // Log pero no fallar la operación (el registro ya fue borrado)
-      console.error('[DELETE-ITEM-MEDIA] storage_delete_failed')
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          warning: 'Record deleted but storage cleanup failed',
-          storage_error: storageError.message
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
+    // The transactional outbox handles Storage after shared-reference checks.
+    // Never remove directly here: database success must survive Storage outages.
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Media deleted successfully'
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({success:true,cleanup:storagePath?'deferred':'review',
+        ...(!storagePath?{warning:'Storage cleanup requires manual review (unrecognized URL format)'}:{})}),
+      {status:200,headers:{...corsHeaders,'Content-Type':'application/json'}}
     )
 
   } catch (error) {

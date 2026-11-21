@@ -1,5 +1,174 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-21 · Blog: imágenes, editor de texto y SEO automático
+
+- Editor visual (Tiptap) con párrafo, título de sección, subtítulo, negrita, cursiva, enlaces seguros, listas, cita, separador y deshacer. Decisión: se sigue guardando Markdown (serializador propio en `lib/blogMarkdown.js`) para que las webs que ya pintan el blog con react-markdown sin HTML sigan igual; los párrafos vacíos se guardan como `&nbsp;` para conservar el espaciado.
+- Imágenes: de 1 a 3 por artículo, una portada, descripción (alt), orden y borrado. Se comprimen a WebP (máx. 1920 px) en el navegador y se suben al guardar a `blog-media/<empresa>/<artículo>/`, con caché de un año. Publicar exige al menos una imagen; el artículo se guarda como borrador hasta que las imágenes están subidas y solo entonces pasa a publicado.
+- Nueva migración `BLOG_MEDIA_EDITOR.sql`: bucket público `blog-media` (5 MB, solo imágenes), escritura en Storage solo para admin/editor de la empresa propietaria con módulo blog activo; en `blog_media`, máximo 3 imágenes, una portada, URL obligatoria del bucket y de la misma empresa/artículo. Bootstrap actualizado.
+- SEO automático al guardar: slug sin palabras vacías y único en la empresa (nunca cambia si ya se publicó), título SEO de 30–60 caracteres con la marca si cabe, descripción ≤155 desde resumen/encabezado/cuerpo, imagen para compartir = portada y alt por defecto = título. Solo se rellena lo vacío o lo que seguía siendo automático; lo escrito a mano se respeta. Revisión SEO de 8 puntos en el editor (recomendaciones, no bloquea).
+- Fallos parciales: si falla la subida, el texto queda guardado y el reintento actualiza el mismo artículo sin duplicarlo ni resubir imágenes ya guardadas.
+- Verificación: 8 pruebas SQL (permisos entre empresas, viewer, anónimo, módulo desactivado, límite, portada única, URL), 20 de Markdown/SEO y 4 de página (bloqueo sin imagen, borrador→imágenes→publicado con SEO, reintento sin duplicar). Suite completa, lint, build y 14/14 funciones correctos. Corregida también una prueba de DatePicker que dependía de la fecha actual. Sin verificación visual en navegador ni contra Supabase real.
+- Pendiente: aplicar `BLOG_MEDIA_EDITOR.sql`. Arquelia ya lee `blog_media` y la portada; mejora futura: datos estructurados BlogPosting.
+
+
+## 2026-11-10 · Optimización de fotos antiguas de Storage
+
+- Diagnóstico de cuotas Supabase (ciclo 18 oct–18 nov): Cached Egress 36 % y Egress 23 % a día 23/31, sin riesgo este ciclo. Log Query no se factura ni lo genera la app. items-media: 102 JPG (227 MB, media 2,3 MB) y 13 PNG subidos antes del optimizador; las 116 WebP ya están optimizadas.
+- Decisión: recomprimir en la misma ruta y formato en vez de convertir a WebP con URL nueva, para no tocar URLs (item_media, blog, Open Graph) ni la cola de limpieza de Storage. Copia local obligatoria antes de subir y modo restaurar.
+- Nuevo `scripts/optimize-legacy-media.mjs` (`npm run media:optimize`, informe por defecto) y guía en `database/maintenance/OPTIMIZE_LEGACY_MEDIA.md`. Dependencias de desarrollo en la raíz: sharp y supabase-js.
+- Verificación: 8 pruebas (`npm run test:scripts`) con Storage simulado e imágenes generadas: selección, EXIF, transparencia, sin cambios en modo informe, copia antes de subir, fallos aislados, sin reemplazo si ahorra poco y restauración. Pendiente ejecución real.
+- Pendiente de decidir: miniaturas para tarjetas y galería de las webs de clientes y caché más larga del bucket.
+
+
+## 2026-10-29 · Correcciones tras segunda revisión
+
+- Nueva COMPANY_USER_PROVISIONING_RECOVERY.sql: reintentos usan rol/nombre actuales para nuevas membresías y conservan miembros existentes. Regresión SQL confirma viewer tras solicitud editor fallida.
+- create-user valida empresa antes de Auth y recupera resultados parciales mediante estado persistente privado. Sin borrado compensatorio, sin contraseñas persistidas y sin cambiar credenciales existentes; UI conserva entrada y distingue creación de recuperación en ES/EN.
+- Pruebas de módulos/correos alineadas con sus contratos reales sin retirar denegaciones; sugerencias SEO ligadas a su contexto sin efecto de setState.
+- Verificación final: 764/764 pruebas en 128 archivos, sin omitidas; lint global y build correctos; 14/14 Edge Functions compilan. Aviso de chunks del 22 excluido. Una ejecución intermedia tuvo un timeout de arranque PGlite bajo carga; la repetición final pasó sin ampliar ni desactivar el timeout.
+- Pendiente aplicar nueva migración, desplegar create-user y panel, y comprobar Auth/REST/SMTP reales. Bootstrap 69 pasos. Procedimiento en docs/correcciones-revision-posterior.md.
+
+
+## 2026-10-29 · Auditoría: entregas conjuntas 18–21
+
+- Métricas semanales: primera emisión verificable sin duplicados, saldo de familias rectificadas y ocurrencias recurrentes por intervalo Madrid. El correo aclara los históricos sin fecha de emisión y el recuento de repeticiones; conserva la ventana de recuperación previa y no activa Watch.
+- Privacidad CRM: subcadenas literales y comparación telefónica solo con entrada telefónica y dos dígitos; controles de empresa, rol y módulo conservados.
+- Invitaciones: estado persistente privado por empresa/correo, validación administrativa en servidor, recuperación explícita sin borrar cuentas ni duplicar membresías; conserva suspensiones y roles existentes. UI ES/EN conserva campos, distingue aceptación de recepción y permite reenvío explícito con intervalo mínimo. SITE_URL obligatorio y destino fijo permitido en Auth.
+- Listado Auth paginado, deduplicado y sin resultados parciales ante errores; exige administrador antes de consultar. Tres migraciones nuevas incorporadas al bootstrap de 68 pasos; artefacto local regenerado.
+- Validación local: 78 pruebas en doce archivos, lint focalizado correcto, build correcto y 14/14 Edge Functions compilan. Aviso de chunks correspondiente al 22 excluido. Sin suite/lint globales limpios acreditados ni verificación visual manual.
+- Pendiente aplicar SQL, desplegar invite-user/listar-usuarios/send-weekly-summary y panel, y validar permisos/concurrencia/SMTP reales. No se han enviado correos ni aplicado cambios remotos. Procedimiento y límites en `docs/auditoria-cierre-18-21.md`. Hallazgos 1–21 corregidos localmente; 22 excluido.
+
+
+## 2026-10-29 · Auditoría: entrega 17, reconstrucción SQL verificable
+
+- Nuevo `database/bootstrap/manifest.json` con 65 pasos y clasificación explícita de todas las migraciones. Aporta las cinco tablas históricas omitidas, buckets y grants revisados, sin ejecutar el snapshot de referencia ni modificar migraciones anteriores.
+- `npm run db:bootstrap` genera SQL para psql con origen/SHA-256 y parada ante errores; no conecta a Supabase ni sobrescribe archivos. Rechaza fuentes locales, referencias, duplicados, marcadores incorrectos, migraciones sin clasificar y SQL operativo. Cron, Watch, demos y reparaciones históricas quedan fuera.
+- Preflight para esquema público de aplicación vacío y plataforma Auth/Storage ya instalada. Privilegios explícitos, compatibilidad histórica cerrada al navegador y sin TRUNCATE para anon/authenticated. Manual canónico sincronizado con el manifiesto.
+- 24 pruebas en tres archivos: reconstrucción completa sobre contrato de plataforma PGlite, emisión/saldos, empresas/roles, directorio, Planning/Storage, preferencias, analítica y payload semanal varchar sin Watch; generador y runbook. Pendiente validación real en Supabase y activación de servicios. Procedimiento en `docs/bootstrap-supabase.md`.
+
+
+## 2026-10-29 · Auditoría: entrega 16, limpieza recuperable de Storage
+
+- `ITEM_STORAGE_CLEANUP_QUEUE.sql` sustituye el NOTICE por una cola transaccional privada al borrar items/medias. Conserva empresa para cascadas tardías, retira URLs con tokens y manda rutas no verificables a revisión.
+- Nuevo worker `cleanup-item-media`: origen/namespace propios, referencias globales de item_media/blog_media/cuerpo del blog, lease/token, ocho intentos, backoff y timeout. Marcadores persistentes y triggers impiden volver a referenciar rutas retiradas durante la llamada externa.
+- `delete-item-media` deja de eliminar directamente objetos; el borrado individual pasa por el mismo circuito. `ITEM_STORAGE_CLEANUP_CRON.sql` prepara programación con secreto exclusivo; sin cambios de UI.
+- 36 pruebas en cinco archivos, lint de tests y 14/14 funciones compilan. SQL, Edge y cron pendientes de despliegue coordinado; no se han borrado objetos remotos. Alcance de referencias, conservación de tombstones e inventario histórico pendiente en `docs/limpieza-storage-items.md`.
+
+
+## 2026-10-29 · Auditoría: entrega 15, directorio compartido de clientes
+
+- `CLIENT_DIRECTORY_MODULE_ACCESS.sql` unifica RLS, trigger y RPC de clientes: acceso con Planning o Facturación, manteniendo membresía activa, rol y empresa. Gestión solo por RPC para admin/editor; validaciones, archivo lógico y documentos históricos conservados. Helpers privados y tabla de solo lectura para authenticated.
+- El resto de Planning y el catálogo fiscal conservan sus módulos propios. Ruta y menú del directorio admiten cualquiera de los dos; el enlace a Planning aparece solo si está activo. Sin estilos nuevos ni textos fuera de ES/EN.
+- 44 pruebas en siete archivos, lint de archivos modificados y build correctos. Aviso de chunks del hallazgo 22 excluido. SQL/panel pendientes de despliegue; pruebas DOM y SQL locales no acreditan permisos ni revisión visual remotos. Decisión, matriz y despliegue: `docs/directorio-clientes-compartido.md`.
+
+
+## 2026-10-29 · Auditoría: entrega 14, recuperación del resumen semanal
+
+- `WEEKLY_SUMMARY_RETRY_WINDOW.sql` fija `first_attempt_at` y permite recuperar solo durante 20 horas, con lease de 10 minutos y la misma clave/generación. Los intentos heredados usan creación como límite conservador; resultados inciertos antiguos quedan para revisión sin reenvío automático.
+- `send-weekly-summary` revalida en servidor justo antes del proveedor y aborta su petición a los 15 segundos. Fallos de confirmación no se reencolan; una confirmación tardía con ID se conserva. No se activa ni repite la prueba Watch.
+- Validación local: 32 pruebas en cuatro archivos, lint de los tests JS y compilación 13/13 Edge Functions. SQL, cron, Resend y despliegue remoto no ejecutados. Procedimiento coordinado y límites: `docs/weekly-summary-retry-window.md`.
+
+
+## 2026-10-29 · Auditoría: entrega 13, avisos obsoletos de Planning
+
+- Nueva migración `PLANNING_EMAIL_STALE_GUARD.sql`: versión de tarea en la cola e invalidación de queued/sending al editar. Reencolado de misma ocurrencia solo si nunca hubo intento; reintentos manuales exigen versión actual.
+- Edge `send-planning-reminders` valida el snapshot, empresa, autor, minutos, ocurrencia y módulo justo antes de llamar al proveedor. Ante fallo de validación no envía. Una confirmación tardía tras una edición se conserva como enviada para evitar duplicados; no se pueden retirar correos ya en vuelo/aceptados.
+- Intentos heredados queued/sending ya intentados se ponen en revisión (dead/sent_marker_failed), sin presumir que fallaron ni autorizar reenvío. Despliegue SQL/Edge coordinado con scheduler pausado y workers finalizados, documentado en `docs/planning-avisos-obsoletos.md`.
+- Validación: 30 pruebas pasan en cinco archivos, lint de tests JS correcto y 13/13 Edge Functions compilan. Las carreras se intercalan en pruebas locales; concurrencia real, conciliación y despliegue remotos pendientes. No requiere publicar el panel.
+
+## 2026-10-29 · Auditoría: entrega 12, recurrencias por intervalo
+
+- El panel expande las series solo dentro del rango visible, con búsqueda directa del índice inicial; elimina la caducidad de 200 repeticiones y el horizonte de tres años, conserva claves absolutas y metadatos del maestro. Límite de trabajo: intervalos de hasta 93 días; no limita la vida de la serie.
+- Días/semanas/años conservan hora civil de Madrid y criterio SQL en cambios de hora; horas suman tiempo transcurrido. Fechas de movimientos de Planning conservan YYYY-MM-DD. El panel informa del periodo de sus importes en ES/EN.
+- Nueva migración `PLANNING_RECURRENCE_WINDOW.sql`: calcula candidatas en la ventana real del aviso, comprueba módulo, elimina duplicados de minutos y conserva marcadores enviados y permisos técnicos. Contrato de cola/Edge y cron conservados.
+- Validación: 32 pruebas pasan en siete archivos, incluidos comparación real Intl/PostgreSQL, series antiguas, DST, bisiestos, cola y regresiones. Compilación y lint de archivos modificados correctos. Reglas y límites en `docs/recurrencias-por-intervalo.md`.
+- Pendiente SQL, publicación del panel y revisión de series/volumen: el cron podrá encolar avisos actuales de series antiguas antes omitidas. Sin cambios remotos realizados.
+
+## 2026-10-29 · Auditoría: entrega 11, cuotas de leads públicos
+
+- Nueva migración `PUBLIC_LEAD_RATE_LIMIT.sql`: reserva persistente serializada por empresa; cinco intentos por origen/15 minutos y 100 por empresa/hora, acceso técnico restringido y verificación de CRM. Limpieza por expiración y cron horario cuando existe pg_cron.
+- Endpoint: máximo 16 KiB de cuerpo, HMAC de la IP del edge Vercel (IPv6 agrupada /64), secreto exclusivo de servidor, fallo cerrado y respuesta 429 al agotar cuota. No guarda IP en claro ni imprime datos del contacto en errores de inserción. Mantiene tenant fijado y honeypot.
+- Cliente distingue `rate_limited`, no anuncia conversión si se rechaza y conserva los datos del formulario. Guía de integración actualizada con mensajes ES/EN, secreto, límites y tradeoffs de NAT/ventanas/cuota global y retención.
+- Validación: 95 pruebas pasan entre snippet, SQL y cliente; 13/13 Edge Functions compilan. Lint de tests JS correcto. Las pruebas locales no simulan varias conexiones simultáneas ni el proxy o cron real. Pendiente SQL, configuración y redespliegue por web; no hay cambios remotos realizados.
+
+## 2026-10-29 · Auditoría: entrega 10, importación Excel
+
+- SheetJS pasa de 0.18.5 a 0.20.3 de la distribución oficial, conservada en `admin-panel/vendor` con licencia Apache-2.0, SHA-256 e integridad del lockfile. Se eliminan las ocho dependencias exclusivas antiguas; se conserva el stack.
+- Importación de atributos en worker con 10 segundos de límite, hasta 2 MiB/500 atributos/cuatro columnas y controles previos del directorio ZIP. Validación de cabeceras, nombres únicos, tipos, indicadores y rechazo de fórmulas; sin resultados parciales ni subida de archivos.
+- Errores ES/EN y borrador conservado ante fallo. Cancelación al sustituir archivo, reset/cierre, cambio de empresa/tipo o desmontaje. Descarga diferida de plantilla conservada.
+- Validación: 26 pruebas pasan en cuatro archivos; XLSX/XLS reales, ZIP manipulado, exportación/importación de plantilla, timeout/abort y conservación del trabajo. Build y ESLint de archivos modificados correctos. Los workers se simulan en pruebas; pendiente interacción con worker nativo tras publicar el panel. Sin SQL ni Edge.
+- Procedencia y límites en `docs/importacion-excel-segura.md` y `admin-panel/vendor/README.md`. La advertencia de bundle sigue fuera del alcance del punto 22 excluido.
+
+## 2026-10-29 · Auditoría: entrega 9, guardado independiente de plantillas
+
+- `BillingChapterTemplates` elimina el formulario anidado en el editor. Guarda mediante botón explícito `type=button`; los controles locales no participan en el envío implícito del presupuesto. El nombre se valida en la acción local con mensajes ES/EN y se anuncia como requerido a tecnologías de asistencia.
+- Enter en el nombre guarda solo la plantilla; en búsqueda no envía el documento. Bloqueo de acciones deshabilitadas y de peticiones duplicadas mientras hay un guardado en curso. Se conserva el nombre ante fallo para reintentar.
+- Prueba de integración: guardar plantilla no persiste presupuesto ni cambia ruta; después el presupuesto se puede guardar explícitamente con el nombre de plantilla vacío. 49 pruebas pasan entre componente y editor; compilación y ESLint de archivos modificados correctos. La advertencia del bundle sigue fuera del alcance por decisión del usuario.
+- Sin cambios SQL/Edge ni de disposición CSS. Pendiente publicar el panel y comprobar interacción nativa/visual en navegador real; las pruebas locales usan Happy DOM y su ajuste conocido para pasos decimales.
+
+## 2026-10-28 · Auditoría: entrega 8, validación de identidad visual
+
+- Nueva migración `BILLING_PROFILE_VALIDATION_REPAIR.sql`: recupera validación de paleta y contraste, base64 y firmas PNG/JPEG, manteniendo las reglas de `rectificationPrefix` añadidas después. Conserva las restricciones de ejecución del validador.
+- No reescribe perfiles ni documentos guardados. Los valores históricos inválidos siguen consultables, pero deben corregirse antes de reutilizarlos en nuevas escrituras. La firma de imagen no sustituye una decodificación completa del archivo.
+- Siete pruebas SQL nuevas reproducen primero la regresión tras la migración de rectificativas y validan perfiles/documentos, series, paletas, logos, emisiones rectificativas y permisos por empresa. Regresión conjunta: 28 pruebas pasan en cinco archivos; ESLint del nuevo test pasa.
+- Pendiente aplicar SQL y revisar valores heredados en entorno controlado/producción. No requiere despliegue de frontend ni Edge.
+
+## 2026-10-28 · Auditoría: entrega 7, saldo de rectificativas
+
+- Nueva migración `BILLING_RECTIFICATION_BALANCES.sql`: consolida familias, última sustitución y diferencias posteriores; descuenta cobros/reversiones una sola vez. Saldo/cobrado agregado en el documento más reciente, anteriores con estado financiero `rectified`. Documentos e historial conservados.
+- Nuevos cobros solo sobre documento vigente; bloqueo de raíz para cobros, reversiones y rectificaciones. Helpers internos sin ejecución para usuarios del navegador; conserva controles de empresa y módulo.
+- Recordatorios usan cálculo consolidado en encolado, reclamación y payload; descartan avisos de documentos anteriores o sin deuda. Panel ES/EN explica consolidación y exceso cobrado, añade filtro Rectificadas.
+- Validación: 66 pruebas de regresión iniciales pasan; siete pruebas SQL finales cubren además idempotencia tras rectificar y rectificativas sucesivas. Compilación del panel y ESLint de archivos modificados correctos. Se mantiene la advertencia de tamaño de bundle (hallazgo 22 excluido).
+- Reglas, ejemplos y límites en `docs/rectificativas-saldos.md`. Sin aplicación SQL remota ni despliegue; pendiente revisión de familias existentes, volumen y concurrencia real.
+
+## 2026-10-28 · Auditoría: entrega 6, módulos y RPC privilegiadas
+
+- Nueva migración COMPANY_MODULES_RPC_COMPLETION.sql: los controles comunes de billing y privacidad CRM exigen módulo activo; finanzas conserva acceso viewer y añade bloqueo de módulo. Listados y reintentos de avisos también comprueban su módulo.
+- Storage Planning exige módulo activo para rutas canónicas y de legado, incluido platform admin. Exportación CRM conserva datos CRM pero omite documentos con billing desactivado y lo indica mediante billing_module_enabled.
+- Inventario en docs/auditoria-modulos-rpc.md; no modifica cálculos financieros ni ACL existentes. Seis pruebas SQL nuevas y regresiones de borradores/rectificativas: 14 pruebas pasan; ESLint del nuevo test pasa.
+- Pendiente aplicación SQL y contraste remoto de permisos, políticas y comportamiento con módulos activos/inactivos. Sin cambios visuales ni despliegues.
+
+## 2026-10-28 · Auditoría: entrega 5, tenant de tracking
+
+- `company-site-snippet/api/track.ts` valida VITE_COMPANY_ID en servidor y descarta con 204 cualquier evento de otra empresa antes de acceder a BD. Definiciones, comprobación de existencia e inserción usan la empresa configurada; admite UUID con mayúsculas normalizado.
+- Sin configuración válida no guarda ni consulta datos. Conserva validación de bots/origen, payload, claves de eventos y hash de visitante.
+- Seis pruebas del handler real con trackCore real y backend simulado cubren cruce de empresas, configuración, eventos válidos, caché caliente y distintas instancias. Validación conjunta con las pruebas del snippet: 89 pruebas pasan en seis archivos; ESLint del nuevo test pasa. Documentado redespliegue/configuración por web; sin SQL ni Edge. Aplicación a webs existentes pendiente.
+
+## 2026-10-28 · Auditoría: entrega 4, RPC internas de analítica
+
+- Nueva migración `ANALYTICS_RPC_SECURITY.sql`: se revoca ejecución de aggregate_analytics_rollup y purge_old_analytics_events a public/anon/authenticated. El propietario conserva acceso y service_role recibe permiso explícito; search_path fijo para funciones privilegiadas.
+- La RPC manual mantiene firma y agregación del día actual, exige usuario autenticado, empresa concreta, rol activo admin/editor o administrador de plataforma y módulo analytics habilitado. No modifica cálculos, retención ni horarios de cron.
+- Cinco pruebas SQL con PGlite ejecutan los cuerpos reales y reproducen el acceso anónimo previo, denegaciones, aislamiento, idempotencia, suspensión, módulos y mantenimiento con retención. Validación conjunta: 22 pruebas pasan; ESLint del nuevo test pasa.
+- Pendiente aplicar la migración y comprobar el usuario/permisos efectivos de pg_cron en el entorno desplegado. Sin despliegue, envíos ni modificaciones de datos remotos.
+
+## 2026-10-28 · Auditoría: entrega 3, RLS en resúmenes de media
+
+- Nueva migración `ITEM_MEDIA_SUMMARY_SECURITY.sql`: la vista `item_media_summary` usa security_invoker para evaluar RLS con el usuario solicitante y concede solo lectura a anon/authenticated. Se conservan columnas, tipos y consultas del panel.
+- Seis pruebas SQL con PGlite reproducen primero la fuga original y validan lectura pública de publicados, aislamiento de borradores, roles, membresías suspendidas, módulos desactivados y conteos de items sin media.
+- Validación conjunta de las tres entregas: 17 pruebas pasan; ESLint del nuevo test pasa. Sin aplicación remota ni cambios visuales. Pendiente ejecutar la nueva migración en PostgreSQL 15+ y contrastar políticas/permisos efectivos.
+
+## 2026-10-28 · Auditoría: entrega 2, autorización de portadas
+
+- Nueva migración `ITEM_MEDIA_COVER_SECURITY.sql`: `set_item_cover` exige usuario autenticado, rol admin/editor activo de la empresa o administrador de plataforma, módulo items habilitado y media de tipo imagen del mismo item. Se revoca ejecución pública/anónima y se fija search_path.
+- Bloqueo del item y sus medias para serializar cambios; validación previa a desmarcar la portada y rollback transaccional si falla la asignación. Se conserva contrato del frontend y el validador existente.
+- Validación: seis pruebas SQL reales en PGlite cubren permisos, cruce de empresas/items, usuarios suspendidos, módulos desactivados, idempotencia y fallo intermedio. Sin aplicación remota ni cambios visuales; despliegue y contraste de permisos efectivos pendientes.
+
+## 2026-10-28 · Auditoría: entrega 1, borrado de media aislado
+
+- Roadmap de correcciones 1–21 en `ROADMAP-AUDITORIA-SEGURIDAD.md`; tamaño del bundle (22) excluido por petición del usuario. El orden prioriza aislamiento, exposición y efectos económicos.
+- `delete-item-media` solo elimina objetos del origen Supabase configurado bajo la ruta exacta empresa/item/archivo del registro autorizado. Rechaza referencias cruzadas, credenciales en URL, doble codificación, segmentos ambiguos y separadores peligrosos; admite URL pública o firmada y ruta canónica codificada.
+- Las rutas antiguas o externas sin propiedad verificable conservan la retirada del registro autorizado con aviso de limpieza omitida; no autorizan borrado privilegiado de Storage. No requiere SQL ni cambios visuales.
+- Validación local: 5 pruebas del handler real con backend simulado (incluyen denegaciones entre empresas y fallos de BD), y 13/13 Edge Functions compilan. No se han borrado archivos reales ni desplegado funciones. Cierre operativo pendiente de desplegar `delete-item-media` y verificar dos empresas en entorno controlado.
+- Fallos previos de la auditoría: lint en SeoFields.jsx; pruebas customerEmailTemplate y suite companyModules. No se incluyen en esta entrega.
+
+## 2026-10-28 · Entrega semanal validada y nuevo diseño MoiraOrdo
+
+- El usuario confirma que recibió el email semanal de prueba de WatchEcommerceDemo tras la corrección del payload. Se cierra la validación de entrega comunicada por el usuario; no se vuelve a ejecutar la prueba.
+- Se rediseña el renderer del resumen con la referencia editorial aportada: masthead azul noche, palabra marca con acento celeste, papel marfil, titular serif, bloques de pendientes/actividad/planning y CTA al panel. Solo usa las ocho métricas existentes; no inventa importes, comparativas o porcentajes.
+- HTML por tablas, estilos principales inline y ancho máximo 640 px; sin fuentes ni imágenes externas. Versión de texto conservada. `ADMIN_APP_URL` opcional configura el enlace al panel; se valida HTTPS, se eliminan ruta/query y se usa el dominio conocido si no hay configuración válida.
+- Vista previa reproducible desde el renderer con `node scripts/preview-weekly-summary.mjs`: HTML normal y de semana tranquila en `docs/previews/`, más copias locales ignoradas para Vite. Capturas a 375/768/1280 px sin desbordamiento; no se consultaron datos reales para el diseño.
+- Validación: 20 pruebas pasan en tres archivos y 13/13 Edge Functions compilan. El email generado ocupa aproximadamente 10 KB. Pendiente validación estética del usuario y despliegue de `send-weekly-summary`; no requiere SQL adicional, no se envió un nuevo correo y no se hizo commit.
+
 ## 2026-10-28 · Estado visual de edición SEO
 
 - La ficha de item comunica si el SEO está bloqueado o si la edición está habilitada, con estilos distintos, botón con espaciado/alineación y texto accesible; los campos bloqueados usan fondo y borde diferenciados sin reducir la legibilidad.
@@ -17,6 +186,36 @@
 
 - El renderer del CTA de aprobación conserva la semántica de enlace; los enlaces editados adicionales mantienen estilo normal en vez de convertirse todos en botones.
 - No se cambió el contenido transmitido ni el esquema. El usuario valida el aspecto final y confirma el despliegue de ambas Edge Functions de envío a clientes.
+
+## 2026-10-28 · Autenticación del cron de recordatorios
+
+- `supabase/config.toml` deja `verify_jwt = false` solo para `send-billing-due-reminders`; el handler conserva la autorización con `BILLING_REMINDERS_CRON_SECRET`.
+- Se documentan el comando de despliegue y la diferencia entre el 401 del gateway JWT y el 403 del secreto interno. Sin cambios de SQL ni de otras funciones.
+
+## 2026-10-28 · Entrega real del aviso de vencimiento
+
+- El usuario confirma que recibió el aviso de prueba de la factura `F-000002` de `WatchEcommerceDemo`, después de desplegar la Edge Function con la configuración de autenticación corregida.
+- Los avisos se desactivaron tras la entrega. La factura de prueba permanece emitida; no se volvió a modificar ni se enviaron más correos.
+- Esta comprobación acredita entrega, pero no prueba de forma separada la baja por factura, el control de duplicados/reintentos ni la configuración DNS. El resumen semanal agregado sigue pendiente de una entrega real controlada.
+
+## 2026-10-28 · Prueba aislada del resumen semanal
+
+- Se añade una ruta de prueba separada del cron normal, limitada en la BD al nombre exacto `WatchEcommerceDemo`, con una sola ejecución por empresa y tabla de trazabilidad independiente; no reclama filas ni altera `company_weekly_summary_queue`.
+- La prueba envía las métricas agregadas de la semana anterior solo a administradores activos de esa empresa. El email lleva `[PRUEBA]` y un aviso explícito. La ruta usa el secreto semanal ya configurado; el SQL de activación no muestra credenciales.
+- Archivos nuevos: `database/migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql` y `database/maintenance/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql`. Edge actualizado: `supabase/functions/send-weekly-summary/index.ts` y renderer compartido.
+- La migración inicial está aplicada y la Edge Function actualizada ya recibió la petición 3042. El envío sigue pendiente; la primera petición devolvió 401 y la siguiente encontró el error SQL que corrige la migración aditiva indicada abajo. No se envió un email.
+
+## 2026-10-28 · Corrección del RPC de prueba semanal
+
+- El usuario muestra que la petición 3042 responde 409; la fila de prueba sigue sin crearse. El log `test_not_started` reporta SQLSTATE `42702`.
+- Se prepara `database/migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST_FIX.sql` para quitar la ambigüedad de `ON CONFLICT(company_id)` en el RPC ya aplicado. No cambia la cola normal ni asigna membresías. La Edge Function no requiere nuevo despliegue para esta corrección.
+- Pendiente: el usuario ejecuta el SQL de corrección y vuelve a lanzar una sola vez el script de mantenimiento.
+
+## 2026-10-28 · Compatibilidad de emails Supabase y recuperación del test
+
+- Tras corregir la ambigüedad, el usuario comunica `dead/unexpected_failure` sin ID de proveedor. Reproducido localmente un error de retorno al usar `auth.users.email varchar(255)`, el tipo de Supabase: el RPC declara `text[]`. El fixture previo usaba `text` y ocultaba el problema.
+- Nueva migración `database/migrations/WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql`: aplica cast explícito a `text` en los emails de ambos RPC de payload (normal y de prueba). La prueba permite una recuperación manual dentro de 20 horas, solo para un primer fallo inesperado sin ID de proveedor, conservando UUID y generación/clave de Resend. No elimina historial ni activa reintentos del cron.
+- Validación: 18 pruebas pasan en tres archivos, incluyendo reproducción con `varchar`, payload normal/de prueba, recuperación con el mismo ID, aislamiento de la cola normal, denegaciones de cliente y rechazo de recuperaciones agotadas, antiguas o con aceptación del proveedor. Pendiente aplicar la migración y lanzar el script de mantenimiento actualizado. No requiere nuevo despliegue Edge ni se hizo un envío remoto.
 
 ## 2026-10-28 · Diferenciar presupuesto y vencimiento
 
@@ -206,6 +405,7 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 - **26/10/2026 · preflight de blog público:** se documenta que `CONTENT_SEO_FIELDS.sql` no asigna slugs inventados a publicaciones históricas; `maintenance/CONTENT_SEO_FIELDS_AUDIT.sql` detecta publicaciones sin slug válido y duplicados por empresa antes de integrar rutas. Solo lectura; verificado en PGlite; ninguna consulta se hizo a Supabase.
 - **26/10/2026 · CRM, cronología unificada:** facturas y presupuestos se intercalan con actividades en orden de fecha; al resolver una solicitud ambigua, una migración nueva copia su actividad de formulario y mensaje original al contacto elegido. Reintento del trigger no duplica la actividad. Pruebas PGlite locales; SQL aún no aplicado en Supabase. Ejecutar `CRM_REVIEW_ACTIVITY_LINK.sql` después de `CRM_CONTACTS_PIPELINE.sql` y antes de `CRM_PRIVACY_CONTROLS.sql`. Sin commits ni despliegues.
 - **26/10/2026 · Resumen semanal, autorización y entrega:** el usuario autorizó expresamente enviar a Resend los emails de administradores activos junto a métricas agregadas, sin datos de clientes ni documentos. Se añade una prueba del emisor Edge para autorización del cron, destinatarios ocultos en BCC, clave estable, errores de proveedor y envío aceptado no confirmado. Pruebas locales; no se mandó correo ni se desplegó. El cron/Vault y las migraciones siguen pendientes en Supabase.
+- **28/10/2026 · Búsqueda global:** revisión autenticada en `WatchEcommerceDemo` confirmó búsqueda/navegación para items, factura `F-000002`, presupuesto `P-000003` y nombre de cliente, además de Ctrl+K, flechas/Enter, Escape y estado vacío. Se reemplaza el tipo técnico del item y estados de facturación en crudo por estados localizados ES/EN. 4 pruebas del servicio, ESLint focalizado y diff-check correctos. La empresa de prueba tiene 0 contactos CRM; no se modificaron módulos ni datos. Pendiente la validación visual del usuario antes de avanzar.
 - **26/10/2026 [P28] · Privacidad CRM, plazos de revisión:** `CRM_RETENTION_REVIEW.sql` y `/settings/privacy` guardan periodos por empresa para solicitudes sin vincular y contactos inactivos, con conteos agregados, permisos de admin, RLS cerrado y ES/EN. No hay borrado automático; el responsable de cada empresa debe fijar los días y revisar cada caso. Pruebas PGlite/servicio/interfaz y lint/build local correctos. SQL local, sin despliegue.
 - **26/10/2026 · preflight de CRM:** `maintenance/CRM_RETENTION_REVIEW_PREFLIGHT.sql` devuelve solo presencia de tablas/RPC/triggers y permisos; la prueba PGlite confirma el estado antes y después de aplicar las migraciones, y comprueba la lectura denegada de la tabla. El volcado `database/local/DatabaseSQL.sql` (26/10, 13:16) contiene tablas CRM base, privacidad y vínculos, pero no serializa funciones/triggers ni las nuevas tablas de revisión; no es evidencia suficiente del estado remoto.
 - **26/10/2026 · aislamiento de tenant del formulario CRM:** `/api/lead` fija el tenant al `VITE_COMPANY_ID` del despliegue Vercel y rechaza un ID de cuerpo diferente antes de consultar Supabase; evita que una petición pública manipule el `company_id` al usar `service_role`. Se actualiza el contrato de integración y se añaden tres regresiones (rechazo entre empresas, insert al tenant configurado y configuración ausente). Suite global: 488 pruebas/85 archivos; no requiere SQL. Los proyectos de webs cliente deben actualizar el endpoint y mantener `VITE_COMPANY_ID` en variables runtime. Sin despliegues ni commits.
@@ -240,3 +440,33 @@ Este documento inicia el registro de decisiones de esta nueva etapa; no pretende
 - **28/10/2026 [Privacidad CRM · retención]:** comienza la revisión de retención. El código actual solo calcula conteos y no programa borrados; solicitudes pendientes son las ambiguas (`review_required`) y contactos inactivos consideran actividad CRM, vínculos de documentos y seguimientos futuros. Se crea `docs/CRM_RETENTION_POLICY_DECISION.md` con alcance técnico y una matriz para que la empresa responsable y su asesoría definan periodos, eventos, acciones y excepciones. Sin cambios SQL ni automatización destructiva.
 - **28/10/2026 [Privacidad CRM · decisión de retención]:** el usuario elige exclusivamente revisión manual. El panel mantiene umbrales orientativos por empresa y anonimización individual con confirmación; no habrá purgas automáticas ni cron. La interfaz ES/EN lo declara explícitamente y los conteos llevan a la bandeja de solicitudes ambiguas o al buscador de contactos. No requiere SQL; los periodos legales de conservación siguen fuera de estos umbrales técnicos.
 - **28/10/2026 [Items · propuesta SEO sin IA]:** el editor propone slug/título/descripción localmente a partir del título/resumen. Presenta vista de cambios y solo aplica tras aceptación; preserva valores SEO ya rellenados y respeta límites de texto. No genera imagen OG ni usa red ni servicios externos. Sin migración SQL.
+- **28/10/2026 [Privacidad CRM · revisión de aislamiento y anonimización]:** al cambiar de empresa, la pestaña Privacidad limpia el contacto/resultados visibles e invalida búsquedas, previsualizaciones y operaciones pendientes del tenant anterior; se difiere la revocación del Blob de exportación para no interrumpir la descarga. Se añade `CRM_PRIVACY_ANONYMIZATION_FIX.sql` para limpiar `source_item` además de PII, atribución y consentimiento, con permisos/idempotencia/auditoría conservados y documentos fiscales intactos, y `CRM_PRIVACY_ANONYMIZATION_PREFLIGHT.sql` para verificarlo sin PII. Regresiones locales: 15/15 tests dirigidos; lint focalizado, build y `git diff --check` correctos (build conserva el aviso del bundle de 688,21 kB). Falta ejecutar migración y preflight en Supabase; sin datos reales, commit ni despliegue.
+- **28/10/2026 [Módulos por empresa · auditoría de alcance]:** las rutas, RLS, RPC de aprobación de presupuesto, recordatorios y analítica semanal ya respetaban Facturación o los módulos correspondientes. Se detectan RPC posteriores de edición/lectura de emails de facturación y auditoría/notificación de aprobación que podían invocarse mientras Facturación estaba apagada. `COMPANY_MODULES_SCOPE_FIX.sql` conserva comprobaciones de rol y payloads e incorpora el control del módulo directamente en las RPC existentes; no toca grants directos de tablas ni Edge Functions. 15 pruebas PGlite y de orden SQL. Al ejecutar el preflight, el usuario detectó que faltaba `company_customer_email_revisions`; se añade la reparación idempotente `COMPANY_CUSTOMER_EMAIL_REVISIONS_REPAIR.sql` y preflights que informan dependencias ausentes sin lanzar errores. Falta aplicar la reparación, repetir la migración de módulos y verificar el resultado remoto. Sin commit ni despliegue.
+
+## 2026-10-28 · [P36 · manual ilustrado del panel]
+
+- Se sustituye el manual anterior por una composición editorial inspirada en la guía VTC y el resumen semanal: azul noche, celeste, marfil y titulares Georgia. El adjunto se utiliza como referencia visual, no como instrucciones operativas.
+- 19 páginas, 17 capítulos, 13 capturas distintas del panel autenticado en WatchEcommerceDemo, índice enlazado, marcadores PDF y retorno al índice desde el pie. Datos identificativos recortados u ocultos; no se guardaron documentos ni se enviaron correos para crear la guía.
+- Se actualizan nombres de navegación, envío opcional del enlace de presupuesto por email, revisión de versiones, plantillas de clientes y retención manual. Fuentes en docs/manual-panel.json, copia legible en docs/manual-facturacion.md y generador scripts/build_editorial_manual.py; el comando anterior sigue funcionando.
+- Verificación: generación local, render de las 19 páginas e inspección visual; comprobación de enlaces y marcadores PDF. Sin cambios de aplicación, SQL ni despliegue. No procede ejecutar suites de React/Edge por cambios exclusivamente documentales.
+
+## 2026-10-28 · [P37 · ampliación del manual y capturas de escritorio]
+
+- Se corrige el capítulo 02 para mostrar Dashboard, conservando los 17 capítulos y la identidad editorial validada. Se reemplazan las capturas estrechas por 31 capturas distintas de escritorio con viewport solicitado de 1600 × 1000. Los números se dibujan como vectores sobre los controles y enlazan visualmente con las leyendas.
+- Presupuestos pasa a ocho páginas: listado, cliente, presentación, capítulos/partidas, plantillas, condiciones, enlace de respuesta y conversión. Facturación, cobros, historial, rectificativas, identidad y avisos ocupan trece páginas. Total: 35 páginas.
+- El generador admite subapartados, rangos de páginas y marcadores anidados, y sincroniza la fuente Markdown. Coordenadas de los puntos en docs/manual-assets/desktop-manifest.json; datos identificativos ocultos en las imágenes. No se guardaron documentos o configuraciones, se registraron cobros, se emitieron rectificativas ni se enviaron correos. Se restauró el tamaño del navegador.
+- Validación: PDF abierto en modo estricto, render de 35 páginas e inspección visual, índice con 17 destinos verificados, correspondencia de leyendas y puntos y todas las capturas usadas en formato apaisado de escritorio. Comprobación de generación y git diff --check; no corresponde ejecutar React/Edge por cambios documentales. Sin SQL ni despliegues.
+
+## 2026-10-28 · [P38 · escenario de datos para las capturas del manual]
+
+- El usuario confirma que WatchEcommerceDemo es ficticia y permite añadir datos de prueba y mostrarlos sin ocultaciones. Se conserva el diseño del PDF aprobado; se prepara un lote SQL de mantenimiento limitado por nombre único, administrador activo y tenant, con rollback transaccional, claves de repetición y comprobaciones negativas.
+- Escenario: 12 solicitudes, 8 contactos/clientes, 10 tareas, 4 previsiones de Planning, 6 conceptos, 1 plantilla, 4 presupuestos, 4 facturas ordinarias + 1 rectificativa, 2 cobros ficticios, 2 artículos y 30 días de analítica con eventos crudos y agregación. Las RPC reales mantienen números, historial y validaciones; no se cambian permisos o migraciones. Sin invocar envíos externos; facturas demo excluidas de avisos y tareas sin recordatorios.
+- Script: database/maintenance/WATCH_MANUAL_DEMO_DATA.sql. Guía/estado: docs/manual-demo-data.md. Pendiente ejecución por el usuario en Supabase, comprobación del panel, nuevas capturas sin ocultación y regeneración del PDF; no se presenta la entrega anterior como ya actualizada.
+
+- Verificación P38: 6/6 pruebas PGlite correctas con migraciones reales, incluidas conservación de datos previos de dos empresas, repetición y RLS. El lote tarda unos segundos en la prueba tras indexar temporalmente las claves de analítica; no añade tablas/índices persistentes. ESLint del test y git diff --check correctos. No se ha ejecutado el SQL remoto ni cambiado todavía el PDF.
+
+## 2026-10-29 · [P38 · manual con datos ficticios visibles]
+
+- El usuario confirmó la ejecución del lote demo y se comprobó su resultado en el panel autenticado. Se sustituyen las 31 capturas por vistas de escritorio con los datos completos de WatchEcommerceDemo, sin ocultaciones; se ajustan coordenadas, leyendas y notas de estados vacíos.
+- Se mantienen 35 páginas, 17 capítulos, el diseño editorial aprobado y el detalle de presupuestos y facturación. El apartado de cobros explica el saldo consolidado de original y rectificativas y dónde consultar cada movimiento.
+- Validación: render e inspección de las 35 páginas, 31 imágenes apaisadas sin máscaras, correspondencia de números/leyendas, capítulos, marcadores y 18 enlaces del índice. Sin cambios de aplicación en esta entrega; el lote ya contaba con 6/6 pruebas PGlite.

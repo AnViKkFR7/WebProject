@@ -2,6 +2,17 @@ import { supabase } from '../lib/supabaseClient'
 
 const LIMIT = 6
 
+const STATUS_NAMESPACE = { item: 'items', invoice: 'invoicing', quote: 'quotes' }
+
+export function getGlobalSearchDetail(result, translate) {
+  if (!result?.detail) return ''
+  const namespace = STATUS_NAMESPACE[result.type]
+  if (!namespace) return result.detail
+  const key = `${namespace}.${result.detail}`
+  const localized = translate(key)
+  return localized === key ? result.detail : localized
+}
+
 function pattern(value) {
   const term = String(value || '').trim().slice(0, 80)
   return term.length >= 2 ? `%${term.replace(/[\\%_]/g, '\\$&')}%` : null
@@ -20,8 +31,8 @@ export const globalSearchService = {
 
     const requests = []
     if (enabledModules.items !== false) {
-      requests.push(run(supabase.from('items').select('id,title,item_type,status').eq('company_id', companyId).ilike('title', like).limit(LIMIT))
-        .then(rows => rows.map(row => ({ id: row.id, type: 'item', title: row.title, detail: row.item_type, href: `/items/${encodeURIComponent(row.id)}` }))))
+      requests.push(run(supabase.from('items').select('id,title,status').eq('company_id', companyId).ilike('title', like).limit(LIMIT))
+        .then(rows => rows.map(row => ({ id: row.id, type: 'item', title: row.title, detail: row.status, href: `/items/${encodeURIComponent(row.id)}` }))))
     }
     if (enabledModules.crm !== false) {
       for (const column of ['name', 'email', 'phone']) {

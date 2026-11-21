@@ -23,10 +23,12 @@ El cron necesita **dos entradas de Vault**. Vault es el almacén cifrado de Supa
 1. En **Edge Functions → Secrets**, configura `BILLING_REMINDERS_CRON_SECRET` con un valor aleatorio fuerte. En el mismo apartado configura `RESEND_API_KEY` y `REMINDERS_FROM_EMAIL` con los valores del proveedor/remitente verificado.
 2. En **Database → Vault**, crea `billing_due_reminders_cron_secret` y pon dentro exactamente el mismo valor usado para `BILLING_REMINDERS_CRON_SECRET`. No son dos claves diferentes: la Edge Function y el cron deben compartirlo para que la petición se autorice.
 3. En Vault, crea `billing_due_reminders_function_url` y pon dentro la URL de la Edge Function, con este formato: `https://<PROJECT_REF>.supabase.co/functions/v1/send-billing-due-reminders`. En este proyecto, el ref conocido es `pakbxfdewswzkipeddhr`.
-4. Confirma que `send-billing-due-reminders` ya está desplegada con `--no-verify-jwt`. Solo entonces abre `database/migrations/BILLING_DUE_REMINDERS_CRON.sql` y ejecuta el fichero completo en el SQL Editor.
+4. `supabase/config.toml` fija `verify_jwt = false` únicamente para `send-billing-due-reminders`, que autoriza las llamadas del cron con su propio header secreto. Despliega con `supabase functions deploy send-billing-due-reminders --project-ref pakbxfdewswzkipeddhr --no-verify-jwt`; el flag conserva la configuración también si la CLI no está usando este archivo. Solo entonces abre `database/migrations/BILLING_DUE_REMINDERS_CRON.sql` y ejecuta el fichero completo en el SQL Editor.
 5. Si el cron devuelve `Create both billing reminder secrets in Vault before scheduling`, revisa en Vault que existan **ambos nombres escritos exactamente** y vuelve a ejecutar el mismo archivo. No ejecutes otra vez la migración principal para resolver este mensaje.
 
 El valor de `billing_due_reminders_cron_secret` es una credencial: no lo guardes en Git, en `cron.schedule`, en capturas ni en mensajes. `billing_due_reminders_function_url` no es una clave de API, pero se guarda en Vault para que la URL no quede copiada en el código del trabajo cron. El SQL del cron desprograma y vuelve a crear los trabajos con nombres fijos, así que puede ejecutarse otra vez después de corregir la configuración.
+
+**Diagnóstico de autenticación:** un `401 Unauthorized` suele ocurrir en el gateway antes de que se ejecute el handler si la verificación JWT sigue activa. El propio handler responde `403 forbidden` cuando falta `BILLING_REMINDERS_CRON_SECRET` o no coincide con `billing_due_reminders_cron_secret` de Vault. Para corregir el `401`, volver a desplegar esta función con `--no-verify-jwt` o desactivar Verify JWT en su configuración de Supabase; no añadir un JWT al cron.
 
 ### Configurar el resumen semanal
 
@@ -42,6 +44,25 @@ Orden para esta funcionalidad; ejecuta cada archivo completo y no repitas las mi
 8. Revisa la ejecución y la cola del cron. El correo se envía a administradores activos; no hay una pestaña que habilitar.
 
 La función envía a Resend los correos de administradores activos y solo los conteos agregados descritos en `docs/emails.md`. La cola no guarda correos ni estadísticas. `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` activa las empresas en la BD; no se envía nada hasta desplegar Edge y programar el cron.
+
+#### Prueba única limitada a WatchEcommerceDemo
+
+**Estado del 28/10/2026:** el usuario confirma la recepción tras aplicar las correcciones. La prueba está completada. Para activar el nuevo diseño semanal, redesplegar únicamente `send-weekly-summary` con `--no-verify-jwt`; no volver a ejecutar los SQL de activación o recuperación. El mismo renderer genera la vista previa local descrita en `docs/emails.md`.
+
+El cron normal procesa todas las empresas habilitadas y no debe usarse para una prueba de un solo tenant. Para enviar una prueba aislada, solo a administradores activos de `WatchEcommerceDemo`:
+
+1. Ejecuta `database/migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql` después de `WEEKLY_SUMMARY_EMAIL.sql` y `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` (ya aplicado en esta prueba).
+2. Ejecuta la corrección `database/migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST_FIX.sql`; corrige el SQLSTATE `42702` en el RPC y no cambia filas ni membresías.
+   Después aplica `database/migrations/WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql`: convierte explícitamente los emails `varchar` de Supabase en `text[]` para ambos RPC de payload. Permite una sola recuperación del test fallido, conservando ID/generación y dentro de las 20 horas desde la creación original.
+3. La función actualizada ya llegó a ejecutarse (petición 3042), así que no hace falta redesplegarla para esta corrección SQL. Si no se hubiera desplegado aún, usar `supabase functions deploy send-weekly-summary --project-ref pakbxfdewswzkipeddhr --no-verify-jwt`.
+4. Ejecuta una sola vez `database/maintenance/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql` en Supabase SQL Editor. Usa `weekly_summary_cron_secret` y `weekly_summary_function_url` ya guardados en Vault; no requiere pegar secretos.
+5. Comprueba el resultado de la petición en logs de `send-weekly-summary` y revisa la bandeja de los administradores activos de `WatchEcommerceDemo`. El asunto empieza por `[PRUEBA]` y el contenido la identifica como envío de prueba.
+
+El script falla cerrado si no encuentra exactamente una empresa con ese nombre, si el resumen está deshabilitado o si no hay admin activo con email. La prueba genera una ejecución en un ledger separado, consulta las métricas agregadas de la semana anterior y no añade ni reclama filas de `company_weekly_summary_queue`. No borres el registro de prueba para volver a enviarlo: se conserva como protección y trazabilidad. La corrección de entrega permite una única recuperación manual si el registro está `dead/unexpected_failure`, no tiene ID de proveedor, tiene un solo intento y no han pasado 20 horas. Conserva el UUID y la generación de Resend; rechaza envíos ya aceptados, estados inciertos de confirmación, recuperaciones agotadas y registros fuera del plazo.
+
+**Recuperación del intento del 28/10/2026:** la migración original, el FIX de ambigüedad y la Edge ya están aplicados. Ejecutar únicamente `database/migrations/WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql` y luego copiar y ejecutar una vez el contenido actualizado de `database/maintenance/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql`. No hace falta redesplegar Edge para esta corrección SQL. Si el script indica plazo agotado, no borrar ni reiniciar la fila.
+
+**Reenvío único para revisar el nuevo diseño (28/10/2026):** la ejecución anterior consta como enviada y el usuario solicita una segunda prueba. Aplicar `database/migrations/WEEKLY_SUMMARY_EMAIL_WATCH_RESEND.sql` después de `WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql`; desplegar `send-weekly-summary` con `--no-verify-jwt`; después ejecutar una sola vez `database/maintenance/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql`. Este script genera una clave de solicitud y los RPC solo admiten una repetición adicional para `WatchEcommerceDemo`. No volver a ejecutarlo si se ha solicitado; consultar Logs y el ledger antes de actuar ante una respuesta ambigua.
 
 ### Enlaces y notificaciones de aprobación de presupuestos
 
@@ -62,3 +83,13 @@ supabase functions deploy notify-quote-approval-response
 
 No se crean cuentas de proveedor, DNS, secretos, cron ni despliegues. No se integra VERI*FACTU ni se envían facturas a clientes; el único correo de cliente añadido en esta fase contiene un enlace de aprobación del presupuesto.
 
+
+
+### Auditoría: ventana de recuperación del resumen normal
+
+Aplicar `WEEKLY_SUMMARY_RETRY_WINDOW.sql` y desplegar `send-weekly-summary` con el scheduler pausado y las invocaciones anteriores terminadas. Seguir `docs/weekly-summary-retry-window.md`: el primer intento fija el plazo máximo de 20 horas; el lease de 10 minutos no lo amplía. No reiniciar intentos inciertos ni ejecutar el script Watch durante este despliegue. Esta corrección local todavía no acredita cambios en Supabase ni en cron.
+
+
+### Auditoría 18–21: configuración de invitaciones
+
+Antes de desplegar `invite-user`, aplicar `COMPANY_USER_INVITATION_STATE.sql` y configurar `SITE_URL` obligatorio, HTTPS salvo localhost, con `/reset-password` permitido en Auth Redirect URLs. Usa el SMTP de Supabase Auth existente y exige administrador de plataforma validado en servidor. Desplegar también `listar-usuarios`, `send-weekly-summary` y el panel conforme a `docs/auditoria-cierre-18-21.md`. Las tres migraciones y comprobaciones remotas están pendientes; no ejecutar una invitación de prueba salvo con buzón controlado.

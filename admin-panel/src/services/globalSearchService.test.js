@@ -27,7 +27,7 @@ vi.mock('../lib/supabaseClient', () => ({
   },
 }))
 
-const { globalSearchService } = await import('./globalSearchService')
+const { globalSearchService, getGlobalSearchDetail } = await import('./globalSearchService')
 
 describe('globalSearchService', () => {
   beforeEach(() => { calls.length = 0 })
@@ -44,6 +44,7 @@ describe('globalSearchService', () => {
     const results = await globalSearchService.search('company-a', 'Ana', { items: true, crm: true, billing: true })
     expect(new Set(results.map(result => result.type))).toEqual(new Set(['item', 'contact', 'invoice', 'quote']))
     expect(results.find(result => result.type === 'item').href).toBe('/items/item-1')
+    expect(results.find(result => result.type === 'item').detail).toBe('published')
     expect(results.find(result => result.type === 'invoice').href).toBe('/invoicing/invoice-1')
     expect(results.find(result => result.type === 'quote').href).toBe('/quotes/quote-1')
     expect(calls.filter(call => ['invoices', 'quotes'].includes(call.table)).every(call => call.filters.some(([method, key]) => method === 'eq' && key === 'company_id'))).toBe(true)
@@ -53,5 +54,14 @@ describe('globalSearchService', () => {
     expect(await globalSearchService.search('company-a', 'x', {})).toEqual([])
     expect(await globalSearchService.search(null, 'Casa', {})).toEqual([])
     expect(calls).toHaveLength(0)
+  })
+
+  it('localizes item and billing statuses instead of exposing technical values', () => {
+    const labels = { 'items.published': 'Publicado', 'invoicing.issued': 'Emitida', 'quotes.accepted': 'Aceptado' }
+    const translate = key => labels[key] || key
+    expect(getGlobalSearchDetail({ type: 'item', detail: 'published' }, translate)).toBe('Publicado')
+    expect(getGlobalSearchDetail({ type: 'invoice', detail: 'issued' }, translate)).toBe('Emitida')
+    expect(getGlobalSearchDetail({ type: 'quote', detail: 'accepted' }, translate)).toBe('Aceptado')
+    expect(getGlobalSearchDetail({ type: 'contact', detail: 'ana@example.test' }, translate)).toBe('ana@example.test')
   })
 })

@@ -12,6 +12,7 @@
 // Variables de entorno requeridas en el proyecto Vercel de la empresa:
 //   SUPABASE_URL                  (misma instancia Supabase de moira ordo)
 //   SUPABASE_SERVICE_ROLE_KEY     (NUNCA con prefijo VITE_)
+//   VITE_COMPANY_ID               UUID de esta empresa; también disponible en servidor
 //   ANALYTICS_SALT                cadena larga al azar, distinta por entorno
 //                                 (openssl rand -hex 32). Se combina con la
 //                                 sal diaria de la base de datos.
@@ -68,6 +69,9 @@ export default async function handler(req: Request) {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.ANALYTICS_SALT) {
     return noContent()
   }
+  // Tenant authority comes from deployment configuration, never the request.
+  const companyId = process.env.VITE_COMPANY_ID?.trim().toLowerCase()
+  if (!companyId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(companyId)) return noContent()
 
   // Bots y peticiones que no vienen de la propia web
   const userAgent = get('user-agent') ?? ''
@@ -87,21 +91,22 @@ export default async function handler(req: Request) {
   const ownHost = get('x-forwarded-host') ?? get('host') ?? undefined
   const preliminary = parseTrackPayload(body, { ownHost })
   if (!preliminary) return noContent()
+  if (preliminary.company_id.toLowerCase() !== companyId) return noContent()
 
   // Un clic con una clave que la empresa no ha dado de alta se descarta,
   // salvo las reservadas (teléfono, email, formulario), que valen siempre.
   // Para esas no hace falta ni consultar la base de datos.
   if (preliminary.event_type === 'cta_click') {
     if (!preliminary.event_key) return noContent()
-    const keys = await activeEventKeys(preliminary.company_id)
+    const keys = await activeEventKeys(companyId)
     if (!isEventKeyAllowed(preliminary.event_key, keys)) return noContent()
   }
 
-  // company_id debe existir: evita inyectar tráfico en otra empresa
+  // Confirm that the configured company exists; existence alone is not authorization.
   const { data: company } = await supabase
     .from('companies')
     .select('id')
-    .eq('id', preliminary.company_id)
+    .eq('id', companyId)
     .maybeSingle()
   if (!company) return noContent()
 
@@ -114,7 +119,7 @@ export default async function handler(req: Request) {
   const geo = geoFromHeaders(get)
 
   const { error } = await supabase.from('analytics_events').insert({
-    company_id: preliminary.company_id,
+    company_id: companyId,
     event_type: preliminary.event_type,
     event_key: preliminary.event_key ?? null,
     value: preliminary.value ?? null,

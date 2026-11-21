@@ -6,8 +6,10 @@
 .search input { min-width:0; }
 .list { display:grid; gap:.75rem; margin:0; padding:0; list-style:none; }
 .post { min-width:0; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-card); }
-.openPost { display:grid; width:100%; gap:.45rem; padding:1rem 1.1rem; border:0; border-radius:inherit; background:transparent; color:var(--text-primary); text-align:left; cursor:pointer; }
+.openPost { display:flex; align-items:flex-start; width:100%; gap:1rem; padding:1rem 1.1rem; border:0; border-radius:inherit; background:transparent; color:var(--text-primary); text-align:left; cursor:pointer; }
 .openPost:hover { background:var(--bg-hover); }
+.postText { display:grid; flex:1; gap:.45rem; min-width:0; }
+.postCover { flex-shrink:0; width:7.5rem; aspect-ratio:16 / 10; border-radius:var(--radius-md); object-fit:cover; background:var(--bg-hover); }
 .postHead { display:flex; align-items:center; justify-content:space-between; gap:.75rem; min-width:0; }
 .postHead strong { overflow-wrap:anywhere; }
 .status { flex-shrink:0; padding:.2rem .55rem; border-radius:999px; background:var(--bg-hover); color:var(--text-secondary); font-size:.72rem; font-weight:650; }
@@ -21,7 +23,12 @@
 .editorTop h3 { margin:0; font-size:1.1rem; }
 .actions { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; }
 .fields { display:grid; gap:1rem; min-width:0; }
-.body { min-height:18rem; resize:vertical; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; line-height:1.55; }
+.checklist { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap:.5rem 1rem; margin:0; padding:0; list-style:none; }
+.checklist li { display:flex; align-items:flex-start; gap:.5rem; font-size:.875rem; line-height:1.4; }
+.checklist li svg { flex-shrink:0; margin-top:.1rem; }
+.checkOk svg { color:var(--success-color); }
+.checkTodo { color:var(--text-secondary); }
+.checkTodo svg { color:var(--warning-color, var(--text-secondary)); }
 .formError { margin:0; padding:.75rem 1rem; border:1px solid var(--danger-color); border-radius:var(--radius-md); color:var(--danger-color); background:var(--danger-bg); }
 .previewLink { margin:0; color:var(--text-secondary); font-size:.8rem; overflow-wrap:anywhere; }
 .previewLink strong { color:var(--text-primary); font-weight:600; }
@@ -35,4 +42,5 @@
   .actions { width:100%; }
   .actions > button { flex:1; justify-content:center; }
   .openPost { padding:.85rem; }
+  .postCover { width:4.5rem; }
 }

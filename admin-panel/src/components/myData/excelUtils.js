@@ -58,43 +58,34 @@ export const downloadTemplate = async () => {
   XLSX.writeFile(wb, 'plantilla_atributos.xlsx')
 }
 
-export const importExcel = async (file, onSuccess, onError) => {
-  let XLSX
-  try {
-    XLSX = await loadXLSX()
-  } catch {
-    onError('No se pudo cargar el lector de Excel. Comprueba la conexión.')
-    return
+// A worker isolates parsing and can be terminated even if the parser stalls.
+export const importExcel = async (file,onSuccess,onError,{signal}={}) => {
+  if(signal?.aborted)return
+  if(!/\.(xlsx|xls)$/i.test(file.name)){onError('excelImport.format');return}
+  if(!file.size||file.size>2*1024*1024){onError('excelImport.tooLarge');return}
+  let worker,timer,done=false
+  const finish=(error,definitions)=>{
+    if(done)return
+    done=true;clearTimeout(timer);worker?.terminate();signal?.removeEventListener('abort',abort)
+    if(signal?.aborted)return
+    if(error)onError(error);else onSuccess(definitions)
   }
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    try {
-      const data = new Uint8Array(e.target.result)
-      const workbook = XLSX.read(data, { type: 'array' })
-      const sheetName = workbook.SheetNames[0]
-      const worksheet = workbook.Sheets[sheetName]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-      // Mapear datos del Excel a formato de definiciones
-      const importedDefinitions = jsonData
-        .filter(row => row['Label'] && !row['Label'].startsWith('Ejemplo:'))
-        .map(row => ({
-          label: row['Label'] || '',
-          data_type: (row['Data Type'] || 'text').toLowerCase(),
-          is_filterable: (row['Filtrable'] || '').toUpperCase() === 'SI',
-          is_required: (row['Requerido'] || '').toUpperCase() === 'SI'
-        }))
-
-      if (importedDefinitions.length === 0) {
-        onError('No se encontraron atributos válidos en el archivo')
-        return
-      }
-
-      onSuccess(importedDefinitions)
-    } catch (err) {
-      console.error('Error importing Excel:', err)
-      onError('Error al leer el archivo Excel. Verifica que el formato sea correcto.')
+  const abort=()=>finish('excelImport.format')
+  signal?.addEventListener('abort',abort,{once:true})
+  timer=setTimeout(()=>finish('excelImport.timeout'),10000)
+  try{
+    const buffer=await file.arrayBuffer()
+    if(done)return
+    if(buffer.byteLength>2*1024*1024){finish('excelImport.tooLarge');return}
+    worker=new Worker(new URL('./excelImport.worker.js',import.meta.url),{type:'module'})
+    worker.onmessage=event=>{
+      const result=event.data
+      if(result?.error)finish(result.error)
+      else if(Array.isArray(result?.definitions)&&result.definitions.length>0&&result.definitions.length<=500)finish(null,result.definitions)
+      else finish('excelImport.format')
     }
-  }
-  reader.readAsArrayBuffer(file)
+    worker.onerror=()=>finish('excelImport.format')
+    worker.onmessageerror=()=>finish('excelImport.format')
+    worker.postMessage(buffer,[buffer])
+  }catch{finish('excelImport.format')}
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { importExcel } from '../components/myData/excelUtils'
 
 const emptyRow = () => ({ label: '', data_type: 'text', is_filterable: false, is_required: false })
@@ -7,7 +7,9 @@ const emptyRow = () => ({ label: '', data_type: 'text', is_filterable: false, is
  * Filas de la creación en lote (nuevo tipo de item o importación Excel).
  * Siempre hay una fila vacía al final para seguir escribiendo.
  */
-export function useDefinitionDraft({ onImported, onImportError } = {}) {
+export function useDefinitionDraft({ onImported, onImportError, scopeKey } = {}) {
+  const importController=useRef(null)
+  useEffect(()=>()=>importController.current?.abort(),[scopeKey])
   const [rows, setRows] = useState([emptyRow()])
 
   const change = useCallback((index, field, value) => {
@@ -23,12 +25,14 @@ export function useDefinitionDraft({ onImported, onImportError } = {}) {
     setRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
   }, [])
 
-  const reset = useCallback(() => setRows([emptyRow()]), [])
+  const reset = useCallback(() => {importController.current?.abort();setRows([emptyRow()])}, [])
 
   const importFile = useCallback((event) => {
     const file = event.target.files[0]
     event.target.value = ''
     if (!file) return
+    importController.current?.abort()
+    importController.current=new AbortController()
     importExcel(
       file,
       (imported) => {
@@ -36,6 +40,7 @@ export function useDefinitionDraft({ onImported, onImportError } = {}) {
         onImported?.(imported.length)
       },
       (message) => onImportError?.(message),
+      {signal:importController.current.signal},
     )
   }, [onImported, onImportError])
 

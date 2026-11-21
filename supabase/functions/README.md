@@ -210,3 +210,8 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/create-us
 ### Error: "Failed to add user to company"
 - Verifica las policies RLS de `company_members`
 - Verifica que el usuario admin tenga permisos para insertar en esa empresa
+
+
+## Auditoría 18–21: invitaciones, usuarios y resumen
+
+Aplicar primero las tres migraciones nuevas y revisar el despliegue coordinado en `docs/auditoria-cierre-18-21.md`. Publicar `invite-user`, `listar-usuarios` y `send-weekly-summary`, incluidos sus módulos `_shared`. `invite-user` requiere `SITE_URL` (HTTPS salvo HTTP local) y `/reset-password` permitido en Auth; cuenta, membresía y aceptación del correo tienen estados separados. Los resultados inciertos necesitan reintento explícito, con mínimo de 60 segundos; no borrar cuentas para compensar fallos. `listar-usuarios` recorre páginas con autorización administrativa y falla sin resultados parciales si Auth no responde correctamente. Publicar el panel actualizado; estas modificaciones locales no acreditan despliegue.

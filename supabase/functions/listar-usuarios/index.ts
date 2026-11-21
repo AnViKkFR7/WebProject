@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {listAuthUsers} from '../_shared/listAuthUsers.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,7 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if(req.method!=='POST')return new Response(JSON.stringify({error:'method_not_allowed'}),{status:405,headers:{...corsHeaders,'Content-Type':'application/json'}})
   try {
     // 1. Obtener y validar header Auth
     const authHeader = req.headers.get('Authorization')
@@ -26,7 +28,6 @@ serve(async (req) => {
     // 2. Setup supabase admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const siteUrl = Deno.env.get('SITE_URL') ?? 'https://moira-ordo.vercel.app'
     
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(
@@ -36,7 +37,8 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
+      global:{fetch:(input:RequestInfo|URL,init?:RequestInit)=>fetch(input,{...init,signal:AbortSignal.timeout(15000)})}
     })
 
     // 3. Validar usuario llamante (debe ser admin)
@@ -57,14 +59,7 @@ serve(async (req) => {
       )
     }
 
-    // 4. Listar usuarios (sin paginación por ahora, o default 50/100)
-    // Supabase listUsers defaults to page 1, perPage 50.
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-
-    if (listError) {
-      console.error('[LISTAR-USUARIOS] auth_list_failed')
-      throw listError
-    }
+    const users = await listAuthUsers(supabaseAdmin)
 
     // Mapear a formato simple
     const mappedUsers = users.map(u => ({
@@ -81,10 +76,10 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch {
     console.error('[LISTAR-USUARIOS] unexpected_error')
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error', message: error.message }),
+      JSON.stringify({ error: 'user_list_unavailable' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

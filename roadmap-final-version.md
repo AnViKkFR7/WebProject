@@ -58,3 +58,9 @@ Completa el [MVP](roadmap-mvp.md) y las mejoras aceptadas del [roadmap principal
 - [ ] Prueba de extremo a extremo en destino, checklist de entorno/DNS/correo/configuración pertinente y seguimiento de errores tras lanzamiento. Actualizar `database/README.md` y changelog.
 
 No se incluyen pasarelas de pago, firma digital, envío comercial automático ni SEO público: necesitarían alcance propio. Los cobros de esta evolución se registran manualmente.
+
+- [x] 28/10/2026 [P36] Manual completamente rediseñado: 19 páginas, 17 capítulos, capturas autenticadas de WatchEcommerceDemo, índice enlazado y estética editorial MoiraOrdo. PDF renderizado y revisado; fuente y generador conservados.
+
+- [x] 28/10/2026 [P37] Revisión del manual: Dashboard corregido en capítulo 02, 31 capturas de escritorio numeradas y 21 páginas dedicadas a presupuestos/facturación. PDF de 35 páginas renderizado y revisado; índice, leyendas y marcadores comprobados.
+
+- [x] 29/10/2026 [P38] Capturas del manual sustituidas por datos ficticios realistas sin ocultación: carga confirmada por el usuario y comprobada en el panel; 31 capturas de escritorio numeradas, 35 páginas renderizadas y revisadas, índice y marcadores verificados. Estado y guía en docs/manual-demo-data.md.

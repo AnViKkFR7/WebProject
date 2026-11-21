@@ -1,0 +1,5 @@
+[functions.send-billing-due-reminders]
+verify_jwt = false
+
+[functions.cleanup-item-media]
+verify_jwt = false

@@ -25,7 +25,7 @@ export interface LeadInput {
 
 export type LeadResult =
   | { ok: true }
-  | { ok: false; reason: 'invalid' | 'network' | 'server' }
+  | { ok: false; reason: 'invalid' | 'network' | 'server' | 'rate_limited' }
 
 /**
  * Envía una solicitud. A diferencia de la analítica no usa sendBeacon:
@@ -65,7 +65,7 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
       window.dispatchEvent(new CustomEvent('moira:lead-sent'))
       return { ok: true }
     }
-    return { ok: false, reason: response.status === 400 ? 'invalid' : 'server' }
+    return { ok: false, reason: response.status===429?'rate_limited':[400,413].includes(response.status)?'invalid':'server' }
   } catch {
     return { ok: false, reason: 'network' }
   }

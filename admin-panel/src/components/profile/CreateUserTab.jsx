@@ -20,6 +20,8 @@ const CreateUserTab = ({ companies }) => {
     invitation_mode: 'password'
   })
   
+  const [pendingInvitation, setPendingInvitation] = useState(null)
+  const canRetryInvitation = pendingInvitation && newUser.invitation_mode !== 'password' && ['email','full_name','company_id','role'].every(key => pendingInvitation[key] === newUser[key])
   const [showPassword, setShowPassword] = useState(false)
   const [companySearch, setCompanySearch] = useState('')
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
@@ -79,7 +81,7 @@ const CreateUserTab = ({ companies }) => {
       })
   }
 
-  const handleCreateUser = async (e) => {
+  const handleCreateUser = async (e, resend = false) => {
     e.preventDefault()
     setLoading(true)
     setErrorMessage('')
@@ -95,7 +97,7 @@ const CreateUserTab = ({ companies }) => {
           return
         }
 
-        await userService.createUserWithPassword({
+        const created = await userService.createUserWithPassword({
           email: newUser.email,
           password: newUser.password,
           full_name: newUser.full_name,
@@ -103,6 +105,15 @@ const CreateUserTab = ({ companies }) => {
           role: newUser.role
         })
 
+        if (created?.success !== true || created?.membership !== true) {
+          setErrorMessage(t('profile.messages.invitationPending'))
+          return
+        }
+        if (!created.password_created) {
+          setSuccessMessage(t('profile.messages.userRecovered'))
+          setNewUser(previous => ({ ...previous, password: '' }))
+          return
+        }
         const company = companies.find(c => c.id === newUser.company_id)
 
         setCreatedUserInfo({
@@ -115,15 +126,26 @@ const CreateUserTab = ({ companies }) => {
 
         setSuccessMessage(t('profile.messages.userCreatedWithPassword'))
       } else {
-        await userService.inviteUser({
+        const invitation = await userService.inviteUser({
           email: newUser.email,
           full_name: newUser.full_name,
           company_id: newUser.company_id,
-          role: newUser.role
+          role: newUser.role,
+          resend
         })
-        setSuccessMessage(t('profile.messages.userInvited'))
+        if (invitation?.success !== true || invitation?.membership !== true) {
+          setPendingInvitation({ email:newUser.email, full_name:newUser.full_name, company_id:newUser.company_id, role:newUser.role, delivery:invitation?.delivery })
+          setErrorMessage(t(invitation?.membership ? 'profile.messages.invitationDeliveryPending' : 'profile.messages.invitationPending'))
+          return
+        }
+        setSuccessMessage(t(invitation.delivery === 'not_required' ? 'profile.messages.userLinked' : 'profile.messages.userInvited'))
+        if (invitation.delivery === 'accepted') {
+          setPendingInvitation({ email:newUser.email, full_name:newUser.full_name, company_id:newUser.company_id, role:newUser.role, delivery:'accepted' })
+          return
+        }
       }
 
+      setPendingInvitation(null)
       setNewUser({
         email: '',
         password: '',
@@ -135,7 +157,7 @@ const CreateUserTab = ({ companies }) => {
       setCompanySearch('')
       
     } catch (error) {
-      setErrorMessage(error.message || t('profile.messages.userCreateError'))
+      setErrorMessage(error.message === 'invitation_busy' ? t('profile.messages.invitationCooldown') : newUser.invitation_mode !== 'password' ? t('profile.messages.userCreateError') : error.message || t('profile.messages.userCreateError'))
     } finally {
       setLoading(false)
     }
@@ -149,7 +171,7 @@ const CreateUserTab = ({ companies }) => {
       </div>
 
       {successMessage && (
-        <div style={{
+        <div role="status" style={{
           background: '#d1f4e0',
           border: '1px solid #4caf50',
           borderRadius: '8px',
@@ -164,7 +186,7 @@ const CreateUserTab = ({ companies }) => {
       )}
 
       {errorMessage && (
-        <div style={{
+        <div role="alert" style={{
           background: '#ffeaea',
           border: '1px solid #f44336',
           borderRadius: '8px',
@@ -178,6 +200,7 @@ const CreateUserTab = ({ companies }) => {
         </div>
       )}
 
+      {canRetryInvitation && <button type="button" className="secondary-button" disabled={loading} onClick={event => handleCreateUser(event, true)}>{t(pendingInvitation.delivery === 'accepted' ? 'profile.messages.resendInvitation' : 'profile.messages.retryInvitation')}</button>}
       <form onSubmit={handleCreateUser}>
         <div className="form-grid">
           <label className="form-group full-width">

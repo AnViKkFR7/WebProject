@@ -29,6 +29,20 @@ beforeAll(async () => {
     create table public.analytics_event_definitions(id uuid primary key default gen_random_uuid(), company_id uuid not null);
     create table public.analytics_events(id uuid primary key default gen_random_uuid(), company_id uuid not null);
     create table public.analytics_daily(id uuid primary key default gen_random_uuid(), company_id uuid not null);
+    create table public.company_customer_email_settings(company_id uuid primary key,settings jsonb);
+    create table public.quote_approval_links(id uuid primary key default gen_random_uuid(),company_id uuid,token_hash text,resolved_at timestamptz);
+    create table public.quote_approval_responses(id uuid primary key default gen_random_uuid(),company_id uuid);
+    create table public.quote_approval_response_handling(id uuid primary key default gen_random_uuid(),company_id uuid);
+    create function public.default_company_customer_email_settings() returns jsonb language sql immutable as $$ select '{}'::jsonb $$;
+    create function auth.role() returns text language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.role',true),''),current_user) $$;
+    create function public.get_company_customer_email_settings(p_company uuid) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+    create function public.save_company_customer_email_settings(p_company uuid,p_settings jsonb) returns timestamptz language sql security definer as $$ select now() $$;
+    create function public.get_company_customer_email_revisions(p_company uuid) returns table(revision_id uuid,created_at timestamptz,created_by uuid,settings jsonb) language sql security definer as $$ select null::uuid,null::timestamptz,null::uuid,null::jsonb where false $$;
+    create function public.restore_company_customer_email_revision(p_company uuid,p_revision uuid) returns timestamptz language sql security definer as $$ select now() $$;
+    create function public.get_company_customer_email_template(p_company uuid,p_template text,p_language text default 'es',p_user uuid default auth.uid()) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+    create function public.get_quote_approval_audit(p_company uuid,p_quote uuid) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+    create function public.get_quote_approval_notification_payload(p_token_hash text) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+    revoke all on public.company_customer_email_settings,public.quote_approval_links,public.quote_approval_responses,public.quote_approval_response_handling from public,anon,authenticated,service_role;
     alter table public.items enable row level security;
     create policy items_tenant_test on public.items for all to authenticated using(public.is_company_member(company_id)) with check(public.has_company_role(company_id,array['admin','editor']));
     alter table public.blog_posts enable row level security;
@@ -39,10 +53,21 @@ beforeAll(async () => {
     grant update on public.company_members to authenticated;
     update public.company_members set role='admin' where company_id='10000000-0000-4000-8000-000000000001' and user_id='20000000-0000-4000-8000-000000000001';
   `)
+  const templatePreflight=await sqlFile('maintenance/COMPANY_CUSTOMER_EMAIL_TEMPLATES_PREFLIGHT.sql')
+  expect((await db.query(templatePreflight)).rows[0].revisions_table_exists).toBe(false)
+  const emailRevisionRepair=await sqlFile('migrations/COMPANY_CUSTOMER_EMAIL_REVISIONS_REPAIR.sql')
+  await db.exec(emailRevisionRepair)
+  await db.exec(emailRevisionRepair)
+  expect((await db.query(templatePreflight)).rows[0]).toMatchObject({revisions_table_exists:true,revisions_rls_enabled:true})
   await db.exec(await sqlFile('migrations/COMPANY_MODULES.sql'))
   await db.exec(await sqlFile('migrations/COMPANY_MODULES.sql'))
   await db.exec(await sqlFile('migrations/COMPANY_MODULES_PLATFORM_ADMIN.sql'))
   await db.exec(await sqlFile('migrations/COMPANY_MODULES_PLATFORM_ADMIN.sql'))
+  const scopeFix=await sqlFile('migrations/COMPANY_MODULES_SCOPE_FIX.sql')
+  await db.exec(scopeFix)
+  await db.exec(scopeFix)
+  const scopePreflight=await sqlFile('maintenance/COMPANY_MODULES_SCOPE_FIX_PREFLIGHT.sql')
+  expect((await db.query(scopePreflight)).rows[0]).toEqual({module_guard_exists:true,module_guard_security_config_ok:true,module_guard_not_public:true,late_billing_rpcs_guarded:true,unchecked_rpcs_private:true,private_billing_tables_isolated:true,module_configuration_system_admin_rpc_only:true})
   await db.exec(`create function public.test_privacy_module_write(p_company uuid,p_contact uuid) returns void language plpgsql security definer set search_path='' as $$ begin perform pg_catalog.set_config('app.crm_privacy_erasure','on',true);if coalesce(pg_catalog.current_setting('app.crm_privacy_erasure',true),'')<>'on' then raise exception 'test context missing';end if;delete from public.crm_contacts where company_id=p_company and id=p_contact;end $$`)
 }, 30000)
 afterAll(async () => db?.close())
@@ -68,6 +93,26 @@ it('allows only the platform admin to change module settings', async () => {
   await login(db, 'viewer')
   await expect(db.query("select public.set_company_module($1,'blog',true)", [ids.a])).rejects.toThrow('Forbidden')
   expect((await db.query("select is_enabled from public.company_modules where company_id=$1 and module_key='blog'", [ids.a])).rows[0].is_enabled).toBe(false)
+})
+
+it('blocks late billing template and quote-approval RPCs when billing is disabled',async()=>{
+  await login(db,'admin')
+  await db.query("select public.set_company_module($1,'billing',false)",[ids.a])
+  await expect(db.query('select public.get_company_customer_email_settings($1)',[ids.a])).rejects.toThrow('Company module is disabled')
+  await expect(db.query("select public.get_company_customer_email_template($1,'quote_approval','es',$2)",[ids.a,ids.admin])).rejects.toThrow('Company module is disabled')
+  await expect(db.query("select public.save_company_customer_email_settings($1,'{}'::jsonb)",[ids.a])).rejects.toThrow('Company module is disabled')
+  await expect(db.query('select public.get_company_customer_email_revisions($1)',[ids.a])).rejects.toThrow('Company module is disabled')
+  await expect(db.query('select public.restore_company_customer_email_revision($1,$2)',[ids.a,'30000000-0000-4000-8000-000000000001'])).rejects.toThrow('Company module is disabled')
+  await expect(db.query('select public.get_quote_approval_audit($1,$2)',[ids.a,'30000000-0000-4000-8000-000000000001'])).rejects.toThrow('Company module is disabled')
+  await db.exec('reset role')
+  await db.query('insert into public.quote_approval_links(company_id,token_hash,resolved_at) values($1,$2,now())',[ids.a,'f'.repeat(64)])
+  await db.exec('set role service_role')
+  await expect(db.query('select public.get_quote_approval_notification_payload($1)',['f'.repeat(64)])).rejects.toThrow('Company module is disabled')
+  await expect(db.query('select public.get_company_customer_email_settings_unchecked($1)',[ids.a])).rejects.toThrow()
+
+  await login(db,'admin')
+  await db.query("select public.set_company_module($1,'billing',true)",[ids.a])
+  expect((await db.query('select public.get_company_customer_email_settings($1) as result',[ids.a])).rows[0].result).toEqual({})
 })
 
 it('hides disabled content from direct reads and denies direct and security-definer writes', async () => {

@@ -25,3 +25,7 @@ database/local/*
 !database/local/.gitkeep
 *.local.sql
 *.secret.sql
+
+# Temporales locales
+tmp/
+admin-panel/.vitest/

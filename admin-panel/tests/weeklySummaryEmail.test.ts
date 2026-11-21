@@ -27,8 +27,41 @@ describe('weekly summary email',()=>{
     expect(()=>buildWeeklySummaryEmail({...payload,week_start:'2026-02-31'})).toThrow('Invalid week range')
   })
 
+  it('renders the MoiraOrdo editorial layout and keeps the panel link safe',()=>{
+    const message=buildWeeklySummaryEmail(payload,{adminAppUrl:'https://admin.example.test/settings?token=private'})
+    expect(message.html).toContain('<html lang="es">')
+    expect(message.html).toContain('max-width:640px')
+    expect(message.html).toContain('Tu semana,<br>en perspectiva')
+    expect(message.html).toContain('01 / Tu foco ahora')
+    expect(message.html).toContain('02 / La actividad de la semana')
+    expect(message.html).toContain('03 / Mira hacia delante')
+    expect(message.html).toContain('href="https://admin.example.test/"')
+    expect(message.html).not.toContain('token=private')
+    expect(message.html).toContain('https://www.moiraordo.es')
+    expect(message.html).not.toContain('<img')
+    expect(buildWeeklySummaryEmail(payload,{adminAppUrl:'javascript:alert(1)'}).html).toContain('href="https://admin.moiraordo.es/"')
+    expect(buildWeeklySummaryEmail(payload,{adminAppUrl:'https://user:password@example.test/'}).html).not.toContain('user:password')
+  })
+
+  it('supports a quiet week and clearly labels the one-shot delivery test',()=>{
+    const quiet=buildWeeklySummaryEmail({...payload,overdue_followups:0,overdue_invoices:0,quotes_waiting:0,upcoming_planning:1},{isTest:true})
+    expect(quiet.html).toContain('Sin pendientes en este resumen')
+    expect(quiet.html).toContain('1 tarea en el horizonte')
+    expect(quiet.subject).toMatch(/^\[PRUEBA\]/)
+    expect(quiet.html).toContain('PRUEBA DE ENTREGA · WatchEcommerceDemo')
+    expect(quiet.text).toContain('envío manual de prueba')
+  })
+
   it('validates and hides the administrator recipient list using BCC',()=>{
     expect(splitWeeklySummaryRecipients(['one@example.test','TWO@example.test','one@example.test','invalid'])).toEqual({to:'one@example.test',bcc:['TWO@example.test']})
     expect(splitWeeklySummaryRecipients([])).toEqual({to:null,bcc:[]})
   })
+})
+
+it('explains the historical issuance scope and recurring occurrence counts',()=>{
+  const email=buildWeeklySummaryEmail(payload)
+  for(const content of [email.text,email.html]){
+    expect(content).toContain('sin fecha de emisión verificable')
+    expect(content).toContain('Cada repetición de una tarea recurrente')
+  }
 })

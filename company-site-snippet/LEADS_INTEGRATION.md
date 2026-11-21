@@ -42,7 +42,7 @@ entorno.
 | `SUPABASE_SERVICE_ROLE_KEY` | Servidor (sin prefijo, **nunca** `VITE_`) | Service role key de ese proyecto Supabase |
 | `VITE_COMPANY_ID` | Cliente y servidor de esta web Vercel (es pública) | El `id` (uuid) de esta empresa en `companies`; el endpoint lo fija desde la configuración del despliegue y rechaza IDs distintos del cuerpo |
 
-Si la analítica ya está integrada, las tres existen y no hay que tocar nada.
+Si la analítica ya está integrada, las tres anteriores pueden existir. Añadir también `LEADS_RATE_LIMIT_SECRET`: secreto de servidor aleatorio de al menos 32 caracteres, sin prefijo VITE_. En Vercel, habilitar la exposición de variables de sistema y comprobar `VERCEL=1` en runtime; el edge proporciona `x-vercel-forwarded-for`. No sustituirlos por datos enviados en el formulario. Referencia: https://vercel.com/docs/environment-variables/system-environment-variables .
 
 > La service role key se salta todos los permisos: va **solo** en el servidor.
 > Si acaba en una variable `VITE_`, queda publicada en el JavaScript de la web.
@@ -83,9 +83,11 @@ export function ContactForm() {
     setSending(false)
     if (result.ok) setSent(true)
     else setError(
-      result.reason === 'invalid'
-        ? 'Revisa los datos: hacen falta tu nombre y un email o teléfono.'
-        : 'No se ha podido enviar. Inténtalo de nuevo en un momento.'
+      result.reason === 'rate_limited'
+        ? 'Has alcanzado el límite de envíos. Espera antes de volver a intentarlo; tus datos siguen en el formulario.'
+        : result.reason === 'invalid'
+          ? 'Revisa los datos: hacen falta tu nombre y un email o teléfono.'
+          : 'No se ha podido enviar. Inténtalo de nuevo en un momento.'
     )
   }
 
@@ -211,3 +213,21 @@ que es un tratamiento con una finalidad clara. Dos cosas que conviene tener:
 A diferencia de la analítica, aquí **sí** hay datos personales: no se puede
 borrar la bandeja entera sin más, pero sí se pueden borrar solicitudes sueltas
 desde el panel si alguien ejerce su derecho de supresión.
+
+## Protección contra spam · auditoría, entrega 11
+
+1. Aplicar `database/migrations/PUBLIC_LEAD_RATE_LIMIT.sql` tras COMPANY_MODULES en el proyecto Supabase correcto. Verificar que la RPC solo es ejecutable por service_role y las tablas no son accesibles desde el navegador.
+2. Configurar `LEADS_RATE_LIMIT_SECRET` en servidor (aleatorio, mínimo 32 caracteres, por ejemplo generado con `openssl rand -hex 32`). Nunca usar VITE_ ni enviar el secreto al cliente. Mantenerlo estable entre instancias de la misma empresa.
+3. Actualizar y redesplegar `api/lead.ts` y `lib/leads.ts` en cada web Vercel. No requiere publicar el panel ni Edge Functions. Fuera de Vercel se necesita una adaptación revisada del proxy de confianza; no hay fallback a cabeceras arbitrarias.
+4. Adaptar el formulario al nuevo resultado `rate_limited`, conservar datos y permitir un reintento manual posterior. En español: «Has alcanzado el límite de envíos. Espera antes de volver a intentarlo». En inglés: «The submission limit has been reached. Please wait before trying again». No reintentar automáticamente.
+5. Verificar un envío válido en Preview, el límite por origen, empresa manipulada, módulo CRM desactivado y fallo de la RPC. No usar datos reales ni agotar cuotas de clientes al probar.
+
+Límites: cinco reservas por IP (prefijo /64 para IPv6) y empresa cada 15 minutos; 100 por empresa y hora. Son ventanas fijas: los bordes permiten ráfagas entre ventanas. Redes compartidas comparten cuota. El límite global protege el volumen de inserciones ante direcciones distribuidas, pero un abuso puede consumir la cuota de la empresa e impedir envíos legítimos hasta la siguiente ventana. No sustituye al firewall de Vercel frente a ataques volumétricos.
+
+Se almacenan HMAC SHA-256 y contadores, sin IP en claro ni campos del contacto. Cambiar nombre, email, teléfono, user-agent o x-forwarded-for no reinicia la cuota. La dirección se toma solo de la cabecera del edge Vercel; referencia: https://vercel.com/docs/headers/request-headers . Si hay un proxy adicional, revisar identidad y cabecera efectiva antes de producción; no asumir que representa al visitante final.
+
+Respuesta 429 con Retry-After: 3600 cuando se agota alguna cuota; 503 si falta secreto/plataforma/IP confiable/RPC o el módulo está desactivado. Se limita el cuerpo a 16 KiB reales y se responde 413 si los supera. La reserva se consume incluso si después falla la inserción del lead, para limitar intentos costosos. El honeypot se conserva como filtro adicional.
+
+Cada bucket caduca a las tres horas de su inicio. Se limpian expirados de la empresa al reservar y se programa purga horaria si existe pg_cron. Verificar el job `purge-public-lead-rate-buckets`; si pg_cron no existe, programar externamente `purge_public_lead_rate_buckets` con service_role cada hora. Con la purga horaria funcionando, los buckets se conservan aproximadamente hasta cuatro horas; sin ejecutor de purga las empresas inactivas pueden retenerlos más tiempo.
+
+Orden de despliegue: SQL → secreto/configuración → API y cliente → prueba controlada. La migración no envía correos ni modifica solicitudes existentes. PGlite valida cuotas y permisos con ejecuciones serializadas; falta verificar varias conexiones simultáneas y el scheduler real en entorno controlado.

@@ -9,6 +9,7 @@ import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useFeedback } from '../contexts/FeedbackContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { useCompanyModules } from '../hooks/useCompanyModules'
 import { getCompanyColor } from '../lib/planningColors'
 import { formatPhoneNumber } from '../lib/phoneUtils'
 import PageHeader from '../components/ui/PageHeader'
@@ -29,6 +30,7 @@ const Companies = () => {
   const { t } = useLanguage()
   const { toast, confirm } = useFeedback()
   const { canEdit } = usePermissions()
+  const { modules } = useCompanyModules()
   const companyId = selectedCompany?.id
 
   const [companies, setCompanies] = useState([])
@@ -239,10 +241,10 @@ const Companies = () => {
                       </div>
                     </dl>
 
-                    <Link className="stat-card-cta" to="/planning">
+                    {modules.planning && <Link className="stat-card-cta" to="/planning">
                       {t('companies.seeInPlanning')}
                       <Icon name="chevronRight" size={14} />
-                    </Link>
+                    </Link>}
                   </li>
                 )
               })}

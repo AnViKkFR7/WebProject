@@ -1,0 +1,233 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "path": "bootstrap/PREFLIGHT.sql"
+    },
+    {
+      "path": "schema/DB_SCHEMA.sql"
+    },
+    {
+      "path": "bootstrap/PLANNING_BASE.sql"
+    },
+    {
+      "path": "schema/ITEM_MEDIA_STORAGE.sql"
+    },
+    {
+      "path": "schema/USER_FILTER_PREFERENCES.sql"
+    },
+    {
+      "path": "schema/ANALYTICS_SCHEMA.sql"
+    },
+    {
+      "path": "schema/PLANNING_SCHEMA.sql"
+    },
+    {
+      "path": "schema/ATTRIBUTES_SCHEMA.sql"
+    },
+    {
+      "path": "schema/LEADS_SCHEMA.sql"
+    },
+    {
+      "path": "migrations/ANALYTICS_PRIVACY_UPGRADE.sql"
+    },
+    {
+      "path": "migrations/ANALYTICS_ENGAGEMENT.sql"
+    },
+    {
+      "path": "schema/ANALYTICS_AGGREGATION.sql",
+      "before": "-- 4) Cron:",
+      "after": "create extension if not exists pg_cron;"
+    },
+    {
+      "path": "migrations/CONTENT_SEO_FIELDS.sql"
+    },
+    {
+      "path": "migrations/COMPANY_MEMBER_ACCESS.sql"
+    },
+    {
+      "path": "migrations/RLS_ADMIN_WRITE_FIX.sql"
+    },
+    {
+      "path": "migrations/PLANNING_TENANT_HARDENING.sql"
+    },
+    {
+      "path": "migrations/PLANNING_TASK_MOVE_UNDO.sql"
+    },
+    {
+      "path": "migrations/PLANNING_REMINDERS.sql",
+      "before": "-- 5) PARTE B"
+    },
+    {
+      "path": "migrations/PLANNING_REMINDER_PAYLOAD_FIX.sql"
+    },
+    {
+      "path": "migrations/PLANNING_EMAIL_QUEUE.sql"
+    },
+    {
+      "path": "bootstrap/STORAGE_BUCKETS.sql"
+    },
+    {
+      "path": "migrations/PLANNING_STORAGE_HARDENING.sql"
+    },
+    {
+      "path": "migrations/CRM_CONTACTS_PIPELINE.sql"
+    },
+    {
+      "path": "migrations/CRM_LEAD_ITEM_ATTRIBUTION.sql"
+    },
+    {
+      "path": "migrations/CRM_REVIEW_ACTIVITY_LINK.sql"
+    },
+    {
+      "path": "migrations/CRM_PRIVACY_CONTROLS.sql"
+    },
+    {
+      "path": "migrations/INVOICING.sql"
+    },
+    {
+      "path": "migrations/QUOTES.sql"
+    },
+    {
+      "path": "migrations/BILLING_SECURITY_HARDENING.sql"
+    },
+    {
+      "path": "migrations/BILLING_DOCUMENT_PRESENTATION.sql"
+    },
+    {
+      "path": "migrations/BILLING_APPEARANCE.sql"
+    },
+    {
+      "path": "migrations/BILLING_DRAFTS.sql"
+    },
+    {
+      "path": "migrations/BILLING_NAMED_PALETTES.sql"
+    },
+    {
+      "path": "migrations/BILLING_DIRECTORY_CATALOG.sql"
+    },
+    {
+      "path": "migrations/BILLING_CHAPTER_TEMPLATES.sql"
+    },
+    {
+      "path": "migrations/BILLING_PAYMENTS_HISTORY.sql"
+    },
+    {
+      "path": "migrations/BILLING_ISSUED_INVOICE_LOCK.sql"
+    },
+    {
+      "path": "migrations/BILLING_RECTIFYING_INVOICES.sql"
+    },
+    {
+      "path": "migrations/BILLING_QUOTE_APPROVAL.sql"
+    },
+    {
+      "path": "migrations/BILLING_QUOTE_APPROVAL_REVISIONS.sql"
+    },
+    {
+      "path": "migrations/BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql"
+    },
+    {
+      "path": "migrations/CRM_BILLING_LINKS.sql"
+    },
+    {
+      "path": "migrations/CRM_PRIVACY_ANONYMIZATION_FIX.sql"
+    },
+    {
+      "path": "migrations/CRM_RETENTION_REVIEW.sql"
+    },
+    {
+      "path": "migrations/COMPANY_MODULES.sql"
+    },
+    {
+      "path": "migrations/COMPANY_MODULES_PLATFORM_ADMIN.sql"
+    },
+    {
+      "path": "migrations/BILLING_DUE_REMINDERS.sql"
+    },
+    {
+      "path": "migrations/COMPANY_CUSTOMER_EMAIL_TEMPLATES.sql"
+    },
+    {
+      "path": "migrations/COMPANY_CUSTOMER_EMAIL_REVISIONS_REPAIR.sql"
+    },
+    {
+      "path": "migrations/COMPANY_MODULES_SCOPE_FIX.sql"
+    },
+    {
+      "path": "migrations/WEEKLY_SUMMARY_EMAIL.sql"
+    },
+    {
+      "path": "migrations/WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql"
+    },
+    {
+      "path": "migrations/ITEM_MEDIA_COVER_SECURITY.sql"
+    },
+    {
+      "path": "migrations/ITEM_MEDIA_SUMMARY_SECURITY.sql"
+    },
+    {
+      "path": "migrations/ANALYTICS_RPC_SECURITY.sql"
+    },
+    {
+      "path": "migrations/COMPANY_MODULES_RPC_COMPLETION.sql"
+    },
+    {
+      "path": "migrations/BILLING_RECTIFICATION_BALANCES.sql"
+    },
+    {
+      "path": "migrations/BILLING_PROFILE_VALIDATION_REPAIR.sql"
+    },
+    {
+      "path": "migrations/PUBLIC_LEAD_RATE_LIMIT.sql",
+      "omit": {
+        "from": "do $$ begin",
+        "through": "end $$;",
+        "reason": "Optional rate-bucket purge scheduler, activated separately."
+      }
+    },
+    {
+      "path": "migrations/PLANNING_RECURRENCE_WINDOW.sql"
+    },
+    {
+      "path": "migrations/PLANNING_EMAIL_STALE_GUARD.sql"
+    },
+    {
+      "path": "migrations/WEEKLY_SUMMARY_RETRY_WINDOW.sql"
+    },
+    {
+      "path": "migrations/CLIENT_DIRECTORY_MODULE_ACCESS.sql"
+    },
+    {
+      "path": "migrations/ITEM_STORAGE_CLEANUP_QUEUE.sql"
+    },
+    {
+      "path": "migrations/WEEKLY_SUMMARY_METRICS.sql"
+    },
+    {
+      "path": "migrations/CRM_PRIVACY_SEARCH_LITERAL.sql"
+    },
+    {
+      "path": "migrations/COMPANY_USER_INVITATION_STATE.sql"
+    },
+    {
+      "path": "migrations/COMPANY_USER_PROVISIONING_RECOVERY.sql"
+    },
+    {
+      "path": "migrations/BLOG_MEDIA_EDITOR.sql"
+    },
+    {
+      "path": "bootstrap/FINAL_ACCESS.sql"
+    }
+  ],
+  "excludedMigrations": {
+    "BILLING_DUE_REMINDERS_CRON.sql": "Optional scheduler: configure extensions, deploy Edge and secrets first.",
+    "WEEKLY_SUMMARY_EMAIL_CRON.sql": "Optional scheduler: configure extensions, deploy Edge and secrets first.",
+    "ITEM_STORAGE_CLEANUP_CRON.sql": "Optional scheduler: configure extensions, deploy Edge and secrets first.",
+    "WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql": "Optional Watch-only manual test; never part of installation.",
+    "WEEKLY_SUMMARY_EMAIL_WATCH_TEST_FIX.sql": "Optional Watch-only manual test; never part of installation.",
+    "WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql": "Optional Watch-only manual test; never part of installation.",
+    "WEEKLY_SUMMARY_EMAIL_WATCH_RESEND.sql": "Optional Watch-only manual test; never part of installation.",
+    "PLANNING_TIMEZONE_FIX.sql": "Historical data repair with a deployment date; empty databases have no legacy tasks."
+  }
+}

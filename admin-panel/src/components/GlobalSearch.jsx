@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { useCompanyModules } from '../hooks/useCompanyModules'
 import { useLanguage } from '../contexts/LanguageContext'
-import { globalSearchService } from '../services/globalSearchService'
+import { globalSearchService, getGlobalSearchDetail } from '../services/globalSearchService'
 import Modal from './ui/Modal'
 import Icon from './ui/Icon'
 import styles from './GlobalSearch.module.css'
@@ -77,7 +77,7 @@ export default function GlobalSearch() {
         {state === 'error' && <p className={styles.message} role="alert">{t('globalSearch.error')}</p>}
         {results.map((result, index) => <button type="button" role="option" aria-selected={activeIndex === index} id={`global-search-result-${index}`} key={`${result.type}:${result.id}`} className={styles.result} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(result)}>
           <span className={styles.resultIcon}><Icon name={result.type === 'item' ? 'items' : result.type === 'contact' ? 'users' : 'file'} size={17} /></span>
-          <span className={styles.resultCopy}><strong>{result.title}</strong><small>{t(`globalSearch.types.${result.type}`)}{result.detail ? ` · ${result.detail}` : ''}</small></span>
+          <span className={styles.resultCopy}><strong>{result.title}</strong><small>{t(`globalSearch.types.${result.type}`)}{result.detail ? ` · ${getGlobalSearchDetail(result,t)}` : ''}</small></span>
           <span className={styles.enterHint}>↵</span>
         </button>)}
       </div>

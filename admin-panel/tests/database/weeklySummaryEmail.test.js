@@ -90,3 +90,65 @@ it('initializes future companies with the automatic weekly schedule',async()=>{
   await db.query("insert into public.companies(id) values('10000000-0000-4000-8000-000000000003')")
   expect((await db.query("select enabled,local_send_time from public.company_weekly_summary_settings where company_id='10000000-0000-4000-8000-000000000003'")).rows[0]).toEqual({enabled:true,local_send_time:'09:00:00'})
 })
+
+it('runs the isolated Watch delivery RPC with the auth email type used by Supabase',async()=>{
+  await db.exec('reset role')
+  await db.exec(`alter table public.companies add column name text;
+    update public.companies set name='WatchEcommerceDemo' where id='${ids.a}';
+    alter table auth.users alter column email type varchar(255);`)
+  await db.exec(await sqlFile('migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST.sql'))
+  await db.exec(await sqlFile('migrations/WEEKLY_SUMMARY_EMAIL_WATCH_TEST_FIX.sql'))
+  const before=(await db.query('select count(*)::int n from public.company_weekly_summary_queue')).rows[0].n
+  await db.exec('set role service_role')
+  const job=(await db.query('select * from public.claim_watch_weekly_summary_test()')).rows[0]
+  expect(job.company_id).toBe(ids.a)
+  await expect(db.query('select * from public.get_watch_weekly_summary_test_payload($1)',[job.queue_id])).rejects.toThrow('structure of query does not match function result type')
+  await db.exec('reset role')
+  await db.exec(await sqlFile('migrations/WEEKLY_SUMMARY_EMAIL_DELIVERY_FIX.sql'))
+  await db.exec('set role service_role')
+  const summary=(await db.query('select * from public.get_watch_weekly_summary_test_payload($1)',[job.queue_id])).rows[0]
+  expect(summary).toMatchObject({company_id:ids.a,recipient_emails:['admin@example.test']})
+  await expect(db.query('select * from public.claim_watch_weekly_summary_test()')).rejects.toThrow('already requested')
+  await db.query("select public.fail_watch_weekly_summary_test($1,'unexpected_failure',null)",[job.queue_id])
+  const recovery=(await db.query('select * from public.claim_watch_weekly_summary_test()')).rows[0]
+  expect(recovery).toEqual(job)
+  expect((await db.query('select public.complete_watch_weekly_summary_test($1,$2) ok',[job.queue_id,'provider-test'])).rows[0].ok).toBe(true)
+  await expect(db.query('select * from public.claim_watch_weekly_summary_test()')).rejects.toThrow('already requested')
+  await db.exec('reset role')
+  await db.exec(await sqlFile('migrations/WEEKLY_SUMMARY_EMAIL_WATCH_RESEND.sql'))
+  await db.exec('set role service_role')
+  const resendKey='90000000-0000-4000-8000-000000000001'
+  const resend=(await db.query('select * from public.claim_watch_weekly_summary_test($1)',[resendKey])).rows[0]
+  expect(resend.company_id).toBe(ids.a)
+  expect(resend.queue_id).not.toBe(job.queue_id)
+  await expect(db.query('select * from public.claim_watch_weekly_summary_test($1)',[resendKey])).rejects.toThrow('already used')
+  expect((await db.query('select public.complete_watch_weekly_summary_test($1,$2) ok',[resend.queue_id,'provider-test-resend'])).rows[0].ok).toBe(true)
+  await expect(db.query('select * from public.claim_watch_weekly_summary_test($1)',['90000000-0000-4000-8000-000000000002'])).rejects.toThrow('only one resend is permitted')
+  await db.exec('reset role')
+  const normal=(await db.query("select id from public.company_weekly_summary_queue where company_id=$1 and status='sending' limit 1",[ids.a])).rows[0]
+  const normalPayload=(await db.query('select * from public.get_company_weekly_summary_payload($1)',[normal.id])).rows[0]
+  expect(normalPayload.recipient_emails).toEqual(['admin@example.test'])
+  expect((await db.query("select count(*)::int n from public.company_weekly_summary_watch_test where status='sent'")).rows[0].n).toBe(2)
+  expect((await db.query('select count(*)::int n from public.company_weekly_summary_queue')).rows[0].n).toBe(before)
+})
+
+it.each([
+  {status:'sent',error:null,provider:'accepted',attempts:1,age:1},
+  {status:'dead',error:'sent_marker_failed',provider:null,attempts:1,age:1},
+  {status:'dead',error:'unexpected_failure',provider:'accepted',attempts:1,age:1},
+  {status:'dead',error:'unexpected_failure',provider:null,attempts:1,age:21},
+  {status:'dead',error:'unexpected_failure',provider:null,attempts:2,age:1},
+])('blocks an unsafe test recovery: $status / $error / attempts=$attempts / age=$age',async({status,error,provider,attempts,age})=>{
+  await db.exec('reset role')
+  await db.query("update public.company_weekly_summary_watch_test set status=$1,last_error_code=$2,provider_message_id=$3,attempt_count=$4,created_at=now()-make_interval(hours=>$5)",[status,error,provider,attempts,age])
+  await db.exec('set role service_role')
+  await expect(db.query('select * from public.claim_watch_weekly_summary_test($1)',['90000000-0000-4000-8000-000000000003'])).rejects.toThrow('only one resend is permitted')
+})
+
+it('denies client roles access to the test ledger and its privileged RPCs',async()=>{
+  for(const role of ['authenticated','anon']){
+    await db.exec(`reset role; set role ${role}`)
+    await expect(db.query('select * from public.company_weekly_summary_watch_test')).rejects.toThrow('permission denied')
+    await expect(db.query("select public.claim_watch_weekly_summary_test('90000000-0000-4000-8000-000000000004')")).rejects.toThrow('permission denied')
+  }
+})

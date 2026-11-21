@@ -29,7 +29,7 @@ export const NAV_GROUPS = [
     requires: 'canSeeAdministration',
     items: [
       { to: '/users', key: 'users', icon: 'users' },
-      { to: '/companies', key: 'companies', icon: 'companies' },
+      { to: '/companies', key: 'companies', icon: 'companies', module: ['billing','planning'] },
       { to: '/settings/modules', key: 'modules', icon: 'grid', requires: 'canManageModules' },
       { to: '/settings/privacy', key: 'privacy', icon: 'lock', requires: 'canManagePrivacy' },
       { to: '/settings/emails', key: 'emailSettings', icon: 'mail', requires: 'canManagePrivacy', module: 'billing' },
@@ -49,7 +49,7 @@ const EXTRA_TITLES = [
 export const visibleNavGroups = (permissions, enabledModules = {}) => NAV_GROUPS
   .filter((group) => !group.requires || permissions[group.requires])
   .map(group => ({ ...group, items: group.items.filter(item =>
-    (!item.module || enabledModules[item.module] !== false) && (!item.requires || permissions[item.requires])
+    (!item.module || (Array.isArray(item.module) ? item.module : [item.module]).some(key => enabledModules[key] !== false)) && (!item.requires || permissions[item.requires])
   ) }))
   .filter(group => group.key === 'main' || group.items.length > 0)
 

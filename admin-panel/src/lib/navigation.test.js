@@ -47,3 +47,10 @@ describe('navigation — menú según rol', () => {
     expect(companyAdmin.flatMap(group => group.items).some(item => item.to === '/invoicing')).toBe(false)
   })
 })
+
+it.each([[true,false,true],[false,true,true],[true,true,true],[false,false,false]])('client directory navigation: billing=%s, planning=%s, visible=%s',(billing,planning,visible)=>{
+  const links=visibleNavGroups(permissionsFor('editor'),{billing,planning}).flatMap(group=>group.items)
+  expect(links.some(item=>item.to==='/companies')).toBe(visible)
+  expect(links.some(item=>item.to==='/planning')).toBe(planning)
+  expect(links.some(item=>item.to==='/invoicing')).toBe(billing)
+})

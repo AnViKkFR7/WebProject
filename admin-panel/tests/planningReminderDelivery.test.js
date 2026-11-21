@@ -7,11 +7,11 @@ beforeAll(async()=>{
   const source=await readFile(new URL('../../supabase/functions/send-planning-reminders/index.ts',import.meta.url),'utf8')
   code=(await transform(source,{loader:'ts',format:'cjs'})).code
 })
-const task={id:'task-a',company_id:'company-a',created_by:'user-a',title:'Meeting',description:'Project scope',start_datetime:'2026-10-22T17:00:00Z',end_datetime:'2026-10-22T18:00:00Z',type:'reunion',recurrence_type:'none',client_company_id:'client-a'}
-async function deliver({active=true,wrongCompany=false,planningEnabled=true,occurrence,secret='cron-test',providerStatus=200,completeError=false,enqueueError=null}={}) {
+const task={id:'task-a',company_id:'company-a',created_by:'user-a',title:'Meeting',description:'Project scope',start_datetime:'2026-10-22T17:00:00Z',end_datetime:'2026-10-22T18:00:00Z',type:'reunion',recurrence_type:'none',client_company_id:'client-a',version:4}
+async function deliver({active=true,wrongCompany=false,planningEnabled=true,occurrence,secret='cron-test',providerStatus=200,completeError=false,enqueueError=null,deliveryCurrent=true,validationError=false}={}) {
   const queries=[];const rpcCalls=[];let handler
   const job={queue_id:'queue-a',task_id:task.id,company_id:task.company_id,recipient_id:task.created_by,minutes_before:0,occurrence_at:occurrence,attempt_count:1,delivery_generation:0}
-  const client={rpc:async(name,args)=>{rpcCalls.push({name,args});if(name==='enqueue_due_planning_emails')return {data:enqueueError?null:1,error:enqueueError};if(name==='claim_planning_email_batch')return {data:[job],error:null};if(name==='complete_planning_email')return {data:!completeError,error:completeError?new Error('internal failure'):null};if(name==='fail_planning_email')return {data:'dead',error:null};throw new Error(`Unexpected RPC ${name}`)},auth:{admin:{getUserById:async()=>({data:{user:{email:'test@example.test'}}})}},from:table=>{
+  const client={rpc:async(name,args)=>{rpcCalls.push({name,args});if(name==='enqueue_due_planning_emails')return {data:enqueueError?null:1,error:enqueueError};if(name==='claim_planning_email_batch')return {data:[job],error:null};if(name==='validate_planning_email_delivery')return {data:deliveryCurrent,error:validationError?new Error('validation unavailable'):null};if(name==='complete_planning_email')return {data:!completeError,error:completeError?new Error('internal failure'):null};if(name==='fail_planning_email')return {data:'dead',error:null};throw new Error(`Unexpected RPC ${name}`)},auth:{admin:{getUserById:async()=>({data:{user:{email:'test@example.test'}}})}},from:table=>{
     const filters={};queries.push({table,filters})
     const lookup=()=>Promise.resolve({data:table==='company_modules'?{is_enabled:planningEnabled}:table==='company_members' ? active?{user_id:task.created_by}:null : table==='planning_task'?wrongCompany?null:task:{name:table==='companies'?'Company A':'Client A'},error:null})
     const query={select:()=>query,eq:(key,value)=>{filters[key]=value;return query},maybeSingle:lookup,single:lookup}
@@ -34,8 +34,9 @@ it('sends a queued email with a stable idempotency key and completes the occurre
   expect(body.html).toContain('Project scope')
   expect(body.text).not.toContain('Invalid Date')
   expect(result.fetch.mock.calls[0][1].headers['Idempotency-Key']).toBe('planning-reminder/queue-a/0')
-  expect(result.rpcCalls.map(call=>call.name)).toEqual(['enqueue_due_planning_emails','claim_planning_email_batch','complete_planning_email'])
-  expect(result.rpcCalls[2].args).toEqual({p_queue:'queue-a',p_provider_id:'test-message'})
+  expect(result.rpcCalls.map(call=>call.name)).toEqual(['enqueue_due_planning_emails','claim_planning_email_batch','validate_planning_email_delivery','complete_planning_email'])
+  expect(result.rpcCalls[2].args).toEqual({p_queue:'queue-a',p_company:'company-a',p_task:task.id,p_version:4})
+  expect(result.rpcCalls[3].args).toEqual({p_queue:'queue-a',p_provider_id:'test-message'})
   for(const table of ['planning_task','client_company'])expect(result.queries.find(item=>item.table===table).filters.company_id).toBe('company-a')
   expect(result.queries.find(item=>item.table==='company_members').filters.is_active).toBe(true)
   expect(result.queries.find(item=>item.table==='company_modules').filters).toEqual({company_id:'company-a',module_key:'planning'})
@@ -76,4 +77,12 @@ it('logs only a sanitized PostgREST error code when enqueueing fails',async()=>{
   expect(result.fetch).not.toHaveBeenCalled()
   expect(log).toHaveBeenCalledWith('[REMINDERS]',expect.objectContaining({event:'operation_failed',code:'enqueue_failed',databaseCode:'PGRST202',httpStatus:404}))
   expect(JSON.stringify(log.mock.calls)).not.toContain('private database details')
+})
+
+it('never contacts the provider for an obsolete claim or a failed last-minute validation',async()=>{
+  for(const options of [{deliveryCurrent:false},{validationError:true}]){
+    const result=await deliver(options)
+    expect(result.fetch).not.toHaveBeenCalled()
+    expect(result.rpcCalls.some(call=>call.name==='complete_planning_email')).toBe(false)
+  }
 })

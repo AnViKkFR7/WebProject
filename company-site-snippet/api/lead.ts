@@ -9,7 +9,10 @@
 // Variables de entorno requeridas en el proyecto Vercel de la empresa:
 //   SUPABASE_URL                  (misma instancia Supabase de moira ordo)
 //   SUPABASE_SERVICE_ROLE_KEY     (NUNCA con prefijo VITE_)
+//   VITE_COMPANY_ID, LEADS_RATE_LIMIT_SECRET (secreto de servidor >=32 caracteres)
 import { createClient } from '@supabase/supabase-js'
+import {createHmac} from 'node:crypto'
+import {isIP} from 'node:net'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -27,14 +30,46 @@ const clean = (value: unknown, max: number): string | null => {
 // Validación mínima: que parezca un email. No se comprueba que exista.
 const looksLikeEmail = (value: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
 
+export function leadClientKey(headers: Headers,company: string,secret: string,vercel: string|undefined): string|null {
+  // Only trust the Vercel edge header on the intended hosting platform.
+  const address=headers.get('x-vercel-forwarded-for')?.trim()
+  if(vercel!=='1'||!address||address.includes('%')||!isIP(address))return null
+  let network=address
+  if(isIP(address)===6){
+    const normalized=new URL(`http://[${address}]/`).hostname.slice(1,-1)
+    if(/^::ffff:[0-9a-f]{1,4}:[0-9a-f]{1,4}$/.test(normalized)){
+      const tail=normalized.slice(7).split(':').map(value=>parseInt(value,16))
+      network=`${tail[0]>>8}.${tail[0]&255}.${tail[1]>>8}.${tail[1]&255}`
+    }else{
+      const [left,right]=normalized.split('::'),head=left?left.split(':'):[],end=right?right.split(':'):[]
+      const parts=right===undefined?head:[...head,...Array(8-head.length-end.length).fill('0'),...end]
+      network=parts.slice(0,4).map(value=>parseInt(value,16).toString(16)).join(':')+'/64'
+    }
+  }
+  return createHmac('sha256',secret).update(`${company}:${network}`).digest('hex')
+}
+
+async function boundedBody(req:Request):Promise<Record<string,unknown>>{
+  if(!req.body)throw new Error('format')
+  const reader=req.body.getReader(),chunks:Uint8Array[]=[];let size=0
+  try{
+    for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>16384){await reader.cancel();throw new Error('size')}chunks.push(value)}
+  }finally{reader.releaseLock()}
+  const bytes=new Uint8Array(size);let offset=0
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+  const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))
+  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('format')
+  return value
+}
+
 export default async function handler(req: Request) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
   let body: Record<string, unknown>
   try {
-    body = await req.json()
-  } catch {
-    return new Response('Bad request', { status: 400 })
+    body = await boundedBody(req)
+  } catch(error) {
+    return new Response('Bad request', { status: error instanceof Error&&error.message==='size'?413:400 })
   }
 
   const company_id = clean(body.company_id, 64)
@@ -65,6 +100,11 @@ export default async function handler(req: Request) {
   // Se responde 200 para que el bot crea que ha funcionado y no reintente.
   if (clean(body.company_website, 200)) return new Response('OK', { status: 200 })
 
+  const rateSecret=process.env.LEADS_RATE_LIMIT_SECRET
+  if(!rateSecret||rateSecret.length<32)return new Response('Service unavailable',{status:503})
+  const clientKey=leadClientKey(req.headers,configuredCompanyId,rateSecret,process.env.VERCEL)
+  if(!clientKey)return new Response('Service unavailable',{status:503})
+
   // company_id debe existir — evita que alguien meta solicitudes en la
   // bandeja de otra empresa.
   const { data: company } = await supabase
@@ -79,6 +119,13 @@ export default async function handler(req: Request) {
   // Missing module configuration must fail closed as well: otherwise a
   // partially applied module migration would keep accepting public requests.
   if (moduleError || !crmModule || !crmModule.is_enabled) return new Response('Requests are unavailable', { status: 503 })
+
+  let reservation
+  try{reservation=await supabase.rpc('reserve_public_lead_attempt',{p_company:configuredCompanyId,p_client_key:clientKey})}
+  catch{return new Response('Service unavailable',{status:503})}
+  const {data:allowed,error:rateError}=reservation
+  if(rateError||typeof allowed!=='boolean')return new Response('Service unavailable',{status:503})
+  if(!allowed)return new Response('Too many requests',{status:429,headers:{'Retry-After':'3600','Cache-Control':'no-store'}})
 
   const { error } = await supabase.from('lead').insert({
     company_id: configuredCompanyId,
@@ -101,7 +148,7 @@ export default async function handler(req: Request) {
   })
 
   if (error) {
-    console.error('[lead] insert failed', error)
+    console.error('[lead] insert failed', error.code??'unknown')
     return new Response('Server error', { status: 500 })
   }
 

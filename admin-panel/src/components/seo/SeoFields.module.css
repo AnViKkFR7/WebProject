@@ -22,3 +22,5 @@
 .previewDescription { margin:.25rem 0 0; color:#4d5156; font-size:.85rem; line-height:1.45; }
 [data-theme='dark'] .preview { background:#fff; }
 @media(max-width:600px) { .preview { padding:.8rem; } .generator { grid-template-columns:minmax(0,1fr); } .generator > button { justify-self:start; width:100%; } .suggestion > p { grid-template-columns:minmax(0,1fr); gap:.15rem; } .suggestion > div button { flex:1 1 auto; } }
+.autoHelp { display:flex; align-items:flex-start; gap:.5rem; margin:0; padding:.65rem .8rem; border-radius:var(--radius-md); background:var(--bg-info); color:var(--text-primary); font-size:.85rem; line-height:1.45; }
+.autoHelp svg { flex-shrink:0; margin-top:.1rem; color:var(--primary-color); }

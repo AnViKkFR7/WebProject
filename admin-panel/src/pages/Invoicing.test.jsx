@@ -136,6 +136,25 @@ it('makes issued invoices read-only, removes the cancel action, and explains the
 })
 const input = async (element,value) => { await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))}) }
 const submit = async () => {await act(async()=>container.querySelector('#invoice-editor').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})))}
+it('saves a chapter template independently and saves the quote with an empty template name',async()=>{
+  const quote={...record(),id:'q-template',number:'P-000001'}
+  mocks.load.mockResolvedValue({invoices:[quote],profile:savedProfile,profileVersion:1})
+  templateMocks.save.mockResolvedValue({id:'template',name:'Only template',lines:quote.document.lines})
+  mocks.saveInvoice.mockImplementation(async(companyId,document,status)=>({...quote,document,status,version:2}))
+  await render('quote','/quotes/q-template')
+  expect(container.querySelectorAll('form form')).toHaveLength(0)
+  const name=container.querySelector('[aria-labelledby="chapter-template-title"] input[aria-required="true"]')
+  await input(name,'Only template');await click(button(es.chapterTemplates.save))
+  expect(templateMocks.save).toHaveBeenCalledTimes(1)
+  expect(mocks.saveInvoice).not.toHaveBeenCalled()
+  expect(name.value).toBe('')
+  expect(router.state.location.pathname).toBe('/quotes/q-template')
+  // Happy DOM has fractional-step rounding errors; keep other validity checks active.
+  container.querySelectorAll('input[type=number]').forEach(control=>{control.step='any'})
+  expect([...container.querySelector('#invoice-editor').elements].filter(element=>element.willValidate&&!element.validity.valid).map(element=>({value:element.value,type:element.type,html:element.outerHTML}))).toEqual([])
+  await submit()
+  expect(mocks.saveInvoice).toHaveBeenCalledTimes(1)
+})
 describe('full page document navigation',()=>{
   it.each(['invoice','quote'])('duplicates a saved %s into an unnumbered draft and requires new dates',async kind=>{
     const source=record();source.status=kind==='quote'?'sent':'issued';source.document.date='2026-10-20';source.document.dueDate='2026-11-20'

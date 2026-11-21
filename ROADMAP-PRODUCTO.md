@@ -5,13 +5,13 @@ Plan para las diez capacidades solicitadas. Es una planificación de trabajo loc
 ## Punto de reanudación · 28/10/2026
 
 1. **Aprobación de presupuestos (#2):** el usuario confirma aplicada `BILLING_QUOTE_APPROVAL_DASHBOARD_HANDLING.sql` y validado el dashboard: respuestas plegables y tratamiento persistente por usuario.
-2. **Avisos de vencimiento (#3), siguiente validación:** `send-billing-due-reminders` está desplegada; falta la prueba real de entrega, baja y control de duplicados. Usar exclusivamente `WatchEcommerceDemo` y una factura de prueba controlada.
+2. **Avisos de vencimiento (#3), validación de entrega completada:** el usuario confirma que recibió el email de prueba de la factura `F-000002` de `WatchEcommerceDemo` tras desplegar la Edge Function sin verificación JWT del gateway. Los avisos se desactivaron después. No se afirma que se hayan probado por separado la baja ni la idempotencia.
 3. **Accesibilidad/responsive (#4), validado por el usuario:** revisión visual autenticada de Contactos/pipeline, listado y editor de presupuestos, y facturación/avisos a 375/768/1024/1280 px. Solo se usó `WatchEcommerceDemo`. Se corrigió el quiebre de números/clientes en tablas estrechas, los controles del encabezado móvil son de 44 px y el CRM recibió un estado inicial guiado, métricas compactas y filtros unificados. No hay scroll horizontal del documento; el kanban y las tablas se desplazan dentro de sus regiones accesibles. El usuario aprobó el rediseño de Contactos y pidió continuar.
 4. **CRM (#5), integración de formularios:** el usuario confirma que ya configuró/desplegó los sitios y completó las pruebas previstas con `WatchEcommerceDemo`. Se registra como validación comunicada por el usuario; no repetimos ni inspeccionamos esos sitios desde este proyecto CRM.
 5. **Responsive tablet:** se corrigen los desbordamientos de cabecera, Seguimientos y métricas de Presupuestos con reglas basadas en el ancho útil del panel. En el navegador autenticado se verificó Contactos y Presupuestos a 768 px, con la empresa `WatchEcommerceDemo`; falta validación visual del usuario y revisión en los otros anchos.
 6. **Guía de nuevos proyectos:** creada `company-site-snippet/MoiraOrdoCRMStartingDocument.md` con los contratos y límites comprobados. Mantenerla alineada con las guías específicas y migraciones.
 7. **SEO público de items (punto #6, fase separada de sitios cliente):** la parte CRM está preparada: panel y `CONTENT_SEO_FIELDS.sql` contienen los metadatos; el contrato y la guía de migración están en `company-site-snippet/ITEMS_SEO_INTEGRATION.md` y `company-site-snippet/ITEMS_SEO_MIGRATION_ROADMAP.md`, con preflight de solo lectura y plantilla SQL. El sitio público deberá consultar items publicados por `company_id` y `item_type`, resolver detalle por `slug` con compatibilidad UUID, renderizar título/description/OG/canonical en el HTML inicial y añadirlos al sitemap; después comprobar fallback, 404, colisiones y aislamiento. Navagli es el único proyecto conocido que consume esos items; su código no se inspecciona ni cambia desde este chat CRM.
-8. **Emails a clientes:** el usuario valida visualmente los diseños y confirma desplegadas `send-quote-approval-link` y `send-billing-due-reminders` con el renderer actualizado. El test de envío de recordatorios sigue pendiente.
+8. **Emails y resumen semanal:** el usuario confirma recibidos el aviso de vencimiento y el email semanal de prueba en `WatchEcommerceDemo`, tras corregir el payload. La entrega queda validada por el usuario. El resumen semanal se rediseñó localmente con marca MoiraOrdo, bloques de atención/actividad/planning y vista previa del mismo renderer; queda pendiente validar el aspecto final y desplegar únicamente `send-weekly-summary`. No ejecutar más SQL de prueba para este cambio visual.
 
 **Alcance obligatorio de pruebas con datos de empresa:** probar exclusivamente en la empresa `WatchEcommerceDemo`. No cambiar a otras empresas ni usar sus datos en pruebas visuales o funcionales.
 
@@ -80,6 +80,7 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - Auditoría local: los umbrales configurables solo producen conteos. Solicitudes pendientes significa exclusivamente coincidencias ambiguas (`review_required`); contactos inactivos se calculan desde creación/actividad/vínculo de documento y omiten seguimientos futuros.
 - Exportación/anonimización son operaciones individuales, administrativas y confirmadas; los documentos emitidos se preservan y se retiran sus vínculos. No hay cron de borrado CRM.
 - El usuario confirma modo exclusivamente manual. No hacen falta nuevas migraciones ni cron para esta decisión; el panel ya calcula conteos por umbral y permite revisar/anonymizar fichas de forma individual y confirmada.
+- La revisión local encontró dos huecos de privacidad: las consultas pendientes podían mostrar resultados de una empresa anterior tras cambiar el tenant, y la RPC desplegada antes de la atribución de item no limpiaba `source_item` al anonimizar. Se corrigen con invalidación de peticiones en el panel y la migración aditiva `CRM_PRIVACY_ANONYMIZATION_FIX.sql`. **Cierre remoto pendiente:** aplicar el SQL nuevo en Supabase y validar el caso en una prueba controlada; no se anonimizan datos reales durante estas comprobaciones.
 - La política legal de conservación sigue siendo responsabilidad de la empresa y puede documentarse aparte. No se inventan plazos; no se activa ni se programa ninguna purga.
 
 ## Fase 4 · Operaciones de facturación y comunicación (MVP)
@@ -94,9 +95,11 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Avisos de vencimiento configurables localmente: offsets, hora de Madrid, baja por factura, deduplicación, reintentos/idempotencia, panel de fallos y purga.
 - [x] El usuario autorizó enviar a Resend solo email, número, vencimiento y saldo; la cola no persiste esos datos y el emisor los relee tras comprobar pago, baja y módulo.
 - [x] El usuario confirmó la ejecución de `migrations/BILLING_DUE_REMINDERS.sql` y `migrations/BILLING_DUE_REMINDERS_CRON.sql`, tras configurar ambos secretos Vault.
-- [x] El usuario confirmó el despliegue de `send-billing-due-reminders`; queda pendiente la prueba real de envío/cancelación/idempotencia y el usuario comunicará el resultado.
+- [x] El usuario confirmó el despliegue y, el 28/10/2026, la recepción de un aviso real de vencimiento para la factura de prueba `F-000002` de `WatchEcommerceDemo`. Los avisos se desactivaron al terminar. La baja y los reintentos/idempotencia no se probaron en este envío.
 - [x] Resumen semanal agregado automático por email a administradores activos: lunes 09:00 Madrid, sin pestaña, módulos respetados, cola semanal, idempotencia y purga.
-- [x] El usuario confirma que aplicó `WEEKLY_SUMMARY_EMAIL.sql`, `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` y `WEEKLY_SUMMARY_EMAIL_CRON.sql`, configuró secretos y desplegó `send-weekly-summary`; falta comprobar una entrega real controlada.
+- [x] El usuario confirma que aplicó `WEEKLY_SUMMARY_EMAIL.sql`, `WEEKLY_SUMMARY_EMAIL_AUTOMATIC.sql` y `WEEKLY_SUMMARY_EMAIL_CRON.sql`, configuró secretos y desplegó `send-weekly-summary`.
+- [x] El usuario confirma la recepción del resumen semanal de prueba el 28/10/2026, después de las correcciones de autenticación, ambigüedad y tipo de retorno del email. Se probó únicamente `WatchEcommerceDemo`; confirmación de entrega por el usuario, sin nueva consulta de la fila remota.
+- [ ] Rediseño visual semanal preparado localmente: marca MoiraOrdo, tres bloques y CTA al panel. Preview en `docs/previews/weekly-summary.html`, datos ficticios y variante de semana sin actividad. Pendiente validación visual del usuario y despliegue de `send-weekly-summary`; sin SQL adicional ni nuevo envío de prueba.
 - [x] Documentar destinatarios, datos enviados, retención e idempotencia en `docs/emails.md`.
 
 ### Verificación secuencial · 2. Aprobación de presupuestos · 26/10/2026
@@ -114,6 +117,9 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 - [x] Aplicar configuración a navegación y rutas, además de RLS y barreras de escritura para RPC. La UI no sustituye autorización de servidor.
 - [x] El usuario confirmó que ejecutó los dos scripts de Company en Supabase, incluida la configuración de módulos solo para el administrador del sistema.
 - [x] Búsqueda Ctrl+K de items, contactos, facturas y presupuestos, limitada a empresa/módulos accesibles; navegación por teclado y estados de carga/vacío/error.
+- [x] Revisión autenticada del 28/10/2026 en `WatchEcommerceDemo`: Ctrl+K, búsqueda de item, factura F-000002, presupuesto P-000003 y por nombre de cliente; navegación con flechas/Enter, Escape y estado vacío. Todas las consultas filtran `company_id`; las pruebas del servicio cubren módulos desactivados. No se alteraron datos ni configuración de módulos.
+- [x] Cierre de auditoría de módulos: las RPC de configuración de emails y auditoría/notificación de aprobación aplican Facturación en servidor. Tras detectar la ausencia de `company_customer_email_revisions`, se ejecutó la reparación aditiva, la migración `COMPANY_MODULES_SCOPE_FIX.sql` y el preflight actualizado; el usuario confirma que todo quedó correcto (28/10/2026).
+- [ ] Validación visual del usuario pendiente. `WatchEcommerceDemo` tiene 0 contactos CRM, por lo que no se pudo confirmar un resultado de contacto real; el servicio y su filtro de compañía sí están cubiertos por pruebas.
 
 ## Fase 6 · Marca y edición de emails para clientes (MVP)
 
@@ -141,7 +147,10 @@ No ejecutar SQL adicional para estos dos circuitos si los objetos ya están apli
 ### Cierre visual de emails · 28/10/2026
 
 - El usuario valida visualmente los emails y confirma desplegadas `send-quote-approval-link` y `send-billing-due-reminders` con el renderer actualizado.
-- No se afirma una prueba de entrega/idempotencia de recordatorios. El envío real de `send-billing-due-reminders` sigue pendiente de validación del usuario.
+- El usuario confirma que recibió el email real de aviso de vencimiento de la factura de prueba `F-000002`, de `WatchEcommerceDemo`. La configuración se volvió a desactivar después de recibirlo. Esta prueba confirma entrega del recordatorio; no verifica por sí sola la baja ni los reintentos/idempotencia.
+- Para validar el resumen semanal sin mandar correos a otros tenants, existe un ledger y una ruta específica restringidos a `WatchEcommerceDemo`; nunca usan la cola habitual.
+- Prueba original recibida y confirmada. El nuevo diseño está aprobado visualmente.
+- [ ] Segunda y última prueba aislada para validar la entrega del diseño: aplicar `WEEKLY_SUMMARY_EMAIL_WATCH_RESEND.sql`, desplegar `send-weekly-summary` y ejecutar una vez el script de mantenimiento actualizado. Solo afecta `WatchEcommerceDemo`.
 - La revisión visual se cierra con esta validación; posibles incidencias específicas de un cliente se tratarán como correcciones puntuales.
 
 ### Alcance de emails confirmado por código

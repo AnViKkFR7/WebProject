@@ -1,0 +1,709 @@
+[
+  {
+    "title": "Antes de empezar",
+    "desc": "Lo esencial para trabajar con confianza desde el primer día.",
+    "steps": [
+      "<b>Comprueba la empresa activa.</b> Su nombre aparece arriba del menú lateral. Todo lo que consultes o guardes corresponde a esa empresa.",
+      "<b>Localiza tu tarea.</b> Contenido reúne Items, Atributos y Blog. Operación reúne solicitudes, CRM, Planning, documentos y analítica.",
+      "<b>Trabaja con tu cuenta.</b> Los botones disponibles dependen del rol y de los módulos habilitados.",
+      "<b>Guarda y espera la confirmación.</b> Si falla una petición, mantén el formulario abierto y reintenta."
+    ],
+    "blocks": [
+      [
+        "Cuatro recorridos habituales",
+        "Atender una petición: capítulos 5 y 6.<br/>Preparar y enviar una oferta: capítulos 8 y 9.<br/>Crear, cobrar y corregir facturas: capítulos 10 a 12.<br/>Revisar la semana: capítulos 13 y 14."
+      ],
+      [
+        "Cómo leer esta guía",
+        "Los números azules sobre cada captura identifican controles; su leyenda está debajo. Las capturas son de escritorio a 1600 × 1000. Los pasos explican cómo usar cada sección sin confundir la vista previa con un guardado o envío."
+      ]
+    ],
+    "note": [
+      "Una guía de la versión local",
+      "Los módulos y permisos pueden cambiar lo que ves. Que una opción exista aquí no acredita que esté desplegada en todos los entornos."
+    ]
+  },
+  {
+    "title": "Entrar y moverse",
+    "desc": "Acceso, empresa activa y búsqueda rápida.",
+    "image": "dashboard-desktop",
+    "steps": [
+      "Inicia sesión con tu cuenta. Si necesitas recuperar acceso, usa la opción de la pantalla de entrada.",
+      "En móvil abre el menú con el botón de cabecera. En escritorio puedes contraer la barra lateral."
+    ],
+    "blocks": [],
+    "note": [
+      "Si falta una sección",
+      "Revisa primero la empresa activa. Después pide a la persona administradora que compruebe tu rol y los módulos habilitados."
+    ],
+    "legend": [
+      "<b>Empresa activa.</b> Abre el selector para cambiar de compañía.",
+      "<b>Menú lateral.</b> Accede a las áreas de trabajo y a Mi cuenta.",
+      "<b>Buscar.</b> También se abre con Ctrl+K; flechas y Enter abren un resultado.",
+      "<b>Dashboard.</b> Resume la empresa, tu rol y la actividad disponible."
+    ]
+  },
+  {
+    "title": "Items y atributos",
+    "desc": "Organiza el catálogo y define los campos de sus fichas.",
+    "image": "items-desktop",
+    "steps": [
+      "Abre una ficha, revisa campos, imágenes y archivos y guarda. Comprueba la confirmación.",
+      "En <b>Atributos</b>, elige tipo, crea o reordena campos y revisa la vista previa. Requerido y Filtrable se guardan al momento."
+    ],
+    "blocks": [],
+    "note": [
+      "Antes de borrar un atributo",
+      "Comprueba si contiene información que debas conservar. Cambiar la estructura afecta al trabajo de todas las personas de la empresa."
+    ],
+    "legend": [
+      "<b>Nuevo Item.</b> Crea una ficha y completa sus campos.",
+      "<b>Buscar por título.</b> Combina búsqueda con estado, tipo y orden.",
+      "<b>Filtros avanzados.</b> Acota por los atributos disponibles."
+    ]
+  },
+  {
+    "title": "Blog y presentación SEO",
+    "desc": "Prepara contenido y revisa cómo se presenta.",
+    "image": "blog-desktop",
+    "steps": [
+      "Revisa el artículo antes de publicar. Guarda en borrador, publicado o archivado según corresponda.",
+      "En Items, despliega SEO, revisa la propuesta de slug/título/descripción y acepta los cambios que quieras antes de guardar."
+    ],
+    "blocks": [],
+    "note": [
+      "Campos bloqueados",
+      "Si el bloque SEO aparece en modo de solo lectura, revisa el permiso de edición. La propuesta automática no genera imágenes ni publica por sí misma."
+    ],
+    "legend": [
+      "<b>Nuevo post.</b> Prepara título, contenido y estado editorial.",
+      "<b>Buscador.</b> Localiza artículos y combina los filtros de estado."
+    ]
+  },
+  {
+    "title": "Solicitudes de la web",
+    "desc": "Cada formulario recibido es una conversación por atender.",
+    "image": "solicitudes-desktop",
+    "steps": [
+      "Cuando haya solicitudes, abre una ficha para leer contacto, mensaje y origen. Actualiza el seguimiento y guarda.",
+      "Los enlaces HTTP/HTTPS se abren en otra pestaña. La atribución depende de lo enviado por la web de origen."
+    ],
+    "blocks": [],
+    "note": [
+      "Borrar no es cerrar una solicitud",
+      "Si eliges eliminar, lee la confirmación: el panel no ofrece recuperación de esa eliminación. Evita incluir datos personales en notas o capturas compartidas."
+    ],
+    "legend": [
+      "<b>Buscar solicitudes.</b> Localiza por nombre, email, teléfono o mensaje.",
+      "<b>Solicitud.</b> Abre el mensaje y revisa el estado del seguimiento."
+    ]
+  },
+  {
+    "title": "Contactos y pipeline",
+    "desc": "Convierte una solicitud en un próximo paso concreto.",
+    "image": "contactos-desktop",
+    "steps": [
+      "Abre la ficha para asignar responsable, etapa y próxima fecha. Registra llamadas, notas, emails o visitas.",
+      "Enlaza documentos de esa empresa. Si email y teléfono apuntan a fichas diferentes, resuelve la revisión manual sin fusionarlas a ciegas."
+    ],
+    "blocks": [],
+    "note": [
+      "Etapas y seguimiento",
+      "La captura muestra contactos ficticios repartidos entre las etapas del pipeline. Abre una ficha para consultar su actividad y preparar el siguiente seguimiento."
+    ],
+    "legend": [
+      "<b>Buscar contactos.</b> Nombre, email, teléfono u origen.",
+      "<b>Seguimientos.</b> Muestra solo los contactos con seguimiento pendiente.",
+      "<b>Etapas.</b> Administradores y editores configuran el pipeline."
+    ]
+  },
+  {
+    "title": "Planning y empresas cliente",
+    "desc": "Organiza tareas, horarios y previsiones.",
+    "image": "planning-desktop",
+    "steps": [
+      "Selecciona empresas cliente y revisa fechas antes de guardar. Empresas y Clientes permite administrar sus fichas.",
+      "El arrastre pide confirmación; en recurrencias afecta a la serie. Escape cancela. Deshacer depende de que no exista una edición posterior."
+    ],
+    "blocks": [],
+    "note": [
+      "Previsiones y cobros",
+      "La vista Facturación de Planning organiza vencimientos previstos. Registra un cobro real en la ficha de la factura, en Cobros e historial."
+    ],
+    "legend": [
+      "<b>Hoy.</b> Regresa al periodo de la fecha actual.",
+      "<b>Vista.</b> Alterna Día, Semana o Mes.",
+      "<b>Nueva tarea.</b> Define empresa cliente, fecha, horario y recurrencia."
+    ]
+  },
+  {
+    "title": "Preparar un presupuesto",
+    "desc": "Una propuesta clara, desde el cliente hasta el último concepto.",
+    "image": "presupuesto-nuevo",
+    "steps": [
+      "Abre <b>Presupuestos → Nuevo presupuesto</b>. Revisa la empresa emisora y selecciona un cliente o pulsa <b>Nuevo cliente</b>.",
+      "Completa fechas, título del proyecto, ubicación, introducción y condiciones. Activa firmas si corresponden.",
+      "Añade conceptos y agrúpalos en capítulos. Comprueba cantidad, precio, descuento, IVA y retención.",
+      "Revisa <b>Vista previa</b> y guarda como <b>Borrador</b> mientras preparas la oferta. El botón Guardar confirma el documento."
+    ],
+    "blocks": [
+      [
+        "Reutiliza sin empezar de cero",
+        "El catálogo recupera conceptos guardados. Las plantillas de capítulos copian una estructura editable. Duplicar crea un documento nuevo sin conservar la numeración del original."
+      ]
+    ],
+    "note": [
+      "Datos del documento",
+      "Cliente, emisor y apariencia se copian en el presupuesto. Cambiar una ficha o una paleta después no reescribe todos los documentos anteriores."
+    ],
+    "sections": [
+      {
+        "title": "Presupuestos: encontrar y empezar",
+        "desc": "08 / 1 · Listado, estados y accesos rápidos.",
+        "image": "presupuestos-desktop",
+        "legend": [
+          "<b>Buscar.</b> Admite número, cliente, identificación fiscal o un concepto del documento.",
+          "<b>Estado.</b> Filtra Borrador, Enviado, Aceptado, Rechazado, Facturado o Cancelado.",
+          "<b>Nuevo presupuesto.</b> Abre el editor completo dentro del panel.",
+          "<b>Número.</b> Abre la ficha. Las acciones de su fila descargan o duplican."
+        ],
+        "steps": [
+          "Los importes superiores agrupan aceptados, pendientes de respuesta y borradores; son el resumen del listado de presupuestos.",
+          "Empieza en Borrador. Enviado indica que has preparado la propuesta para compartirla; la entrega del email se comprueba por separado."
+        ]
+      },
+      {
+        "title": "Cliente y datos del presupuesto",
+        "desc": "08 / 2 · Seleccionar el destinatario y preparar el documento.",
+        "image": "presupuesto-nuevo-desktop",
+        "legend": [
+          "<b>Cliente guardado.</b> Busca y selecciona una ficha fiscal de esta empresa.",
+          "<b>Nuevo cliente.</b> Abre el alta sin abandonar el presupuesto.",
+          "<b>Identificación fiscal.</b> Revisa el NIF o CIF del destinatario.",
+          "<b>Email del cliente.</b> Comprueba la dirección que se utilizará si envías el enlace."
+        ],
+        "steps": [
+          "Completa razón social, NIF e identificación y dirección fiscal. El email será necesario si quieres enviar el enlace desde el panel.",
+          "Comprueba emisor y fechas: emisión, validez y estado. El presupuesto conserva una copia de los datos usados, aunque la ficha cambie después."
+        ],
+        "note": [
+          "Si falla el guardado",
+          "Mantén el editor abierto, revisa los campos señalados y reintenta. El autoguardado de borradores no envía la oferta al cliente."
+        ]
+      },
+      {
+        "title": "Presentar la propuesta",
+        "desc": "08 / 3 · Contexto, condiciones y espacios de firma.",
+        "image": "presupuesto-presentacion-desktop",
+        "legend": [
+          "<b>Título del proyecto.</b> Da a la propuesta un nombre comprensible.",
+          "<b>Introducción.</b> Explica el alcance; utiliza ubicación y condiciones para concretarlo.",
+          "<b>Firmas.</b> Decide si el PDF incluirá espacios para firma y fecha."
+        ],
+        "steps": [
+          "Separa qué incluye el trabajo de sus exclusiones. Revisa ortografía, fechas y condiciones antes de pasar a las partidas.",
+          "Los espacios de firma impresos y la respuesta por enlace son funciones distintas. Incluir un espacio no registra una firma digital."
+        ]
+      },
+      {
+        "title": "Capítulos, partidas e importes",
+        "desc": "08 / 4 · Organizar el contenido y revisar cada línea.",
+        "image": "presupuesto-capitulos-desktop",
+        "legend": [
+          "<b>Capítulo.</b> Pon un título y usa subir/bajar para ajustar su orden.",
+          "<b>Partida.</b> Revisa descripción, cantidad, precio unitario, descuento e IVA.",
+          "<b>Descripción ampliada.</b> Añade el detalle que no cabe en el nombre de la partida.",
+          "<b>Añadir partida.</b> Incorpora otra línea a este capítulo; Añadir capítulo crea otro grupo."
+        ],
+        "steps": [
+          "Cada capítulo muestra su subtotal sin IVA. El resumen general combina las líneas y la retención configurada en Pago y notas.",
+          "Reordena capítulos y partidas con sus controles. Elimina una línea solo cuando estés seguro y vuelve a revisar el total antes de guardar."
+        ]
+      },
+      {
+        "title": "Reutilizar capítulos y catálogo",
+        "desc": "08 / 5 · Guardar estructuras para futuras propuestas.",
+        "image": "presupuesto-plantillas-desktop",
+        "legend": [
+          "<b>Buscar plantilla.</b> Localiza una estructura guardada para esta empresa.",
+          "<b>Nombre de la plantilla.</b> Identifica la estructura que vas a guardar.",
+          "<b>Guardar capítulos.</b> Conserva los capítulos y partidas actuales como plantilla."
+        ],
+        "steps": [
+          "Aplicar una plantilla incorpora una copia editable. Comprueba las líneas resultantes, el orden y los importes antes de guardar el presupuesto.",
+          "El buscador de conceptos recupera servicios del catálogo. Nuevo concepto guarda una ficha reutilizable; una línea escrita manualmente no equivale a dar de alta catálogo."
+        ]
+      },
+      {
+        "title": "Pago, retención y notas",
+        "desc": "08 / 6 · Completar las condiciones económicas.",
+        "image": "presupuesto-pago-desktop",
+        "legend": [
+          "<b>Retención.</b> Revisa el porcentaje aplicable y su efecto en el total.",
+          "<b>Método de pago.</b> Explica plazos y forma de pago; completa el IBAN si procede.",
+          "<b>Notas.</b> Añade las condiciones finales que deban acompañar al documento."
+        ],
+        "steps": [
+          "Contrasta el contenido con la vista previa, incluidas todas las páginas y los saltos de capítulo.",
+          "Guarda en Borrador si aún falta revisar algo. Cuando esté preparado, cambia a Enviado y guarda antes de generar el enlace de respuesta."
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Enviar y recibir la respuesta",
+    "desc": "Comparte la oferta y sigue su aceptación o rechazo.",
+    "image": "presupuestos",
+    "steps": [
+      "Guarda el presupuesto con estado <b>Enviado</b>. Abre su bloque <b>Respuesta del cliente</b>.",
+      "Para mandarlo por correo, marca <b>Enviar el enlace al correo del cliente</b> y genera el enlace. Revisa que el cliente tenga un email correcto.",
+      "Sin marcar esa opción, genera el enlace y cópialo para compartirlo por tu canal habitual. El panel indica la caducidad; un enlace nuevo invalida los anteriores no respondidos.",
+      "Revisa respuesta e historial. El cliente puede aceptar o rechazar e indicar su identidad. Las respuestas recientes también aparecen en Dashboard."
+    ],
+    "blocks": [
+      [
+        "De presupuesto a factura",
+        "Cuando el presupuesto esté Aceptado y guardado, usa Convertir a factura y confirma. Revisa el documento resultante antes de emitirlo."
+      ],
+      [
+        "Si corriges una oferta respondida",
+        "Conserva el historial. La respuesta corresponde a una versión concreta; revisa el estado y genera un nuevo enlace de la versión corregida cuando el panel lo permita."
+      ]
+    ],
+    "note": [
+      "Enlace creado no significa email entregado",
+      "Comprueba el mensaje de envío. Si el correo falla, el enlace puede seguir creado: conserva la pantalla y sigue la indicación del panel antes de repetir."
+    ],
+    "sections": [
+      {
+        "title": "Enviar el enlace de respuesta",
+        "desc": "09 / 1 · Copia privada o envío por email.",
+        "image": "presupuesto-respuesta-desktop",
+        "legend": [
+          "<b>Enviar por correo.</b> Márcalo si quieres que el panel envíe el enlace al email del cliente.",
+          "<b>Generar enlace.</b> Requiere presupuesto guardado como Enviado y sin cambios pendientes.",
+          "<b>Documento enviado.</b> La cabecera identifica el presupuesto y su estado antes de generar el enlace."
+        ],
+        "steps": [
+          "Sin marcar el envío por correo, genera y copia el enlace para compartirlo por tu canal habitual. El enlace es privado y muestra su vencimiento.",
+          "Un enlace nuevo invalida los anteriores aún no respondidos. Revisa el mensaje final: crear un enlace no demuestra que el correo se haya entregado."
+        ],
+        "note": [
+          "Caducidad y versiones",
+          "El enlace se genera con validez de 30 días. La respuesta queda asociada a una versión del presupuesto; revisa el historial si corriges una oferta ya respondida."
+        ]
+      },
+      {
+        "title": "Respuesta, copia y conversión",
+        "desc": "09 / 2 · Qué hacer cuando el cliente decide.",
+        "image": "presupuesto-conversion-desktop",
+        "legend": [
+          "<b>Convertir en factura.</b> Disponible cuando el presupuesto está Aceptado y guardado.",
+          "<b>Duplicar.</b> Abre una copia nueva para preparar otra propuesta.",
+          "<b>Descargar PDF.</b> Obtén la versión que quieras entregar y revisa su estado."
+        ],
+        "steps": [
+          "El bloque de respuesta muestra decisión, identidad declarada y fecha. El historial distingue respuestas anteriores de la versión actual.",
+          "Para convertir, guarda los cambios y confirma el diálogo. Después localiza la factura resultante en Facturación y revisa su contenido antes de emitir."
+        ],
+        "note": [
+          "No sobrescribas una respuesta",
+          "Si corriges una oferta respondida, conserva su trazabilidad y comparte un enlace de la versión revisada cuando el estado lo permita. Duplicar no modifica el original."
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Crear y emitir una factura",
+    "desc": "Revisa primero. Emite cuando todo esté preparado.",
+    "image": "factura-nueva",
+    "steps": [
+      "Abre <b>Facturación → Nueva factura</b>. Completa cliente, emisor, fecha y vencimiento.",
+      "Añade líneas desde el catálogo o escribe los conceptos. Revisa cantidades, precios, descuentos, impuestos y total.",
+      "Completa pago, IBAN y notas si proceden. Comprueba <b>Vista previa</b> y guarda como Borrador mientras trabajas.",
+      "Cuando esté revisada, elige <b>Emitida</b> y guarda. Descarga el PDF desde la cabecera."
+    ],
+    "blocks": [
+      [
+        "Qué cambia al emitir",
+        "La factura obtiene su condición de documento emitido y queda bloqueada para la edición ordinaria. Revisa especialmente datos fiscales, fechas e importes antes de confirmar."
+      ],
+      [
+        "Descargar el documento",
+        "Un PDF generado con cambios pendientes puede aparecer como borrador. Guarda la versión que quieras entregar y comprueba su estado antes de compartirla."
+      ]
+    ],
+    "note": [
+      "Si necesitas corregir una emitida",
+      "Usa Crear rectificativa. No intentes corregir el documento original cambiando directamente sus líneas o su estado."
+    ],
+    "sections": [
+      {
+        "title": "Facturación: listado y saldos",
+        "desc": "10 / 1 · Localizar documentos y separar emisión de cobro.",
+        "image": "facturacion-desktop",
+        "legend": [
+          "<b>Nueva factura.</b> Abre el editor completo.",
+          "<b>Estado de cobro.</b> Filtra vencidas, pendientes, parciales, cobradas o a favor.",
+          "<b>Datos y plantilla.</b> Configura emisor, series y apariencia de nuevos documentos."
+        ],
+        "steps": [
+          "El buscador admite número, cliente, identificación fiscal o concepto. El filtro Estado distingue Borrador, Emitida, Pagada y Cancelada.",
+          "Total es el importe del documento; Saldo, lo que queda tras sus movimientos. Una factura emitida puede seguir pendiente o estar parcialmente cobrada."
+        ]
+      },
+      {
+        "title": "Cliente nuevo y ficha fiscal",
+        "desc": "10 / 2 · Alta reutilizable desde factura o presupuesto.",
+        "image": "cliente-nuevo-desktop",
+        "legend": [
+          "<b>NIF / CIF.</b> Completa la identificación del destinatario.",
+          "<b>Dirección fiscal.</b> Introduce la dirección completa y revisa contacto/email.",
+          "<b>Guardar cliente.</b> Guarda la ficha y selecciónala en el documento."
+        ],
+        "steps": [
+          "Primero busca un cliente existente para evitar duplicados. Si falta, pulsa Nuevo cliente y completa razón social y los campos obligatorios.",
+          "La información seleccionada se copia en el documento. Una corrección en esa copia no actualiza automáticamente todo el directorio ni los documentos anteriores."
+        ]
+      },
+      {
+        "title": "Fechas, vencimiento y emisión",
+        "desc": "10 / 3 · Elige el momento de convertir el borrador en factura emitida.",
+        "image": "factura-fechas-desktop",
+        "legend": [
+          "<b>Fecha de emisión.</b> Revisa el día que llevará el documento.",
+          "<b>Vencimiento.</b> Define cuándo debe pagarse; se usa para saldos vencidos y avisos.",
+          "<b>Estado.</b> Mantén Borrador mientras preparas; elige Emitida cuando esté revisada."
+        ],
+        "steps": [
+          "Cambiar el selector no sustituye Guardar. Antes de guardar como Emitida, revisa destinatario, emisor, líneas, impuestos, fechas y total.",
+          "Después de emitida, el contenido queda bloqueado para edición y cancelación ordinarias. Los cobros y la rectificación se gestionan con sus acciones propias."
+        ],
+        "note": [
+          "Emisión deliberada",
+          "Guardar una rectificativa también emite un documento nuevo. No uses el cambio de estado como prueba sin revisar el resultado que estás confirmando."
+        ]
+      },
+      {
+        "title": "Líneas, descuentos e impuestos",
+        "desc": "10 / 4 · Construir el detalle de la factura.",
+        "image": "factura-lineas-desktop",
+        "legend": [
+          "<b>Catálogo.</b> Selecciona un servicio o producto guardado.",
+          "<b>Nuevo concepto.</b> Abre el alta de una ficha reutilizable.",
+          "<b>Cantidad y precio.</b> Comprueba también descuento e IVA de cada línea.",
+          "<b>Añadir línea.</b> Incluye más partidas; usa la papelera de su fila para eliminar."
+        ],
+        "steps": [
+          "El descuento se aplica a la línea. En Pago y notas revisa la retención general, las condiciones, el IBAN y las notas del documento.",
+          "El resumen distingue base, IVA y total. Comprueba los porcentajes adecuados antes de emitir; la vista previa permite revisar cómo se presentan."
+        ]
+      },
+      {
+        "title": "Guardar conceptos reutilizables",
+        "desc": "10 / 5 · Mantener un catálogo útil para ambos tipos de documento.",
+        "image": "catalogo-desktop",
+        "legend": [
+          "<b>Nombre.</b> Identifica el servicio o producto del catálogo.",
+          "<b>Unidad.</b> Define la referencia usada para la cantidad, cuando corresponda.",
+          "<b>Guardar concepto.</b> Revisa descripción, precio e IVA antes de confirmar."
+        ],
+        "steps": [
+          "Tras el alta, selecciona el concepto en la factura o presupuesto. Comprueba los valores copiados y ajusta la partida si ese trabajo lo necesita.",
+          "El catálogo acelera la preparación, pero no sustituye la revisión de los importes particulares de cada documento."
+        ]
+      },
+      {
+        "title": "Vista previa y PDF final",
+        "desc": "10 / 6 · Revisar el documento antes de compartirlo.",
+        "image": "factura-emitida-desktop",
+        "legend": [
+          "<b>Crear rectificativa.</b> Corrige una emitida mediante un documento nuevo.",
+          "<b>Duplicar factura.</b> Prepara otra a partir del contenido existente.",
+          "<b>Descargar PDF.</b> Descarga el documento desde la cabecera."
+        ],
+        "steps": [
+          "La vista previa se muestra al lado cuando hay espacio; Mostrar/Ocultar vista previa controla el panel. Usa el selector de página y las flechas para revisar todas sus páginas.",
+          "Descargar con cambios pendientes puede mostrar un borrador. Guarda primero la versión que quieras entregar y revisa número, estado, logo, datos y totales."
+        ],
+        "note": [
+          "El PDF no registra pagos",
+          "Descargar o compartir el archivo no actualiza el saldo. Registra solo cobros efectivamente recibidos desde Cobros e historial."
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Cobros y rectificativas",
+    "desc": "Mantén el saldo y el historial al día.",
+    "steps": [
+      "En Facturación, filtra por <b>Vencidas</b>, <b>Pendientes</b>, <b>Cobro parcial</b>, <b>Cobradas</b> o <b>A favor del cliente</b>. Abre la factura.",
+      "En <b>Cobros e historial</b>, registra importe y fecha de un cobro realmente recibido. Añade método y referencia si ayudan a identificarlo.",
+      "Si un cobro es incorrecto, pulsa <b>Revertir</b> y explica la causa. Quedará la reversión junto al movimiento original.",
+      "Para corregir una factura emitida o pagada, pulsa <b>Crear rectificativa</b>. Revisa original, método, motivo y partidas antes de guardar."
+    ],
+    "blocks": [
+      [
+        "Por diferencias",
+        "Las líneas parten como abono del documento original. Ajusta lo que resta o suma con los controles de signo y añade partidas si procede."
+      ],
+      [
+        "Por sustitución",
+        "Prepara el contenido correcto. El PDF muestra también la diferencia respecto al importe original. La rectificativa tiene su propia serie y numeración; la original se conserva."
+      ],
+      [
+        "Historial y recuperación",
+        "Cargar más recupera cambios anteriores. Solo las versiones de borrador se recuperan como una revisión nueva; los documentos emitidos se corrigen mediante rectificativa."
+      ]
+    ],
+    "note": [
+      "Registrar un movimiento no mueve dinero",
+      "El panel registra cobros manuales y saldos. Una rectificativa negativa puede dejar saldo a favor, pero el panel no ejecuta una devolución bancaria."
+    ],
+    "sections": [
+      {
+        "title": "Registrar un cobro recibido",
+        "desc": "11 / 1 · Importe, fecha y referencia del movimiento.",
+        "image": "factura-cobros-desktop",
+        "legend": [
+          "<b>Importe.</b> Indica la cantidad recibida y revisa el saldo pendiente.",
+          "<b>Método.</b> Describe cómo se recibió; completa fecha y referencia para localizarlo.",
+          "<b>Registrar cobro.</b> Confirma únicamente un pago que realmente has recibido.",
+          "<b>Historial.</b> Consulta los cambios del documento y su versión."
+        ],
+        "steps": [
+          "La cabecera del bloque separa Cobrado y Saldo. Un cobro parcial deja importe pendiente; revisa el resultado tras registrar cada movimiento.",
+          "Si un movimiento es incorrecto, usa Revertir junto a él y explica la causa. La reversión se añade al historial; no borra el movimiento original."
+        ],
+        "note": [
+          "Saldo de la factura y sus rectificativas",
+          "La captura muestra una rectificativa con el saldo consolidado de su factura original. Cada documento conserva sus propios movimientos; abre la original para consultar el cobro ficticio de 150 €."
+        ]
+      },
+      {
+        "title": "Historial y recuperación",
+        "desc": "11 / 2 · Leer versiones y recuperar borradores.",
+        "image": "factura-historial-desktop",
+        "legend": [
+          "<b>Historial.</b> Cada entrada identifica acción, fecha, versión y autor disponible."
+        ],
+        "steps": [
+          "Cargar más muestra entradas anteriores cuando existen. Si el documento sigue en Borrador, una versión anterior compatible puede ofrecer Recuperar/Restaurar.",
+          "La recuperación crea una revisión nueva: comprueba el contenido resultante y guarda. Una factura emitida se corrige con rectificativa, no restaurando un borrador."
+        ],
+        "note": [
+          "Autoguardado y conflictos",
+          "La copia de recuperación está aislada por usuario, empresa y tipo. Compara fecha y versión antes de recuperarla; no sobrescribas otra pestaña sin revisar. No sustituye un respaldo."
+        ]
+      },
+      {
+        "title": "Preparar una rectificativa",
+        "desc": "11 / 3 · Identificar original, método y causa.",
+        "image": "rectificativa-desktop",
+        "legend": [
+          "<b>Método.</b> Elige Por diferencias o Por sustitución.",
+          "<b>Causa.</b> Selecciona el motivo tipificado que corresponda.",
+          "<b>Motivo y explicación.</b> Describe qué se corrige y por qué.",
+          "<b>Guardar.</b> Emite un documento nuevo; revisa todo antes de pulsarlo."
+        ],
+        "steps": [
+          "Desde una factura emitida o pagada, pulsa Crear rectificativa. Comprueba la factura original indicada en el bloque Rectificación.",
+          "La serie es independiente y correlativa por empresa (FR por defecto). La original permanece intacta; método y causa son decisiones distintas."
+        ],
+        "note": [
+          "Antes de emitir",
+          "Revisa causa, cifras, signos y datos con la persona responsable de facturación. Esta pantalla es una preparación: abrirla no emite la rectificativa."
+        ]
+      },
+      {
+        "title": "Ajustar diferencias y sustituciones",
+        "desc": "11 / 4 · Revisar el signo de cada partida.",
+        "image": "rectificativa-partidas-desktop",
+        "legend": [
+          "<b>Signo.</b> Alterna si una partida resta o suma al importe de la corrección.",
+          "<b>Precio y cantidad.</b> Ajusta los valores para representar la corrección real.",
+          "<b>Añadir línea.</b> Incorpora conceptos nuevos si la corrección los requiere."
+        ],
+        "steps": [
+          "Por diferencias, las partidas empiezan como abono de la original. Modifica cantidades/importes y signos para reflejar la diferencia necesaria.",
+          "Por sustitución, expresa el contenido correcto; el PDF refleja también la diferencia respecto al original. Revisa el método seleccionado antes de guardar."
+        ],
+        "note": [
+          "Saldo a favor",
+          "Una rectificativa negativa puede dejar importe a favor del cliente. El panel no ejecuta transferencias ni registra una devolución bancaria automática."
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Marca y avisos de vencimiento",
+    "desc": "La identidad de tus documentos y sus recordatorios.",
+    "image": "facturacion",
+    "steps": [
+      "En <b>Datos y plantilla</b>, revisa identidad fiscal, pago, notas y series. Facturas, presupuestos y rectificativas tienen sus prefijos.",
+      "Configura logo y paleta: <b>Grafito</b>, <b>Océano</b>, <b>Oliva</b> o <b>Personalizada</b> mediante códigos HEX y muestras.",
+      "En el listado de Facturación, un administrador puede activar <b>Avisos de vencimiento</b>, indicar días y hora local de Madrid y guardar.",
+      "Revisa los avisos que requieren atención. En una factura emitida puedes excluir los recordatorios cuando corresponda."
+    ],
+    "blocks": [
+      [
+        "Cómo interpretar los días",
+        "7 y 1 avisan antes; 0, el día del vencimiento; -7, una semana después. El control admite valores de -90 a 90 días y limita cuántos puedes configurar."
+      ],
+      [
+        "Qué recibe el cliente",
+        "El aviso incluye número de factura, vencimiento y saldo pendiente. No adjunta el PDF ni incluye conceptos. Una factura pagada o excluida no debe recibir el recordatorio."
+      ]
+    ],
+    "note": [
+      "Antes de activar un envío automático",
+      "Comprueba destinatario, calendario y configuración con la persona administradora. El envío depende de que el servicio esté habilitado en ese entorno."
+    ],
+    "sections": [
+      {
+        "title": "Emisor, series y valores por defecto",
+        "desc": "12 / 1 · Datos y plantilla de esta empresa.",
+        "image": "identidad-desktop",
+        "legend": [
+          "<b>Identidad fiscal.</b> Revisa razón social, identificación, dirección y contacto.",
+          "<b>Marca y plantilla.</b> Configura la presentación y numeración de nuevos documentos.",
+          "<b>Serie.</b> Revisa el prefijo de facturas y la serie independiente de rectificativas."
+        ],
+        "steps": [
+          "En Presupuestos, Datos y plantilla permite configurar su prefijo específico. Verifica siempre la empresa activa antes de cambiar series o datos.",
+          "Pago y notas guarda condiciones, IBAN y notas habituales. Estos valores se copian al preparar nuevos documentos; los anteriores conservan su información."
+        ]
+      },
+      {
+        "title": "Logo, paletas y HEX",
+        "desc": "12 / 2 · Personalizar manteniendo la legibilidad.",
+        "image": "paleta-desktop",
+        "legend": [
+          "<b>Logo.</b> Usa PNG o JPEG dentro de los límites indicados en pantalla.",
+          "<b>Paletas.</b> Elige Grafito, Océano u Oliva como punto de partida.",
+          "<b>Personalizada.</b> Ajusta muestras y códigos HEX para cada función del color.",
+          "<b>Paleta guardada.</b> Copia una combinación de esta compañía; el logo va aparte."
+        ],
+        "steps": [
+          "Personalizada separa acento, texto principal/secundario, papel y tablas. Las muestras tachadas avisan de contraste insuficiente; revisa el conjunto en la vista previa.",
+          "Puedes dar nombre a una combinación para reutilizarla. Guardar una paleta no sustituye guardar la plantilla o el documento que estás preparando."
+        ],
+        "note": [
+          "Identidad del documento",
+          "Cada factura o presupuesto conserva una copia de la apariencia utilizada. Cambiar la plantilla no rediseña los documentos ya guardados."
+        ]
+      },
+      {
+        "title": "Avisos de vencimiento",
+        "desc": "12 / 3 · Calendario de envíos y exclusiones.",
+        "image": "avisos-desktop",
+        "legend": [
+          "<b>Activar avisos.</b> Un administrador decide si se envían automáticamente.",
+          "<b>Días.</b> Separa los desplazamientos con comas; revisa también la hora de Madrid.",
+          "<b>Guardar.</b> Confirma la programación para esta empresa."
+        ],
+        "steps": [
+          "7 y 1 son días antes; 0, el día del vencimiento; -7, una semana después. Se admiten de -90 a 90 días y hasta ocho desplazamientos.",
+          "Una factura emitida puede excluirse desde su bloque de cobros. Revisa fallos recientes antes de reintentar. Una pagada o excluida no debe recibir el aviso."
+        ],
+        "note": [
+          "Qué recibe el cliente",
+          "Número, vencimiento y saldo pendiente, sin conceptos ni PDF adjunto. Revisa email y configuración del entorno antes de activar el envío."
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Emails y resumen semanal",
+    "desc": "Dos herramientas distintas para comunicar y revisar.",
+    "image": "emails-desktop",
+    "steps": [
+      "Elige diseño e idioma, revisa la vista previa y edita asunto, preencabezado y HTML conservando los nombres entre llaves. Guarda.",
+      "El historial conserva diez versiones anteriores por empresa. Restaurar crea una entrada nueva. El resumen semanal llega a administradores los lunes a las 09:00 de Madrid."
+    ],
+    "blocks": [],
+    "note": [
+      "Vista previa sin envío",
+      "La vista previa no envía correos. Las plantillas son para aprobación y vencimiento; el resumen semanal no tiene pestaña propia y contiene solo cifras agregadas."
+    ],
+    "legend": [
+      "<b>Elegir logo.</b> Configura la marca común para las plantillas."
+    ]
+  },
+  {
+    "title": "Leer la analítica",
+    "desc": "Consulta el periodo adecuado y convierte cifras en acciones.",
+    "image": "analitica-desktop",
+    "steps": [
+      "Revisa visitantes, vistas, eventos, páginas, orígenes, idiomas y conversiones. Los ceros pueden significar que no hay tráfico en ese intervalo.",
+      "La gestión de eventos requiere que la web emita los eventos correspondientes. Definirlos en el panel no conecta una web externa."
+    ],
+    "blocks": [],
+    "note": [
+      "Eventos de la web",
+      "Crear una definición no conecta por sí solo una web externa. La integración debe emitir el evento correspondiente para que aparezca actividad."
+    ],
+    "legend": [
+      "<b>Periodo.</b> Alterna 7, 30 o 90 días antes de interpretar cifras.",
+      "<b>Agregar ahora.</b> Actualiza resúmenes cuando esté habilitado."
+    ]
+  },
+  {
+    "title": "Equipo, cuenta y módulos",
+    "desc": "Cada persona trabaja con el acceso que necesita.",
+    "image": "modulos-desktop",
+    "steps": [
+      "En Usuarios revisa miembro y rol: Admin, Editor o Visualizador. Algunas acciones son exclusivas de plataforma.",
+      "Mi cuenta reúne perfil, Seguridad y organización. El menú de usuario permite idioma, tema y cerrar sesión. No compartas credenciales."
+    ],
+    "blocks": [],
+    "note": [
+      "Tema del panel y diseño del documento",
+      "Elegir claro u oscuro cambia tu interfaz. El logo, la paleta y la apariencia de los documentos se configuran por separado en Datos y plantilla."
+    ],
+    "legend": [
+      "<b>Empresa y módulos.</b> Comprueba el ámbito antes de cambiar un área.",
+      "<b>Interruptor.</b> Solo plataforma activa o desactiva módulos; no borra su contenido."
+    ]
+  },
+  {
+    "title": "Privacidad de contactos",
+    "desc": "Revisión manual, exportación y anonimización con alcance explícito.",
+    "image": "privacidad-desktop",
+    "steps": [
+      "Selecciona el contacto y revisa el alcance de exportación o anonimización. Los documentos fiscales se conservan según el alcance de la operación.",
+      "Exportar descarga un JSON: guárdalo con acceso restringido. Anonimizar requiere las confirmaciones del panel y una decisión individual."
+    ],
+    "blocks": [],
+    "note": [
+      "Revisión manual",
+      "Los umbrales no son plazos legales ni activan purgas. Consulta la política de la empresa y al responsable de privacidad antes de anonimizar."
+    ],
+    "legend": [
+      "<b>Guardar plazos.</b> Configura umbrales de revisión; no ejecuta borrados.",
+      "<b>Buscar.</b> Localiza una ficha por nombre, email o teléfono."
+    ]
+  },
+  {
+    "title": "Chuleta para el día a día",
+    "desc": "Qué revisar cuando algo no sale como esperabas.",
+    "steps": [
+      "<b>Una lista está vacía.</b> Comprueba empresa, filtros, estado y periodo. Usa Reintentar si aparece.",
+      "<b>No puedes guardar.</b> Mantén abierto el formulario, revisa los campos y la conexión, y conserva el mensaje de error.",
+      "<b>Falta un botón.</b> Revisa rol y módulos con la persona administradora.",
+      "<b>Un presupuesto no se envía.</b> Confirma estado Enviado, cambios guardados y email del cliente. Lee el resultado del envío.",
+      "<b>Necesitas recuperar un borrador.</b> Compara fecha y versión de la copia ofrecida. Guardar confirma; el autoguardado no emite ni garantiza una copia remota.",
+      "<b>Aparece una función o tabla no disponible.</b> Comunica sección y mensaje al soporte técnico; repetir la operación no instala la función."
+    ],
+    "blocks": [
+      [
+        "Pequeño glosario",
+        "<b>Empresa activa:</b> ámbito actual de trabajo.<br/><b>Pipeline:</b> etapas del seguimiento comercial.<br/><b>Borrador:</b> documento aún en preparación.<br/><b>Emitida:</b> factura bloqueada para edición ordinaria.<br/><b>Saldo:</b> importe pendiente tras los movimientos registrados.<br/><b>Rectificativa:</b> documento nuevo que corrige una factura anterior."
+      ],
+      [
+        "Al terminar",
+        "Comprueba las confirmaciones de guardado, deja los seguimientos con fecha y cierra sesión si compartes equipo. Este manual describe el uso del panel; la aplicación no integra actualmente remisión VERI*FACTU ni QR SIF. Consulta su adecuación con tu asesoría antes de usarla para facturación sujeta a requisitos específicos."
+      ]
+    ]
+  }
+]

@@ -52,8 +52,9 @@ const MyData = () => {
   }, [toast, t])
 
   const draft = useDefinitionDraft({
+    scopeKey:`${companyId}:${selectedType}`,
     onImported: (count) => toast.success(t('attributes.imported').replace('{count}', count)),
-    onImportError: (message) => toast.error(message),
+    onImportError: (message) => toast.error(t(message)),
   })
 
   const selectType = useCallback((itemType, replace = false) => {

@@ -1,8 +1,13 @@
 {
   "devDependencies": {
+    "@supabase/supabase-js": "^2.91.0",
+    "sharp": "^0.34.4",
     "supabase": "^2.72.8"
   },
   "scripts": {
-    "check:functions": "node supabase/check-functions.mjs"
+    "check:functions": "node supabase/check-functions.mjs",
+    "db:bootstrap": "node scripts/build-database-bootstrap.mjs",
+    "media:optimize": "node scripts/optimize-legacy-media.mjs",
+    "test:scripts": "node --test scripts/lib/legacyMedia.test.mjs"
   }
 }

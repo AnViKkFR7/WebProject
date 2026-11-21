@@ -58,7 +58,7 @@ const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="/items/:itemId" element={<RequireModule module="items"><ItemDetail /></RequireModule>} />
                 <Route path="/analytics" element={<RequireModule module="analytics"><Analytics /></RequireModule>} />
                 <Route path="/my-data" element={<RequireModule module="items"><MyData /></RequireModule>} />
-                <Route path="/companies" element={<Companies />} />
+                <Route path="/companies" element={<RequireModule module={['billing','planning']}><Companies /></RequireModule>} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings/modules" element={<ModuleSettings />} />
                 <Route path="/settings/privacy" element={<CrmPrivacy />} />

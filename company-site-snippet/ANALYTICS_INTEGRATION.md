@@ -134,7 +134,7 @@ tráfico, que el hash del visitante cambie cada día).
 | `SUPABASE_URL` | Servidor | La misma URL de Supabase que usa el panel |
 | `SUPABASE_SERVICE_ROLE_KEY` | Servidor, **nunca** `VITE_` | Service role key de ese proyecto |
 | `ANALYTICS_SALT` | Servidor | Cadena larga al azar: `openssl rand -hex 32`. Distinta por entorno |
-| `VITE_COMPANY_ID` | Cliente (pública) | El `id` (uuid) de esta empresa en `companies` |
+| `VITE_COMPANY_ID` | Cliente y servidor (pública) | El `id` (uuid) de esta empresa en `companies`; debe estar disponible en la función serverless |
 
 Sin las tres de servidor el endpoint responde `204` y no guarda nada, en
 silencio. La medición nunca rompe la web.
@@ -264,3 +264,11 @@ y no lo cubre el código.
 
 Este diseño sigue el criterio español (LSSI art. 22.2 + RGPD 6.1.f y 21).
 Para otro país, que lo revise quien corresponda.
+
+## Aislamiento de empresa · auditoría, entrega 5
+
+Actualizar `api/track.ts` en cada web integrada y redesplegar su proyecto Vercel. Mantener el import de trackCore ajustado a la estructura del destino. Configurar `VITE_COMPANY_ID` en el entorno de ejecución de servidor además del build del cliente (Production/Preview según corresponda), con el UUID de esa web. No introducir claves de servicio en variables VITE_.
+
+El servidor valida el UUID configurado y exige que el identificador del evento coincida antes de cualquier consulta, caché o inserción. Todas las consultas e inserciones usan el UUID configurado. Si falta la variable, es inválida o no coincide, descarta el evento con 204, sin guardar datos ni iniciar consultas. Las cabeceras de origen no sustituyen esta vinculación. Comprobar un evento válido de A y otro manipulado hacia B: solo A debe recibir datos; probar también una instancia caliente después de un evento válido.
+
+No requiere SQL ni despliegue de Edge Functions. El cambio en este repositorio no actualiza automáticamente las webs que copiaron el snippet.

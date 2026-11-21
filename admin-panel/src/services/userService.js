@@ -58,7 +58,7 @@ export const userService = {
   /**
    * Crear usuario por invitación (vía Edge Function)
    */
-  async inviteUser({ email, full_name, company_id, role }) {
+  async inviteUser({ email, full_name, company_id, role, resend = false }) {
     const { data: { session } } = await supabase.auth.getSession()
     
     if (!session) {
@@ -70,7 +70,8 @@ export const userService = {
         email,
         full_name,
         company_id,
-        role
+        role,
+        resend
       }
     })
 

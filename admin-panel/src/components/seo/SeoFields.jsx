@@ -1,21 +1,21 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { buildSeoPreview, SEO_LIMITS, suggestItemSeo } from '../../lib/contentSeo'
 import FormSection from '../ui/FormSection'
 import Icon from '../ui/Icon'
 import styles from './SeoFields.module.css'
 
-export default function SeoFields({ values, onChange, title, summary, section, disabled = false, collapsed = false, onToggleCollapse }) {
+export default function SeoFields({ values, onChange, title, summary, section, disabled = false, collapsed = false, onToggleCollapse, placeholders = {}, autoHelp }) {
   const { t } = useLanguage()
   const id = useId()
-  const [suggestion, setSuggestion] = useState(null)
-  useEffect(() => setSuggestion(null), [title, summary])
+  const [proposal, setSuggestion] = useState(null)
+  const suggestion = proposal && proposal.title === title && proposal.summary === summary ? proposal.value : null
   const preview = buildSeoPreview({
-    title, summary, seoTitle: values.seo_title, seoDescription: values.seo_description,
-    slug: values.slug, section,
+    title, summary, seoTitle: values.seo_title || placeholders.seo_title, seoDescription: values.seo_description || placeholders.seo_description,
+    slug: values.slug || placeholders.slug, section,
   })
   const update = (key) => (event) => onChange({ ...values, [key]: event.target.value })
-  const propose = () => setSuggestion(suggestItemSeo({ title, summary, values }))
+  const propose = () => setSuggestion({ title, summary, value: suggestItemSeo({ title, summary, values }) })
   const applySuggestion = () => {
     if (!suggestion) return
     onChange({ ...values, ...suggestion })
@@ -25,6 +25,7 @@ export default function SeoFields({ values, onChange, title, summary, section, d
   return (
     <FormSection title={t('seo.sectionTitle')} description={t('seo.sectionDescription')} icon="search" headingLevel={2} className={disabled ? styles.readOnly : ''} collapsible collapsed={collapsed} onToggleCollapse={onToggleCollapse} collapseLabel={t('seo.collapse')} expandLabel={t('seo.expand')}>
       <div className={styles.fields}>
+        {autoHelp && <p className={styles.autoHelp}><Icon name="star" size={16} />{autoHelp}</p>}
         {section === 'items' && <div className={styles.generator}>
           <div className={styles.generatorIntro}><strong>{t('seo.generatorTitle')}</strong><p>{t('seo.generatorHelp')}</p></div>
           <button type="button" className="ghost-button" onClick={propose} disabled={disabled || (!String(title || '').trim() && !String(summary || '').trim())}><Icon name="star" size={16}/>{t('seo.generate')}</button>
@@ -42,22 +43,22 @@ export default function SeoFields({ values, onChange, title, summary, section, d
         </div>}
         <div className="field">
           <label className="field-label" htmlFor={`${id}-slug`}>{t('seo.slug')}</label>
-          <input id={`${id}-slug`} className="input" value={values.slug || ''} onChange={update('slug')} maxLength={SEO_LIMITS.slug} disabled={disabled} autoCapitalize="none" spellCheck="false" />
+          <input id={`${id}-slug`} className="input" value={values.slug || ''} placeholder={placeholders.slug || undefined} onChange={update('slug')} maxLength={SEO_LIMITS.slug} disabled={disabled} autoCapitalize="none" spellCheck="false" />
           <p className="field-help">{t('seo.slugHelp')}</p>
         </div>
         <div className="field">
           <label className="field-label" htmlFor={`${id}-title`}>{t('seo.title')}</label>
-          <input id={`${id}-title`} className="input" value={values.seo_title || ''} onChange={update('seo_title')} maxLength={SEO_LIMITS.title} disabled={disabled} aria-describedby={`${id}-title-count`} />
+          <input id={`${id}-title`} className="input" value={values.seo_title || ''} placeholder={placeholders.seo_title || undefined} onChange={update('seo_title')} maxLength={SEO_LIMITS.title} disabled={disabled} aria-describedby={`${id}-title-count`} />
           <p id={`${id}-title-count`} className="field-help">{(values.seo_title || '').length}/{SEO_LIMITS.title} · {t('seo.titleHelp')}</p>
         </div>
         <div className="field">
           <label className="field-label" htmlFor={`${id}-description`}>{t('seo.description')}</label>
-          <textarea id={`${id}-description`} className="input" value={values.seo_description || ''} onChange={update('seo_description')} maxLength={SEO_LIMITS.description} rows={3} disabled={disabled} aria-describedby={`${id}-description-count`} />
+          <textarea id={`${id}-description`} className="input" value={values.seo_description || ''} placeholder={placeholders.seo_description || undefined} onChange={update('seo_description')} maxLength={SEO_LIMITS.description} rows={3} disabled={disabled} aria-describedby={`${id}-description-count`} />
           <p id={`${id}-description-count`} className="field-help">{(values.seo_description || '').length}/{SEO_LIMITS.description} · {t('seo.descriptionHelp')}</p>
         </div>
         <div className="field">
           <label className="field-label" htmlFor={`${id}-image`}>{t('seo.ogImage')}</label>
-          <input id={`${id}-image`} className="input" type="url" inputMode="url" placeholder="https://…" value={values.seo_og_image_url || ''} onChange={update('seo_og_image_url')} maxLength={2048} disabled={disabled} />
+          <input id={`${id}-image`} className="input" type="url" inputMode="url" placeholder={placeholders.seo_og_image_url || 'https://…'} value={values.seo_og_image_url || ''} onChange={update('seo_og_image_url')} maxLength={2048} disabled={disabled} />
           <p className="field-help">{t('seo.ogImageHelp')}</p>
         </div>
         <figure className={styles.preview} aria-label={t('seo.preview')}>
