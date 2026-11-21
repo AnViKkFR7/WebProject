@@ -217,6 +217,9 @@
       "path": "migrations/BLOG_MEDIA_EDITOR.sql"
     },
     {
+      "path": "migrations/CLIENT_DIRECTORY_RELATIONSHIPS.sql"
+    },
+    {
       "path": "bootstrap/FINAL_ACCESS.sql"
     }
   ],

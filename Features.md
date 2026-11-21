@@ -1,5 +1,14 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-21 · Clientes y colaboradores (rama `feature/clientes-colaboradores`)
+
+- Análisis de CRM: Odoo usa un único contacto (`res.partner`) con «es empresa» y rangos de cliente/proveedor; Salesforce separa cuentas de persona y de empresa y añade un tipo de relación; HubSpot clasifica empresas por tipo (cliente, partner, proveedor); Holded y Zoho marcan el tipo de contacto. Decisión: un único directorio por empresa donde cada ficha es cliente, colaborador o ambas cosas, y persona física o empresa. Así no se duplican datos cuando un colaborador también compra, y facturas y agenda siguen apuntando a la misma tabla.
+- Nueva migración `CLIENT_DIRECTORY_RELATIONSHIPS.sql` sobre `client_company`: `legal_form` (company/individual), `is_client`, `is_collaborator` (al menos uno), `collaborator_role` y `notes`. Las fichas existentes quedan como cliente/empresa. Escritura por la RPC `save_directory_party` (admin/editor, módulo agenda o facturación, empresa comprobada en servidor) y resumen por `get_directory_party_summary` (miembros activos; cada bloque solo con su módulo activo).
+- Ficha `/companies/:id`: datos, facturado, pendiente y vencidas, presupuestos, tareas y próxima tarea, movimientos por cobrar/pagar y facturación de los últimos 12 meses. Las facturas guardan una copia del cliente y no un enlace, así que se asocian por NIF/CIF normalizado o, si la ficha no tiene, por nombre exacto; la ficha lo indica.
+- Listado: filtros Todos/Clientes/Colaboradores y Todo tipo/Empresa/Persona física en la URL, búsqueda sin tildes por nombre, NIF, especialidad, contacto o email, insignias y enlace a la ficha. El formulario cambia etiquetas según el tipo (razón social/CIF frente a nombre/NIF) y solo pide persona de contacto a empresas y especialidad a colaboradores. Al facturar solo se ofrecen fichas marcadas como cliente.
+- Verificación: 829/829 pruebas (6 SQL nuevas con denegaciones entre empresas, viewer, anónimo, miembro suspendido y módulos desactivados; filtros; ficha; listado), lint, build y 14/14 funciones. En navegador con datos reales (WatchEcommerceDemo), escritorio y móvil: listado, filtros, ficha y formulario. Corregido en la revisión: el selector de tipo del formulario heredaba el tamaño de botón de icono. Sin la migración, la ficha muestra sus datos y avisa de que no puede cargar la actividad; el resumen con datos reales queda pendiente de aplicar la SQL.
+- Pendiente: aplicar `CLIENT_DIRECTORY_RELATIONSHIPS.sql` **antes** de fusionar en `main`.
+
 ## 2026-11-21 · Rediseño «Glass» y cambios de flujo (fusionado en `main`)
 
 - Capa visual translúcida `admin-panel/src/styles/glass.css` (tokens claro/oscuro, menú flotante, barra superior y modales de cristal, controles píldora, segmentados tipo iOS). Sin cambios de datos ni de permisos. Detalle y fases en `ROADMAP-REDISENO.md`.

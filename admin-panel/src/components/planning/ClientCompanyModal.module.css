@@ -1,0 +1,30 @@
+.group, .wide { grid-column: 1 / -1; }
+.group { margin: 0 0 0.25rem; padding: 0; border: 0; min-width: 0; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.6rem; }
+.choice {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--control-border, var(--border-color));
+  border-radius: var(--radius-md, 12px);
+  background: var(--input-bg, var(--bg-card));
+  cursor: pointer;
+  transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+}
+.choice input { margin-top: 0.2rem; width: 1.05rem; height: 1.05rem; accent-color: var(--primary-color); flex: none; }
+.choice:has(input:focus-visible) { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.checked {
+  border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 7%, var(--input-bg, var(--bg-card)));
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.choiceText { display: grid; gap: 0.15rem; min-width: 0; }
+.choiceText strong { font-size: 0.9rem; color: var(--text-primary); }
+.choiceText span { font-size: 0.8rem; line-height: 1.35; color: var(--text-secondary); }
+
+/* El .segmented global está pensado para iconos: aquí los botones llevan texto. */
+.legalForm { display: flex; width: 100%; max-width: 22rem; }
+.legalForm button { flex: 1 1 0; width: auto; gap: 0.4rem; padding: 0 0.9rem; font: inherit; font-size: 0.875rem; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { .choice { transition: none; } }

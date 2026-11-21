@@ -6,7 +6,8 @@ const checkCompany=(row,companyId,label)=>{
 }
 export async function loadBillingReuse(companyId) {
   const [clients,catalog]=await Promise.all([
-    supabase.from('client_company').select('id,company_id,name,tax_id,billing_address,email,phone,responsible,color').eq('company_id',companyId).is('archived_at',null).order('name'),
+    // Solo clientes: un colaborador puro no es destinatario de facturas.
+    supabase.from('client_company').select('id,company_id,name,tax_id,billing_address,email,phone,responsible,color,legal_form').eq('company_id',companyId).eq('is_client',true).is('archived_at',null).order('name'),
     supabase.from('billing_catalog_items').select('*').eq('company_id',companyId).is('archived_at',null).order('name'),
   ])
   if(clients.error)throw clients.error

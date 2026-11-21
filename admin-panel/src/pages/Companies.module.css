@@ -1,0 +1,29 @@
+.counts { margin: -0.5rem 0 1rem; color: var(--text-secondary); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem; }
+.filters { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.filters :global(.segmented) { width: auto; }
+.filters :global(.segmented button) { width: auto; padding: 0 0.9rem; font-size: 0.82rem; }
+.search { flex: 1 1 16rem; max-width: 26rem; }
+.search :global(.input) { width: 100%; }
+
+.nameLink { color: inherit; text-decoration: none; }
+.nameLink:hover { color: var(--primary-color); }
+.nameLink:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; border-radius: 4px; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.badges :global(.pill) { align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; }
+.client { background: color-mix(in srgb, var(--primary-color) 13%, transparent); color: var(--primary-color); }
+.collaborator { background: color-mix(in srgb, var(--accent-color, #0d9488) 16%, transparent); color: color-mix(in srgb, var(--accent-color, #0d9488) 78%, var(--text-primary)); }
+.neutral { background: var(--bg-hover); color: var(--text-secondary); }
+
+.role { margin: -0.25rem 0 0; color: var(--text-secondary); font-size: 0.85rem; }
+
+.links { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: auto; }
+
+@media (max-width: 640px) {
+  .filters { width: 100%; }
+  .filters :global(.segmented) { width: 100%; }
+  .filters :global(.segmented button) { flex: 1; padding: 0 0.5rem; }
+  .search { max-width: none; }
+}

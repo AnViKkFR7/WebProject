@@ -207,13 +207,7 @@ const PlanningWorkspace = () => {
     setSaving(true); setCompanyError("");
     try {
       const created = await createClientCompany({
-        name: companyForm.name,
-        tax_id:companyForm.tax_id || null,
-        billing_address:companyForm.billing_address || null,
-        phone: companyForm.phone || null,
-        email: companyForm.email || null,
-        responsible: companyForm.responsible || null,
-        color: companyForm.color,
+        ...companyForm,
         user_id: userId,
         company_id: companyId,
       });

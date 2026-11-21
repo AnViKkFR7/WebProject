@@ -24,6 +24,7 @@ const ItemDetail = lazy(() => import('./pages/ItemDetail.jsx'))
 const Analytics = lazy(() => import('./pages/Analytics.jsx'))
 const MyData = lazy(() => import('./pages/MyData.jsx'))
 const Companies = lazy(() => import('./pages/Companies.jsx'))
+const DirectoryParty = lazy(() => import('./pages/DirectoryParty.jsx'))
 const Users = lazy(() => import('./pages/Users.jsx'))
 const Leads = lazy(() => import('./pages/Leads.jsx'))
 const Contacts = lazy(() => import('./pages/Contacts.jsx'))
@@ -62,6 +63,7 @@ const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="/analytics" element={<RequireModule module="analytics"><Analytics /></RequireModule>} />
                 <Route path="/my-data" element={<RequireModule module="items"><MyData /></RequireModule>} />
                 <Route path="/companies" element={<RequireModule module={['billing','planning']}><Companies /></RequireModule>} />
+                <Route path="/companies/:partyId" element={<RequireModule module={['billing','planning']}><DirectoryParty /></RequireModule>} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<CompanySettings />}>
                   <Route path="general" element={<CompanyGeneralSettings />} />
