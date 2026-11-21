@@ -1,0 +1,427 @@
+/* =====================================================================
+   Tema «Glass»: capa translúcida sobre el sistema existente.
+   Solo redefine tokens y la apariencia de clases globales; no cambia
+   estructura ni comportamiento. Se importa la última (App.jsx).
+
+   Reglas de la capa:
+   - El desenfoque (backdrop-filter) solo va en la barra superior, el menú,
+     modales y menús flotantes. En sidebar/topbar/modal se aplica en un
+     ::before para no convertirlos en bloque contenedor de los elementos
+     `position: fixed` que llevan dentro (calendarios, menús).
+   - Las tarjetas son translúcidas sin desenfoque: el fondo es suave y
+     así la página sigue fluida con listas largas.
+   - Los bordes de campos mantienen contraste 3:1 (--control-border).
+   ===================================================================== */
+
+:root {
+  --primary-color: #4f46e5;
+  --primary-button-bg: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: rgb(79 70 229 / 0.14);
+  --accent-color: #0d9488;
+  --accent-soft: rgb(13 148 136 / 0.12);
+
+  --ambient-base: #eef0fa;
+  --ambient-1: rgb(99 102 241 / 0.30);
+  --ambient-2: rgb(45 212 191 / 0.22);
+  --ambient-3: rgb(192 132 252 / 0.20);
+
+  --glass-bg: rgb(255 255 255 / 0.64);
+  --glass-strong: rgb(255 255 255 / 0.84);
+  --glass-chrome: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(255 255 255 / 0.75);
+  --glass-line: rgb(15 23 42 / 0.09);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 48px -24px rgb(30 27 75 / 0.28), 0 2px 6px -2px rgb(30 27 75 / 0.06);
+  --glass-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 26px 60px -26px rgb(30 27 75 / 0.36), 0 4px 10px -4px rgb(30 27 75 / 0.08);
+  --glass-blur: blur(22px) saturate(170%);
+
+  --bg-body: var(--ambient-base);
+  --bg-sidebar: transparent;
+  --bg-card: var(--glass-bg);
+  --bg-page: var(--glass-bg);
+  --bg-elevated: var(--glass-strong);
+  --bg-hover: rgb(79 70 229 / 0.07);
+  --bg-table-header: rgb(15 23 42 / 0.035);
+  --bg-info: rgb(14 165 233 / 0.10);
+  --input-bg: rgb(255 255 255 / 0.78);
+
+  --border-color: rgb(15 23 42 / 0.13);
+  --control-border: #7c869a;
+  --sidebar-active-bg: rgb(255 255 255 / 0.92);
+  --sidebar-active-text: #4338ca;
+
+  --shadow-sm: 0 1px 2px rgb(30 27 75 / 0.05);
+  --shadow-md: 0 10px 28px -14px rgb(30 27 75 / 0.25);
+  --shadow-lg: var(--glass-shadow-lift);
+
+  --radius-md: 0.75rem;
+  --radius-lg: 1.15rem;
+  --radius-xl: 1.6rem;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --transition-fast: 180ms var(--ease-out);
+}
+
+[data-theme='dark'] {
+  --primary-color: #a5b4fc;
+  --primary-button-bg: #5b54ea;
+  --primary-hover: #6d67f0;
+  --primary-light: rgb(129 140 248 / 0.22);
+  --accent-color: #5eead4;
+  --accent-soft: rgb(94 234 212 / 0.14);
+
+  --ambient-base: #090d1d;
+  --ambient-1: rgb(79 70 229 / 0.42);
+  --ambient-2: rgb(13 148 136 / 0.26);
+  --ambient-3: rgb(147 51 234 / 0.24);
+
+  --glass-bg: rgb(22 27 52 / 0.58);
+  --glass-strong: rgb(24 29 56 / 0.86);
+  --glass-chrome: rgb(17 21 42 / 0.52);
+  --glass-edge: rgb(255 255 255 / 0.10);
+  --glass-line: rgb(255 255 255 / 0.08);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 22px 54px -26px rgb(0 0 0 / 0.75);
+  --glass-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 30px 70px -28px rgb(0 0 0 / 0.85);
+
+  --bg-hover: rgb(255 255 255 / 0.07);
+  --bg-table-header: rgb(255 255 255 / 0.045);
+  --bg-info: rgb(56 189 248 / 0.12);
+  --input-bg: rgb(9 13 29 / 0.55);
+
+  --border-color: rgb(255 255 255 / 0.12);
+  --control-border: #64748b;
+  --sidebar-active-bg: rgb(255 255 255 / 0.13);
+  --sidebar-active-text: #ffffff;
+  --danger-bg: rgb(127 29 29 / 0.32);
+  --success-bg: rgb(20 83 45 / 0.32);
+}
+
+/* --- Fondo ambiental ------------------------------------------------- */
+
+html { background-color: var(--ambient-base); }
+body,
+.app-main { background-color: transparent; }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42vmax 34vmax at 12% 8%, var(--ambient-1), transparent 70%),
+    radial-gradient(38vmax 32vmax at 92% 12%, var(--ambient-2), transparent 70%),
+    radial-gradient(46vmax 40vmax at 70% 100%, var(--ambient-3), transparent 70%),
+    var(--ambient-base);
+  animation: ambientDrift 38s ease-in-out infinite alternate;
+}
+
+@keyframes ambientDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-2vmax, 1.5vmax, 0) scale(1.06); }
+}
+
+::selection { background: color-mix(in srgb, var(--primary-color) 28%, transparent); }
+
+/* --- Superficies de cristal ----------------------------------------- */
+
+.glass-surface,
+.sidebar,
+.topbar,
+.modal { isolation: isolate; }
+
+.sidebar::before,
+.topbar::before,
+.modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-chrome);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  pointer-events: none;
+}
+
+/* Menús y paneles flotantes: no contienen elementos fixed, se desenfocan directamente. */
+.user-menu-panel,
+.company-switcher-menu,
+.multi-select-menu,
+.date-picker-dropdown,
+.calendar-popover,
+.toast {
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow-lift);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.card,
+.form-section,
+.stat-card,
+.analytics-card,
+.section-card,
+.item-card,
+.client-card,
+.type-card,
+.login-card,
+.empty-state {
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+}
+
+.card,
+.stat-card,
+.analytics-card,
+.section-card,
+.form-section { border-radius: var(--radius-lg); }
+
+.card:hover { border-color: var(--glass-edge); box-shadow: var(--glass-shadow-lift); }
+
+.form-section-heading {
+  background: linear-gradient(110deg, color-mix(in srgb, var(--section-tone) 7%, transparent), transparent 70%);
+  border-bottom-color: var(--glass-line);
+}
+.form-section-icon { border-radius: 10px; }
+
+/* --- Acceso (login, recuperar contraseña) -------------------------- */
+
+.login-container { background: transparent; }
+.login-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow-lift);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  animation: pageEnter 480ms var(--ease-out);
+}
+.login-card h2 { color: var(--text-primary); letter-spacing: -0.03em; }
+.login-card p { color: var(--text-secondary); }
+/* Antes #e2e8f0 (1,2:1): el borde del campo no se distinguía. */
+.form-group input {
+  border-color: var(--control-border);
+  border-radius: 12px;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+}
+.form-group input:focus { background-color: var(--bg-elevated); box-shadow: 0 0 0 4px var(--primary-light); }
+
+/* --- Menú lateral flotante ------------------------------------------ */
+
+@media (min-width: 769px) {
+  .sidebar {
+    margin: 0.75rem 0 0.75rem 0.75rem;
+    height: calc(100vh - 1.5rem);
+    top: 0.75rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+  }
+  .sidebar.collapsed .company-switcher-menu { left: 104px; }
+}
+
+.sidebar-footer { border-top: 1px solid var(--glass-line); }
+
+.nav-group-title {
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.nav-link {
+  border-radius: var(--radius-pill);
+  transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform 220ms var(--ease-spring);
+}
+.nav-link:hover { background-color: var(--bg-hover); transform: none; }
+.nav-link:active { transform: scale(0.98); }
+.nav-link.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 6px 18px -10px rgb(30 27 75 / 0.45);
+}
+[data-theme='dark'] .nav-link.active { box-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 8px 22px -12px rgb(0 0 0 / 0.8); }
+.nav-link.active .nav-icon { color: var(--primary-color); }
+[data-theme='dark'] .nav-link.active .nav-icon { color: var(--accent-color); }
+
+/* --- Barra superior: se vuelve cristal al desplazar ---------------- */
+
+@media (min-width: 769px) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    transition: padding 240ms var(--ease-out);
+  }
+  .topbar::before {
+    inset: 0.5rem 1rem 0.25rem;
+    border-radius: var(--radius-xl);
+    opacity: 0;
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+    transition: opacity 240ms var(--ease-out);
+  }
+  .topbar.scrolled::before { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .topbar,
+  [data-theme='dark'] .topbar { background: transparent; border-bottom-color: var(--glass-line); }
+  .topbar.scrolled,
+  [data-theme='light'] .topbar.scrolled,
+  [data-theme='dark'] .topbar.scrolled { box-shadow: var(--shadow-md); }
+  .sidebar { background-color: var(--glass-strong); }
+}
+
+/* --- Cabecera de página -------------------------------------------- */
+
+.page-header h2 { letter-spacing: -0.03em; }
+.topbar-title { letter-spacing: -0.03em; }
+
+/* --- Botones -------------------------------------------------------- */
+
+.primary-button,
+.ghost-button,
+.button {
+  border-radius: var(--radius-pill);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform 220ms var(--ease-spring);
+}
+
+.primary-button {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-button-bg) 88%, #fff), var(--primary-button-bg));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.25) inset, 0 8px 20px -10px color-mix(in srgb, var(--primary-button-bg) 80%, transparent);
+}
+.primary-button:hover:not(:disabled) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-hover) 88%, #fff), var(--primary-hover));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.25) inset, 0 12px 26px -12px color-mix(in srgb, var(--primary-button-bg) 90%, transparent);
+}
+.primary-button.danger { background: var(--danger-color); }
+
+.ghost-button {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+}
+.ghost-button:hover:not(:disabled),
+[data-theme='dark'] .ghost-button:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+  color: var(--primary-color);
+}
+[data-theme='dark'] .ghost-button { color: var(--text-primary); border-color: var(--glass-edge); }
+
+.primary-button:active:not(:disabled),
+.ghost-button:active:not(:disabled),
+.icon-button:active:not(:disabled) { transform: scale(0.97); }
+
+.icon-button { border-radius: 10px; transition: background-color var(--transition-fast), transform 220ms var(--ease-spring); }
+
+/* --- Controles segmentados (filtros) ------------------------------- */
+
+.segmented {
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.06);
+}
+.segmented button { border-radius: var(--radius-pill); transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast); }
+.segmented button + button { border-left: none; }
+.segmented button:hover:not([aria-pressed='true']) { background: var(--bg-hover); color: var(--text-primary); }
+.segmented button[aria-pressed='true'] {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 4px 12px -6px rgb(30 27 75 / 0.4);
+  font-weight: 650;
+}
+[data-theme='dark'] .segmented button[aria-pressed='true'] { background: rgb(255 255 255 / 0.14); color: #fff; }
+
+/* --- Campos --------------------------------------------------------- */
+
+.input,
+.select,
+.modal-body :is(.input, .select),
+[data-theme='dark'] .input,
+[data-theme='dark'] .select,
+[data-theme='dark'] textarea.input {
+  border-color: var(--control-border);
+  border-radius: 12px;
+  background-color: var(--input-bg);
+}
+.input:focus,
+.select:focus,
+[data-theme='dark'] .input:focus,
+[data-theme='dark'] .select:focus,
+[data-theme='dark'] textarea.input:focus {
+  background-color: var(--bg-elevated);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+[data-theme='dark'] .select option { background-color: #1b2142; }
+
+/* --- Tablas, pills y estados --------------------------------------- */
+
+.table-row.table-header { background: var(--bg-table-header); }
+.pill,
+.status-pill { border-radius: var(--radius-pill); }
+
+/* --- Modales -------------------------------------------------------- */
+
+.modal-overlay { background: rgb(9 13 29 / 0.34); -webkit-backdrop-filter: blur(10px) saturate(120%); backdrop-filter: blur(10px) saturate(120%); }
+.modal {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow-lift), 0 40px 120px -40px rgb(9 13 29 / 0.5);
+}
+.modal::before { background: var(--glass-strong); }
+.modal-header { background: linear-gradient(110deg, color-mix(in srgb, var(--primary-color) 8%, transparent), transparent 75%); }
+.modal-body { background: transparent; }
+.modal-footer { background: transparent; border-color: var(--glass-line); }
+
+/* --- Movimiento ----------------------------------------------------- */
+
+.page > * { animation: pageEnter 360ms var(--ease-out); }
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Barra de desplazamiento discreta ------------------------------ */
+
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text-tertiary) 45%, transparent) transparent; }
+
+/* --- Sin soporte de desenfoque: superficies más opacas ------------- */
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-chrome: rgb(255 255 255 / 0.92); --glass-strong: #ffffff; }
+  [data-theme='dark'] { --glass-chrome: rgb(17 21 42 / 0.95); --glass-strong: #181d38; }
+}
+
+/* --- Transparencia reducida / movimiento reducido ------------------ */
+
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-bg: rgb(255 255 255 / 0.94); --glass-chrome: #ffffff; --glass-strong: #ffffff; }
+  [data-theme='dark'] { --glass-bg: #161b34; --glass-chrome: #12162d; --glass-strong: #181d38; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  .page > *,
+  .login-card { animation: none; }
+  .nav-link,
+  .primary-button,
+  .ghost-button,
+  .icon-button { transition: none; }
+  .primary-button:active:not(:disabled),
+  .ghost-button:active:not(:disabled),
+  .icon-button:active:not(:disabled),
+  .nav-link:active { transform: none; }
+}
