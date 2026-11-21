@@ -314,6 +314,22 @@ export const es = {
   },
 
   // Analítica
+  analyticsHub: {
+    description: 'Visitas de las webs de {company} y conexión con otras plataformas.',
+    tabsLabel: 'Secciones de analítica',
+    tabs: { web: 'Webs', integrations: 'Vinculaciones' },
+    integrations: {
+      title: 'Vinculaciones',
+      intro: 'Aquí podréis conectar vuestras cuentas de Google y Meta para ver sus datos junto a los de la web. Todavía no hay ninguna disponible: cada plataforma tiene que aprobar antes la conexión.',
+      pending: 'Pendiente de activar',
+      needs: 'Qué falta:',
+      googleAnalytics: { name: 'Google Analytics 4', shows: 'Usuarios, sesiones, páginas más vistas y de dónde llegan las visitas.', needs: 'Una aplicación de Google Cloud verificada por Google (unos días). Después cada empresa conecta su cuenta con un clic.' },
+      meta: { name: 'Meta (Facebook e Instagram)', shows: 'Alcance, interacción y seguidores de la página de Facebook y la cuenta de Instagram.', needs: 'Una aplicación de Meta con la empresa verificada y la revisión de permisos aprobada (semanas). La cuenta de Instagram debe ser de empresa y estar unida a una página.' },
+      googleBusiness: { name: 'Google Business Profile (Maps)', shows: 'Búsquedas, vistas en Maps, llamadas, indicaciones y reseñas de la ficha.', needs: 'Solicitar a Google el acceso a su API (hasta 14 días). La ficha debe estar verificada y quien conecta debe gestionarla.' },
+      appleBusiness: { name: 'Apple Business Connect (Apple Maps)', shows: 'Búsquedas, vistas de la ficha y acciones en Apple Maps.', needs: 'Apple solo da acceso por API a partners aprobados. Mientras tanto, la revisión de la ficha y sus datos se hace desde Apple Business Connect.' },
+    },
+  },
+
   analytics: {
     conversionsTitle: 'Conversiones',
     conversionsHelp: 'Lo que hace la gente cuando quiere contactar. Se mide solo en todas las webs.',

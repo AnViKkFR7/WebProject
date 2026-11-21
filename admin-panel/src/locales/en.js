@@ -314,6 +314,22 @@ export const en = {
   },
 
   // Analytics
+  analyticsHub: {
+    description: 'Visits to {company} websites and connections with other platforms.',
+    tabsLabel: 'Analytics sections',
+    tabs: { web: 'Websites', integrations: 'Connections' },
+    integrations: {
+      title: 'Connections',
+      intro: 'Here you will be able to connect your Google and Meta accounts and see their data next to your website data. None is available yet: each platform must approve the connection first.',
+      pending: 'Pending activation',
+      needs: 'What is missing:',
+      googleAnalytics: { name: 'Google Analytics 4', shows: 'Users, sessions, top pages and where visits come from.', needs: 'A Google Cloud app verified by Google (a few days). Then each company connects its account in one click.' },
+      meta: { name: 'Meta (Facebook and Instagram)', shows: 'Reach, engagement and followers of the Facebook Page and the Instagram account.', needs: 'A Meta app with a verified business and approved permission review (weeks). The Instagram account must be a business account linked to a Page.' },
+      googleBusiness: { name: 'Google Business Profile (Maps)', shows: 'Searches, Maps views, calls, directions and reviews of the profile.', needs: 'Request access to its API from Google (up to 14 days). The profile must be verified and the person connecting must manage it.' },
+      appleBusiness: { name: 'Apple Business Connect (Apple Maps)', shows: 'Searches, place card views and actions in Apple Maps.', needs: 'Apple only gives API access to approved partners. Meanwhile, the place card is reviewed and updated in Apple Business Connect.' },
+    },
+  },
+
   analytics: {
     conversionsTitle: 'Conversions',
     conversionsHelp: 'What people do when they want to get in touch. Measured automatically on every site.',

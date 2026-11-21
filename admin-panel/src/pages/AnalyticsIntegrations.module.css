@@ -1,0 +1,11 @@
+.title { margin: 0 0 0.35rem; font-size: 1rem; color: var(--text-primary); }
+.intro { margin: 0 0 1.1rem; max-width: 60ch; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.card { display: grid; gap: 0.6rem; align-content: start; padding: 1.15rem 1.25rem; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.head h4 { margin: 0; font-size: 0.975rem; color: var(--text-primary); }
+.status { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg-hover); color: var(--text-secondary); }
+.what { margin: 0; color: var(--text-primary); font-size: 0.875rem; line-height: 1.5; }
+.need { margin: 0; padding-top: 0.6rem; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.8rem; line-height: 1.45; }
+.need strong { color: var(--text-primary); font-weight: 600; }

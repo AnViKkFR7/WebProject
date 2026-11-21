@@ -1,5 +1,17 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-21 · Analítica en pestañas y vinculaciones previstas
+
+- «Analítica» pasa a tener pestañas como «Ajustes de empresa»: «Webs» (`/analytics/web`, la analítica de siempre, sin cambios de datos) y «Vinculaciones» (`/analytics/integrations`). `/analytics` abre la primera.
+- Vinculaciones muestra Google Analytics 4, Meta (Facebook e Instagram), Google Business Profile y Apple Business Connect como «Pendiente de activar», con lo que se verá de cada una y qué falta. No hay botón de conectar hasta que exista la conexión real.
+- Viabilidad (consultada el 21/11/2026):
+  - Google Analytics 4: OAuth con permiso de solo lectura en un proyecto de Google Cloud; Google revisa los permisos sensibles (3–5 días hábiles según su documentación). Cada empresa conecta su propia cuenta.
+  - Meta: aplicación de Meta con verificación de empresa y revisión de permisos (`pages_read_engagement`, `instagram_manage_insights`…). Instagram tiene que ser cuenta profesional unida a una página.
+  - Google Business Profile: solicitud de acceso a la API (Google indica hasta 14 días); quien conecta debe gestionar la ficha.
+  - Apple Business Connect: la API solo se abre a partners aprobados; de momento se gestiona en su web.
+- Diseño previsto para conectar: los tokens solo en servidor (Edge Functions), cifrados y por empresa; solo admins conectan o desconectan; el panel nunca recibe tokens.
+- Verificación: 838/838 pruebas (3 nuevas de la pestaña), lint y build; revisado en navegador en escritorio y móvil sin desbordes.
+
 ## 2026-11-21 · Auditoría de seguridad entre empresas (rama `security/auditoria-aislamiento`)
 
 - Revisión completa de aislamiento (RLS, funciones privilegiadas, Storage, Edge Functions, navegador, secretos y entradas públicas). Sin vías explotables hoy. Informe y tabla de hallazgos en `ROADMAP-AUDITORIA-SEGURIDAD.md`.
