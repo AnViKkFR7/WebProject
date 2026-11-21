@@ -14,6 +14,8 @@ import ClientCompanyModal from '../components/planning/ClientCompanyModal'
 import styles from './DirectoryParty.module.css'
 
 const fill = (text, values) => Object.entries(values).reduce((out, [key, value]) => out.replaceAll(`{${key}}`, value), text)
+// «1 factura» frente a «2 facturas»: las claves con forma singular terminan en «One».
+const countText = (t, key, count, name = 'count') => (Number(count) === 1 ? t(`${key}One`) : fill(t(key), { [name]: count }))
 
 /**
  * Ficha de un cliente o colaborador: datos, y actividad calculada en el servidor
@@ -159,7 +161,7 @@ export default function DirectoryParty() {
               <article className={`stat-card ${styles.metric}`}>
                 <h4 className="stat-card-title">{t('directory.invoiced')}</h4>
                 <p className="stat-card-value">{money(invoices.total)}</p>
-                <p className="stat-card-hint">{fill(t('directory.invoicedHint'), { count: invoices.count })}</p>
+                <p className="stat-card-hint">{countText(t, 'directory.invoicedHint', invoices.count)}</p>
                 {invoices.last_issued_on && <p className="stat-card-hint">{fill(t('directory.lastInvoice'), { date: date(invoices.last_issued_on) })}</p>}
               </article>
             )}
@@ -169,7 +171,7 @@ export default function DirectoryParty() {
                 <p className="stat-card-value">{money(invoices.outstanding)}</p>
                 <p className="stat-card-hint">{t('directory.collected')}: {money(invoices.paid)}</p>
                 <p className={`stat-card-hint ${invoices.overdue_count > 0 ? styles.warning : ''}`}>
-                  {invoices.overdue_count > 0 ? fill(t('directory.overdue'), { count: invoices.overdue_count }) : t('directory.nothingOverdue')}
+                  {invoices.overdue_count > 0 ? countText(t, 'directory.overdue', invoices.overdue_count) : t('directory.nothingOverdue')}
                 </p>
               </article>
             )}
@@ -178,14 +180,14 @@ export default function DirectoryParty() {
                 <h4 className="stat-card-title">{t('directory.quotes')}</h4>
                 <p className="stat-card-value">{money(quotes.accepted_total)}</p>
                 <p className="stat-card-hint">{fill(t('directory.quotesHint'), { accepted: quotes.accepted, count: quotes.count })}</p>
-                {quotes.open > 0 && <p className="stat-card-hint">{fill(t('directory.openQuotes'), { count: quotes.open })}</p>}
+                {quotes.open > 0 && <p className="stat-card-hint">{countText(t, 'directory.openQuotes', quotes.open)}</p>}
               </article>
             )}
             {planning && (
               <article className={`stat-card ${styles.metric}`}>
                 <h4 className="stat-card-title">{t('directory.tasks')}</h4>
                 <p className="stat-card-value">{planning.count}</p>
-                <p className="stat-card-hint">{fill(t('directory.tasksHint'), { upcoming: planning.upcoming })}</p>
+                <p className="stat-card-hint">{countText(t, 'directory.tasksHint', planning.upcoming, 'upcoming')}</p>
                 <p className="stat-card-hint">{planning.next ? fill(t('directory.nextTask'), { title: planning.next.title, date: date(planning.next.start) }) : t('directory.noUpcoming')}</p>
               </article>
             )}
@@ -193,7 +195,7 @@ export default function DirectoryParty() {
               <article className={`stat-card ${styles.metric}`}>
                 <h4 className="stat-card-title">{party.is_collaborator && !isClient ? t('directory.toPay') : t('directory.toCollect')}</h4>
                 <p className="stat-card-value">{money(party.is_collaborator && !isClient ? movements.to_pay : movements.to_collect)}</p>
-                <p className="stat-card-hint">{fill(t('directory.movementsHint'), { count: movements.count })}</p>
+                <p className="stat-card-hint">{countText(t, 'directory.movementsHint', movements.count)}</p>
                 {isClient && party.is_collaborator && <p className="stat-card-hint">{t('directory.toPay')}: {money(movements.to_pay)}</p>}
               </article>
             )}

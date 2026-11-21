@@ -50,6 +50,11 @@ it('loads the record of the selected company and shows its activity', async () =
   expect(text).toContain('directory.toPay')
   expect(host.querySelectorAll('ol li')).toHaveLength(12)
   expect(text).toContain('directory.matchedByTax')
+  // Singular con 1 (próxima tarea, vencida), plural con más
+  expect(text).toContain('directory.tasksHintOne')
+  expect(text).toContain('directory.overdueOne')
+  expect(text).toContain('directory.invoicedHint')
+  expect(text).not.toContain('directory.invoicedHintOne')
 })
 
 it('hides billing blocks when the server returns none (module off)', async () => {

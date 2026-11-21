@@ -247,6 +247,6 @@ Procedimiento: docs/correcciones-revision-posterior.md.
 
 - [x] Inventario del catálogo, revisión de Edge Functions, RPC públicos y almacenamiento del navegador.
 - [x] Correcciones A, B y C con pruebas (`tests/database/tenantIsolationAudit.test.js`, `tests/itemMediaDeletion.test.js`).
-- [ ] Aplicar `ITEM_MEDIA_PUBLIC_READ_FIX.sql` y desplegar `upload-item-media` y `delete-item-media`.
-- [ ] Ejecutar `database/maintenance/SECURITY_AUDIT_CHECKS.sql` en producción y comparar con lo esperado.
+- [x] `ITEM_MEDIA_PUBLIC_READ_FIX.sql` aplicada y `upload-item-media`/`delete-item-media` desplegadas por el usuario (21/11/2026).
+- [ ] `database/maintenance/SECURITY_AUDIT_CHECKS.sql` ejecutada en producción (21/11/2026); falta contrastar sus resultados con lo esperado en cada bloque.
 - [x] Punto D decidido (21/11/2026): un editor puede ascender a un viewer a editor, nunca a admin.
