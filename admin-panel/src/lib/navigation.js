@@ -30,9 +30,8 @@ export const NAV_GROUPS = [
     items: [
       { to: '/users', key: 'users', icon: 'users' },
       { to: '/companies', key: 'companies', icon: 'companies', module: ['billing','planning'] },
-      { to: '/settings/modules', key: 'modules', icon: 'sliders', requires: 'canManageModules' },
-      { to: '/settings/privacy', key: 'privacy', icon: 'lock', requires: 'canManagePrivacy' },
-      { to: '/settings/emails', key: 'emailSettings', icon: 'send', requires: 'canManagePrivacy', module: 'billing' },
+      // Módulos, Emails a clientes y Privacidad son pestañas de esta sección (lib/companySettings.js).
+      { to: '/settings', key: 'companySettings', icon: 'sliders', requires: 'canManagePrivacy' },
     ],
   },
 ]
@@ -42,7 +41,6 @@ const EXTRA_TITLES = [
   { to: '/privacy-policy', key: 'privacyPolicy' },
   { to: '/legal-notice', key: 'legalNotice' },
   { to: '/cookies-policy', key: 'cookiesPolicy' },
-  { to: '/settings/emails', key: 'emailSettings' },
 ]
 
 /** Grupos visibles según permisos */

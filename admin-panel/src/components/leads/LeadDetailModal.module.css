@@ -67,3 +67,16 @@
   .contactCard, .messageCard { padding: .875rem; }
   .details { grid-template-columns: minmax(0, 1fr); }
 }
+
+.contactLink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem .75rem;
+  margin-top: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border-color);
+}
+.contactLink p { margin: 0; flex: 1 1 14rem; color: var(--text-secondary); font-size: .85rem; }
+.contactLink a { text-decoration: none; }

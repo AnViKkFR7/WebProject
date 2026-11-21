@@ -21,17 +21,19 @@
   --accent-color: #0d9488;
   --accent-soft: rgb(13 148 136 / 0.12);
 
-  --ambient-base: #eef0fa;
+  --ambient-base: #e8ebf6;
   --ambient-1: rgb(99 102 241 / 0.30);
   --ambient-2: rgb(45 212 191 / 0.22);
   --ambient-3: rgb(192 132 252 / 0.20);
 
-  --glass-bg: rgb(255 255 255 / 0.64);
+  --glass-bg: rgb(255 255 255 / 0.74);
   --glass-strong: rgb(255 255 255 / 0.84);
   --glass-chrome: rgb(255 255 255 / 0.55);
   --glass-edge: rgb(255 255 255 / 0.75);
   --glass-line: rgb(15 23 42 / 0.09);
-  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 48px -24px rgb(30 27 75 / 0.28), 0 2px 6px -2px rgb(30 27 75 / 0.06);
+  /* Borde de tarjetas: un filo oscuro muy suave para separarlas del fondo claro */
+  --surface-edge: rgb(30 27 75 / 0.10);
+  --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 48px -24px rgb(30 27 75 / 0.32), 0 2px 6px -2px rgb(30 27 75 / 0.09);
   --glass-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 26px 60px -26px rgb(30 27 75 / 0.36), 0 4px 10px -4px rgb(30 27 75 / 0.08);
   --glass-blur: blur(22px) saturate(170%);
 
@@ -45,7 +47,7 @@
   --bg-info: rgb(14 165 233 / 0.10);
   --input-bg: rgb(255 255 255 / 0.78);
 
-  --border-color: rgb(15 23 42 / 0.13);
+  --border-color: rgb(15 23 42 / 0.15);
   --control-border: #7c869a;
   --sidebar-active-bg: rgb(255 255 255 / 0.92);
   --sidebar-active-text: #4338ca;
@@ -77,11 +79,12 @@
   --ambient-2: rgb(13 148 136 / 0.26);
   --ambient-3: rgb(147 51 234 / 0.24);
 
-  --glass-bg: rgb(22 27 52 / 0.58);
+  --glass-bg: rgb(24 30 58 / 0.66);
   --glass-strong: rgb(24 29 56 / 0.86);
   --glass-chrome: rgb(17 21 42 / 0.52);
   --glass-edge: rgb(255 255 255 / 0.10);
   --glass-line: rgb(255 255 255 / 0.08);
+  --surface-edge: rgb(255 255 255 / 0.12);
   --glass-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 22px 54px -26px rgb(0 0 0 / 0.75);
   --glass-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 30px 70px -28px rgb(0 0 0 / 0.85);
 
@@ -90,7 +93,7 @@
   --bg-info: rgb(56 189 248 / 0.12);
   --input-bg: rgb(9 13 29 / 0.55);
 
-  --border-color: rgb(255 255 255 / 0.12);
+  --border-color: rgb(255 255 255 / 0.14);
   --control-border: #64748b;
   --sidebar-active-bg: rgb(255 255 255 / 0.13);
   --sidebar-active-text: #ffffff;
@@ -170,7 +173,7 @@ body::before {
 .type-card,
 .login-card,
 .empty-state {
-  border-color: var(--glass-edge);
+  border-color: var(--surface-edge);
   box-shadow: var(--glass-shadow);
 }
 
@@ -180,7 +183,7 @@ body::before {
 .section-card,
 .form-section { border-radius: var(--radius-lg); }
 
-.card:hover { border-color: var(--glass-edge); box-shadow: var(--glass-shadow-lift); }
+.card:hover { border-color: color-mix(in srgb, var(--primary-color) 22%, var(--surface-edge)); box-shadow: var(--glass-shadow-lift); }
 
 .form-section-heading {
   background: linear-gradient(110deg, color-mix(in srgb, var(--section-tone) 7%, transparent), transparent 70%);
@@ -247,6 +250,37 @@ body::before {
 .nav-link.active .nav-icon { color: var(--primary-color); }
 [data-theme='dark'] .nav-link.active .nav-icon { color: var(--accent-color); }
 
+/* Aviso de pendientes en el menú (p. ej. solicitudes nuevas) */
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--primary-button-bg, var(--primary-color));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.nav-link { position: relative; }
+/* Menú plegado: queda un punto sobre el icono, el número va en el título del enlace */
+.sidebar.collapsed .nav-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: calc(50% - 1rem);
+  min-width: 0.6rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  padding: 0;
+  box-shadow: 0 0 0 2px var(--bg-card);
+}
+.sidebar.collapsed .nav-badge > [aria-hidden='true'] { display: none; }
+
 /* --- Barra superior: se vuelve cristal al desplazar ---------------- */
 
 @media (min-width: 769px) {
@@ -274,6 +308,12 @@ body::before {
   [data-theme='light'] .topbar.scrolled,
   [data-theme='dark'] .topbar.scrolled { box-shadow: var(--shadow-md); }
   .sidebar { background-color: var(--glass-strong); }
+  /* La barra es fija y el contenido solo reserva una fila (4rem): en móvil la parte derecha
+     son dos iconos, así que título y acciones caben en una sola fila y no tapan la página. */
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .topbar-right { justify-content: flex-end; }
+  .topbar-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page { padding-top: 5.25rem; }
 }
 
 /* --- Cabecera de página -------------------------------------------- */
@@ -385,12 +425,112 @@ body::before {
 .modal-body { background: transparent; }
 .modal-footer { background: transparent; border-color: var(--glass-line); }
 
+/* --- Indicador deslizante (menú, pestañas, filtros) ---------------- */
+/* Una sola píldora viaja hasta la opción activa (components/ui/SlidingIndicator).
+   Solo cuando está medida (data-indicator="ready") la opción activa deja su propio fondo. */
+
+:root { --ease-glide: cubic-bezier(0.32, 0.72, 0, 1); --glide: 460ms var(--ease-glide); }
+
+.sidebar-nav,
+.segmented,
+.tabs-header { position: relative; }
+.slide-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: var(--slide-radius, var(--radius-pill));
+  background: var(--slide-bg, var(--bg-elevated));
+  box-shadow: var(--slide-shadow, 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 4px 12px -6px rgb(30 27 75 / 0.4));
+  transition: transform var(--glide), width var(--glide), height var(--glide), opacity 200ms ease;
+  will-change: transform, width;
+}
+[data-indicator='ready'] > :not(.slide-indicator),
+[data-indicator='ready'] > * > .nav-link { position: relative; z-index: 1; }
+[data-indicator='ready'] .nav-link.active,
+[data-indicator='ready'] > button[aria-pressed='true'],
+[data-indicator='ready'] > .tab-button.active,
+[data-theme='dark'] [data-indicator='ready'] .nav-link.active,
+[data-theme='dark'] [data-indicator='ready'] > button[aria-pressed='true'] { background: transparent; box-shadow: none; }
+
+.nav-indicator { --slide-bg: var(--sidebar-active-bg); --slide-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 6px 18px -10px rgb(30 27 75 / 0.45); }
+[data-theme='dark'] .nav-indicator { --slide-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 8px 22px -12px rgb(0 0 0 / 0.8); }
+[data-theme='dark'] .segmented .slide-indicator { --slide-bg: rgb(255 255 255 / 0.14); --slide-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset; }
+/* El texto y el icono cambian de color al ritmo de la píldora */
+.nav-link .nav-icon,
+.segmented button { transition: color var(--glide), background-color var(--transition-fast); }
+
+/* Pestañas de Mi cuenta: mismo lenguaje que las de Ajustes de empresa */
+.tabs-header {
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  padding: 0.25rem;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  background: var(--bg-hover);
+  --slide-bg: var(--bg-card);
+  --slide-shadow: 0 1px 2px rgb(15 23 42 / 0.08), 0 4px 12px -6px rgb(15 23 42 / 0.25);
+}
+.tab-button,
+.tab-button.active {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: color var(--glide), background-color var(--transition-fast);
+}
+.tab-button:hover { background: transparent; color: var(--text-primary); }
+.tab-button.active { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 1px 2px rgb(15 23 42 / 0.08), 0 4px 12px -6px rgb(15 23 42 / 0.25); }
+.tab-content { border-radius: var(--radius-lg); }
+
 /* --- Movimiento ----------------------------------------------------- */
+/* Entrada de página en cascada: el contenido aparece por bloques, sin saltos. */
 
-.page > * { animation: pageEnter 360ms var(--ease-out); }
+.page > * { animation: pageFade 320ms var(--ease-out); }
+.page-content > * { animation: pageEnter 560ms var(--ease-glide) both; }
+.page-content > :nth-child(2) { animation-delay: 40ms; }
+.page-content > :nth-child(3) { animation-delay: 80ms; }
+.page-content > :nth-child(4) { animation-delay: 120ms; }
+.page-content > :nth-child(n + 5) { animation-delay: 160ms; }
 
+/* Rejillas de tarjetas (Inicio, Analítica, Catálogo): cada tarjeta entra un instante después */
+:is(.stat-grid, .items-cards-grid, .client-grid) > * { animation: pageEnter 520ms var(--ease-glide) both; }
+:is(.stat-grid, .items-cards-grid, .client-grid) > :nth-child(2) { animation-delay: 50ms; }
+:is(.stat-grid, .items-cards-grid, .client-grid) > :nth-child(3) { animation-delay: 90ms; }
+:is(.stat-grid, .items-cards-grid, .client-grid) > :nth-child(4) { animation-delay: 130ms; }
+:is(.stat-grid, .items-cards-grid, .client-grid) > :nth-child(n + 5) { animation-delay: 170ms; }
+
+@keyframes pageFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pageEnter {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px) scale(0.995); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Tarjetas: elevación suave al pasar el ratón */
+@media (hover: hover) and (pointer: fine) {
+  .card,
+  .stat-card,
+  .item-card,
+  .client-card,
+  .type-card { transition: transform 420ms var(--ease-glide), box-shadow 420ms var(--ease-glide), border-color 240ms ease; }
+  .card:hover,
+  .stat-card:hover,
+  .item-card:hover,
+  .client-card:hover,
+  .type-card:hover { transform: translateY(-3px); }
+}
+
+/* Modales: aparecen desde ligeramente más pequeños, con el fondo fundiéndose */
+.modal-overlay { animation: pageFade 240ms ease both; }
+.modal:not(.modal-drawer) { animation: modalIn 420ms var(--ease-glide) both; }
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
   to { opacity: 1; transform: none; }
 }
 
@@ -415,7 +555,25 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   body::before,
   .page > *,
+  .page-content > *,
+  :is(.stat-grid, .items-cards-grid, .client-grid) > *,
+  .modal-overlay,
+  .modal,
   .login-card { animation: none; }
+  .slide-indicator,
+  .card,
+  .stat-card,
+  .item-card,
+  .client-card,
+  .type-card,
+  .tab-button,
+  .segmented button,
+  .nav-link .nav-icon { transition: none; }
+  .card:hover,
+  .stat-card:hover,
+  .item-card:hover,
+  .client-card:hover,
+  .type-card:hover { transform: none; }
   .nav-link,
   .primary-button,
   .ghost-button,

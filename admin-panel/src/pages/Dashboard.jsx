@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { usePermissions } from '../hooks/usePermissions'
+import { useCompanyModules } from '../hooks/useCompanyModules'
 import { fetchCompanyOverview,fetchRecentQuoteApprovalResponses,markQuoteApprovalResponseHandled } from '../services/companyOverviewService'
 import { formatDateTime } from '../lib/dates'
 import { ITEM_STATUSES, MEMBER_ROLES } from '../lib/companyOverview'
@@ -32,6 +33,9 @@ const Dashboard = () => {
   const { selectedCompany, companies, loading: companiesLoading, error: companiesError, reload } = useCompany()
   const { t } = useLanguage()
   const { canSeeAdministration } = usePermissions()
+  const { modules } = useCompanyModules()
+  // Cada tarjeta es un acceso directo: no se ofrece si su módulo está desactivado.
+  const on = (...keys) => keys.some(key => modules[key] !== false)
 
   const [overview, setOverview] = useState(null)
   const [state, setState] = useState('loading') // loading | error | ready
@@ -148,100 +152,112 @@ const Dashboard = () => {
           </li>)}</ul>
         </details>}
         <div className="stat-grid">
-          <StatCard
-            icon="items"
-            title={t('nav.items')}
-            value={overview.items.total}
-            hint={t('dashboard.itemsHint')}
-            to="/items"
-            ctaLabel={t('dashboard.goToItems')}
-          >
-            <StatBreakdown
-              total={overview.items.total}
-              rows={ITEM_STATUSES.map(status => ({
-                key: status,
-                label: t(`items.${status}`),
-                value: overview.items.byStatus[status],
-                tone: STATUS_TONE[status],
-              }))}
+          {on('items') && (
+            <StatCard
+              icon="items"
+              title={t('nav.items')}
+              value={overview.items.total}
+              hint={t('dashboard.itemsHint')}
+              to="/items"
+              ctaLabel={t('dashboard.goToItems')}
+            >
+              <StatBreakdown
+                total={overview.items.total}
+                rows={ITEM_STATUSES.map(status => ({
+                  key: status,
+                  label: t(`items.${status}`),
+                  value: overview.items.byStatus[status],
+                  tone: STATUS_TONE[status],
+                }))}
+              />
+            </StatCard>
+          )}
+
+          {on('items') && (
+            <StatCard
+              icon="data"
+              title={t('nav.myData')}
+              value={overview.content.itemTypes}
+              hint={t('dashboard.typesHint').replace('{count}', overview.content.attributes)}
+              to="/my-data"
+              ctaLabel={t('dashboard.goToAttributes')}
             />
-          </StatCard>
+          )}
 
-          <StatCard
-            icon="data"
-            title={t('nav.myData')}
-            value={overview.content.itemTypes}
-            hint={t('dashboard.typesHint').replace('{count}', overview.content.attributes)}
-            to="/my-data"
-            ctaLabel={t('dashboard.goToAttributes')}
-          />
-
-          <StatCard
-            icon="mail"
-            title={t('leads.title')}
-            value={overview.leads.new}
-            hint={t('dashboard.leadsHint')}
-            to={overview.leads.new > 0 ? '/leads?status=new' : '/leads'}
-            ctaLabel={t('dashboard.goToLeads')}
-          >
-            <p className="stat-card-extra">
-              {t('dashboard.leadsTotal').replace('{count}', overview.leads.total)}
-            </p>
-          </StatCard>
-
-          <StatCard
-            icon="planning"
-            title={t('nav.planning')}
-            value={overview.planning.upcoming}
-            hint={t('dashboard.planningHint')}
-            to="/planning"
-            ctaLabel={t('dashboard.goToPlanning')}
-          >
-            {overview.planning.next.length > 0 ? (
-              <ul className="mini-list">
-                {overview.planning.next.map(task => (
-                  <li key={task.id}>
-                    <span className="mini-list-title">{task.title}</span>
-                    <span className="mini-list-meta">{formatDateTime(task.start_datetime)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="stat-card-empty">{t('dashboard.noUpcoming')}</p>
-            )}
-          </StatCard>
-
-          <StatCard
-            icon="analytics"
-            title={t('nav.analytics')}
-            value={overview.analytics?.available ? overview.analytics.visitors : '—'}
-            hint={overview.analytics?.available
-              ? t('dashboard.analyticsHint').replace('{days}', overview.analytics.days)
-              : t('dashboard.analyticsEmpty')}
-            to="/analytics"
-            ctaLabel={t('dashboard.goToAnalytics')}
-          >
-            {overview.analytics?.available && (
+          {on('crm') && (
+            <StatCard
+              icon="mail"
+              title={t('leads.title')}
+              value={overview.leads.new}
+              hint={t('dashboard.leadsHint')}
+              to={overview.leads.new > 0 ? '/leads?status=new' : '/leads'}
+              ctaLabel={t('dashboard.goToLeads')}
+            >
               <p className="stat-card-extra">
-                {t('dashboard.pageViews')}: <strong>{overview.analytics.pageViews.toLocaleString('es-ES')}</strong>
+                {t('dashboard.leadsTotal').replace('{count}', overview.leads.total)}
               </p>
-            )}
-          </StatCard>
+            </StatCard>
+          )}
 
-          <StatCard
-            icon="companies"
-            title={t('dashboard.clientCompanies')}
-            value={overview.clients}
-            hint={t('dashboard.clientsHint')}
-            to="/companies"
-            ctaLabel={t('dashboard.goToCompanies')}
-          >
-            <p className="stat-card-extra">
-              <span className="bill-total-income">+{money(overview.planning.toReceive)}</span>
-              {' · '}
-              <span className="bill-total-expense">−{money(overview.planning.toPay)}</span>
-            </p>
-          </StatCard>
+          {on('planning') && (
+            <StatCard
+              icon="planning"
+              title={t('nav.planning')}
+              value={overview.planning.upcoming}
+              hint={t('dashboard.planningHint')}
+              to="/planning"
+              ctaLabel={t('dashboard.goToPlanning')}
+            >
+              {overview.planning.next.length > 0 ? (
+                <ul className="mini-list">
+                  {overview.planning.next.map(task => (
+                    <li key={task.id}>
+                      <span className="mini-list-title">{task.title}</span>
+                      <span className="mini-list-meta">{formatDateTime(task.start_datetime)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="stat-card-empty">{t('dashboard.noUpcoming')}</p>
+              )}
+            </StatCard>
+          )}
+
+          {on('analytics') && (
+            <StatCard
+              icon="analytics"
+              title={t('nav.analytics')}
+              value={overview.analytics?.available ? overview.analytics.visitors : '—'}
+              hint={overview.analytics?.available
+                ? t('dashboard.analyticsHint').replace('{days}', overview.analytics.days)
+                : t('dashboard.analyticsEmpty')}
+              to="/analytics"
+              ctaLabel={t('dashboard.goToAnalytics')}
+            >
+              {overview.analytics?.available && (
+                <p className="stat-card-extra">
+                  {t('dashboard.pageViews')}: <strong>{overview.analytics.pageViews.toLocaleString('es-ES')}</strong>
+                </p>
+              )}
+            </StatCard>
+          )}
+
+          {on('billing','planning') && (
+            <StatCard
+              icon="companies"
+              title={t('dashboard.clientCompanies')}
+              value={overview.clients}
+              hint={t('dashboard.clientsHint')}
+              to="/companies"
+              ctaLabel={t('dashboard.goToCompanies')}
+            >
+              <p className="stat-card-extra">
+                <span className="bill-total-income">+{money(overview.planning.toReceive)}</span>
+                {' · '}
+                <span className="bill-total-expense">−{money(overview.planning.toPay)}</span>
+              </p>
+            </StatCard>
+          )}
 
           {canSeeAdministration && (
             <StatCard

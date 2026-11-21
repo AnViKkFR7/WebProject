@@ -6,6 +6,7 @@ import MonthView from './MonthView';
 import { visibleRange } from '../../lib/planningRange';
 import { useLanguage } from '../../contexts/LanguageContext';
 import Icon from '../ui/Icon';
+import SlidingIndicator from '../ui/SlidingIndicator';
 
 const VIEWS = ['day', 'week', 'month'];
 
@@ -67,6 +68,8 @@ export default function CalendarWrapper({ tasks, defaultView = 'week', onDeleteT
         <span className="calendar-title">{title}</span>
 
         <div className="segmented" role="group" aria-label={t('planning.viewMode')}>
+
+          <SlidingIndicator activeSelector="[aria-pressed='true']" />
           {VIEWS.map(key => (
             <button
               key={key}

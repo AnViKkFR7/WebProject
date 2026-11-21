@@ -15,6 +15,17 @@ export const leadService = {
     return data
   },
 
+  /** Solicitudes nuevas sin abrir; solo la cabecera del conteo, sin filas (RLS limita a la empresa) */
+  async countNew(companyId) {
+    const { count, error } = await supabase
+      .from(TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('status', 'new')
+    if (error) throw error
+    return count ?? 0
+  },
+
   /** Cambia el estado y deja constancia de quién lo tocó */
   async updateLead(id, updates) {
     const { data: { user } } = await supabase.auth.getUser()

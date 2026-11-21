@@ -1,0 +1,27 @@
+.wrapper { display: grid; gap: 1rem; }
+.summary { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; }
+.summary h3 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }
+.summary p { margin: 0.2rem 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+.links { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.links li { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.25rem; }
+.links li > svg { flex: none; color: var(--primary-color); }
+.links li > div { flex: 1 1 12rem; min-width: 0; }
+.links h4 { margin: 0; font-size: 0.95rem; color: var(--text-primary); }
+.links p { margin: 0.2rem 0 0; color: var(--text-secondary); font-size: 0.85rem; }
+.links a { flex: none; text-decoration: none; }
+
+@media (max-width: 560px) {
+  .links li { flex-wrap: wrap; }
+  .links li { align-items: flex-start; }
+  .links a { margin-left: calc(18px + 0.9rem); }
+}
