@@ -27,6 +27,8 @@ las recomprime **en su misma ruta y con su mismo formato**:
 
 ## Límites
 
+- Ante cortes de red (`fetch failed`, `terminated`, 5xx, 429) reintenta cada descarga y subida hasta 3 veces (2 s, 5 s, 15 s). Si una foto sigue fallando queda como `error` en el CSV y no se toca; basta con repetir el comando.
+
 - La CDN y los navegadores pueden servir la versión anterior hasta 1 h (caché por defecto del bucket).
 - El ahorro de egress se nota a partir de ese momento, no retroactivamente en el ciclo actual.
 - Pruebas: `npm run test:scripts` (Storage simulado e imágenes generadas). No probado contra Supabase real.

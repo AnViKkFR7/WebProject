@@ -605,6 +605,7 @@ export const en = {
     monthlyTitle: 'Invoiced over the last 12 months',
     monthlyEmpty: 'No invoices in the last 12 months.',
     monthlyLabel: 'Invoiced in {month}: {amount}',
+    seeInvoices: 'See their invoices',
     matchedByTax: 'Invoices and quotes are linked to this record by tax ID.',
     matchedByName: 'This record has no tax ID: invoices are linked by exact name. Add it so the summary is reliable.',
     lastInvoice: 'Last invoice: {date}',

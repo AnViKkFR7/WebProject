@@ -605,6 +605,7 @@ export const es = {
     monthlyTitle: 'Facturación de los últimos 12 meses',
     monthlyEmpty: 'Sin facturas en los últimos 12 meses.',
     monthlyLabel: 'Facturado en {month}: {amount}',
+    seeInvoices: 'Ver sus facturas',
     matchedByTax: 'Facturas y presupuestos se asocian a esta ficha por su NIF/CIF.',
     matchedByName: 'Esta ficha no tiene NIF/CIF: las facturas se asocian por nombre exacto. Añádelo para que el resumen sea fiable.',
     lastInvoice: 'Última factura: {date}',

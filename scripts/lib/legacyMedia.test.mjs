@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import sharp from 'sharp'
-import { listBucketFiles, selectCandidates, encode, optimizeFiles, restoreFiles, MAX_SIDE } from './legacyMedia.mjs'
+import { listBucketFiles, selectCandidates, encode, optimizeFiles, restoreFiles, withRetry, MAX_SIDE } from './legacyMedia.mjs'
 
 // Foto "de móvil": grande, con ruido (comprime mal) y girada por EXIF.
 const noisyPhoto = async (width, height, format = 'jpeg', extra = {}) => {
@@ -117,6 +117,34 @@ test('al aplicar: copia primero, sube en la MISMA ruta y formato, y sigue tras u
   // La copia guarda el original intacto, antes de subir.
   assert.ok(order.some(([, path, size, type, uploadsBefore]) => path === 'c/i/a.jpg' && size === photo.length && type === 'image/jpeg' && uploadsBefore === 0))
   assert.ok(storage.files.get('c/i/a.jpg').length < photo.length)
+})
+
+test('reintenta cortes de red y sigue con el resto; no reintenta errores definitivos', async () => {
+  const photo = await noisyPhoto(3000, 2000)
+  const storage = fakeStorage({ files: { 'c/i/a.jpg': photo, 'c/i/b.jpg': photo }, dirs: {} })
+  const bucket = storage.from()
+  let cuts = 2
+  let brokenCalls = 0
+  storage.from = () => ({
+    ...bucket,
+    async download(path) {
+      if (path.includes('broken')) { brokenCalls++; return { data: null, error: { message: 'Object not found' } } }
+      if (path.endsWith('a.jpg') && cuts-- > 0) throw new TypeError(cuts ? 'fetch failed' : 'terminated')
+      return bucket.download(path)
+    },
+  })
+  const waits = []
+  const files = ['a', 'broken', 'b'].map(name => ({ path: `c/i/${name}.jpg`, size: photo.length, mimetype: 'image/jpeg' }))
+  const results = await optimizeFiles(files, { storage, apply: false, retry: { wait: async ms => { waits.push(ms) } } })
+  assert.deepEqual(results.map(r => r.status.split(':')[0]), ['would_optimize', 'error', 'would_optimize'])
+  assert.deepEqual(waits, [2000, 5000])
+  assert.equal(brokenCalls, 1)
+})
+
+test('withRetry se rinde tras agotar los intentos', async () => {
+  let calls = 0
+  await assert.rejects(withRetry(async () => { calls++; throw new Error('fetch failed') }, { wait: async () => {} }), /fetch failed/)
+  assert.equal(calls, 4)
 })
 
 test('si la copia falla no se sube nada', async () => {

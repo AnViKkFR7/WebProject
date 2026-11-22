@@ -57,6 +57,23 @@ it('loads the record of the selected company and shows its activity', async () =
   expect(text).not.toContain('directory.invoicedHintOne')
 })
 
+it('shows each month amount and links to the invoices filtered by this client', async () => {
+  await render()
+  const amounts = [...host.querySelectorAll('ol li')].map(li => li.firstElementChild.textContent)
+  expect(amounts.filter(text => text.includes('242'))).toHaveLength(1)
+  expect(amounts.filter(text => text.startsWith('–'))).toHaveLength(11)
+  const link = [...host.querySelectorAll('a')].find(a => a.textContent.includes('directory.seeInvoices'))
+  expect(link.getAttribute('href')).toBe('/invoicing?q=123Z')
+})
+
+it('filters invoices by name when the summary matched by name', async () => {
+  mocks.party.mockResolvedValue({ ...collaborator, tax_id: '' })
+  mocks.summary.mockResolvedValue({ ...fullSummary, matched_by: 'name' })
+  await render()
+  const link = [...host.querySelectorAll('a')].find(a => a.textContent.includes('directory.seeInvoices'))
+  expect(link.getAttribute('href')).toBe(`/invoicing?q=${encodeURIComponent('Lucía Pérez')}`)
+})
+
 it('hides billing blocks when the server returns none (module off)', async () => {
   mocks.summary.mockResolvedValue({ ...fullSummary, invoices: null, quotes: null })
   await render()

@@ -39,6 +39,13 @@ export default function DirectoryParty() {
   const locale = language === 'en' ? 'en-GB' : 'es-ES'
   const money = value => new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Number(value) || 0)
   const date = value => (value ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : '')
+  // Importe corto para la columna del mes («1,2k €»); el completo va en la etiqueta accesible y en móvil.
+  const shortMoney = value => {
+    const n = Math.max(Number(value) || 0, 0)
+    const num = new Intl.NumberFormat(locale, { maximumFractionDigits: n >= 1000 && n < 10000 ? 1 : 0 })
+    const text = n >= 1000 ? `${num.format(n / 1000)}k` : num.format(n)
+    return language === 'en' ? `€${text}` : `${text} €`
+  }
   const monthName = month => new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
   const monthLong = month => new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
 
@@ -208,13 +215,23 @@ export default function DirectoryParty() {
                 <ol className={styles.chart}>
                   {months.map(({ month, total }) => (
                     <li key={month} aria-label={fill(t('directory.monthlyLabel'), { month: monthLong(month), amount: money(total) })}>
-                      <span className={styles.bar} style={{ '--h': `${Math.max(total > 0 ? 4 : 0, Math.round((Math.max(total, 0) / maxMonth) * 100))}%` }} />
+                      <span className={`${styles.amount} ${total > 0 ? '' : styles.empty}`} aria-hidden="true">
+                        <span className={styles.amountShort}>{total > 0 ? shortMoney(total) : '–'}</span>
+                        <span className={styles.amountFull}>{money(total)}</span>
+                      </span>
+                      <span className={styles.track} aria-hidden="true"><span className={styles.bar} style={{ '--h': `${Math.max(total > 0 ? 4 : 0, Math.round((Math.max(total, 0) / maxMonth) * 100))}%` }} /></span>
                       <span className={styles.month} aria-hidden="true">{monthName(month)}</span>
                     </li>
                   ))}
                 </ol>
               ) : <p className="text-muted">{t('directory.monthlyEmpty')}</p>}
-              <p className={styles.matchNote}>{summary.matched_by === 'name' ? t('directory.matchedByName') : t('directory.matchedByTax')}</p>
+              <div className={styles.chartFooter}>
+                <p className={styles.matchNote}>{summary.matched_by === 'name' ? t('directory.matchedByName') : t('directory.matchedByTax')}</p>
+                {/* Abre Facturación con el listado ya filtrado por este cliente (mismo criterio que el resumen). */}
+                <Link className="stat-card-cta" to={`/invoicing?q=${encodeURIComponent((summary.matched_by === 'name' ? party.name : party.tax_id) || party.name)}`}>
+                  {t('directory.seeInvoices')}<Icon name="chevronRight" size={14} />
+                </Link>
+              </div>
             </div>
           )}
 

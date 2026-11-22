@@ -49,9 +49,22 @@
   padding: 0;
   list-style: none;
 }
-.chart li { display: grid; grid-template-rows: 1fr auto; gap: 0.35rem; min-width: 0; }
+.chart li { display: grid; grid-template-rows: auto 1fr auto; gap: 0.35rem; min-width: 0; }
+.track { display: flex; align-items: flex-end; min-height: 0; }
+.amount {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.amount.empty { color: var(--text-tertiary); font-weight: 400; }
+.amountFull { display: none; }
 .bar {
-  align-self: end;
+  width: 100%;
   height: var(--h);
   min-height: 0;
   border-radius: 6px 6px 3px 3px;
@@ -60,17 +73,27 @@
   animation: barGrow 640ms var(--ease-glide, cubic-bezier(0.32, 0.72, 0, 1)) both;
 }
 .month { font-size: 0.7rem; text-align: center; color: var(--text-tertiary); text-transform: capitalize; overflow: hidden; text-overflow: clip; white-space: nowrap; }
-.matchNote { margin: 0.9rem 0 0; font-size: 0.8rem; color: var(--text-secondary); }
+.chartFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 0.9rem; }
+.chartFooter :global(.stat-card-cta) { margin: 0; }
+.matchNote { margin: 0; font-size: 0.8rem; color: var(--text-secondary); }
 
 @keyframes barGrow { from { transform: scaleY(0); } to { transform: none; } }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 480px) {
-  .chart { gap: 0.2rem; }
-  .month { font-size: 0.6rem; }
+/* En pantallas estrechas 12 columnas no dejan sitio a los importes: barras horizontales, una por fila. */
+@media (max-width: 560px) {
+  .chart { grid-template-columns: minmax(0, 1fr); height: auto; gap: 0.45rem; }
+  .chart li { grid-template-columns: 2.6rem minmax(0, 1fr) auto; grid-template-rows: none; grid-template-areas: 'month track amount'; align-items: center; gap: 0.6rem; }
+  .month { grid-area: month; text-align: left; font-size: 0.75rem; }
+  .track { grid-area: track; height: 0.6rem; align-items: stretch; }
+  .amount { grid-area: amount; font-size: 0.75rem; text-align: right; }
+  .amountShort { display: none; }
+  .amountFull { display: inline; }
+  .bar { width: var(--h); height: auto; border-radius: 3px 6px 6px 3px; transform-origin: left; animation-name: barGrowX; }
 }
+@keyframes barGrowX { from { transform: scaleX(0); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .bar { animation: none; }
 }

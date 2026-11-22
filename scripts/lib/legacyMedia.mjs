@@ -58,19 +58,38 @@ export const worthIt = (before, after) => after > 0 && after <= before * MIN_SAV
 
 export const formatBytes = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(2)} MB` : `${Math.round(bytes / 1024)} KB`
 
+// Cortes de red o del servidor que suelen arreglarse solos (no «Object not found» ni permisos).
+const TRANSIENT = /fetch failed|terminated|socket|ECONNRESET|ETIMEDOUT|EAI_AGAIN|timeout|network|502|503|504|Gateway|Too Many Requests|429/i
+export const RETRY_DELAYS = [2000, 5000, 15000]
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+/** Reintenta `task` ante fallos transitorios, con espera creciente. */
+export async function withRetry(task, { delays = RETRY_DELAYS, wait = sleep } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await task() } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (attempt >= delays.length || !TRANSIENT.test(message)) throw error
+      await wait(delays[attempt])
+    }
+  }
+}
+
 /**
  * Procesa las candidatas una a una. Sin `apply` solo calcula (descarga y
  * comprime en memoria, pero no sube nada). Con `apply`: copia de seguridad →
  * comprobación → subida en la misma ruta. Un fallo en una foto no para el resto.
  */
-export async function optimizeFiles(candidates, { storage, apply, backup, log = () => {} }) {
+export async function optimizeFiles(candidates, { storage, apply, backup, log = () => {}, retry = {} }) {
   const results = []
   for (const file of candidates) {
     const row = { ...file, after: null, width: null, height: null, status: '' }
     try {
-      const { data, error } = await storage.from(BUCKET).download(file.path)
-      if (error || !data) throw new Error(error?.message || 'descarga vacía')
-      const original = Buffer.from(await data.arrayBuffer())
+      // La lectura del cuerpo va dentro del reintento: «terminated» llega a mitad de descarga.
+      const original = await withRetry(async () => {
+        const { data, error } = await storage.from(BUCKET).download(file.path)
+        if (error || !data) throw new Error(error?.message || 'descarga vacía')
+        return Buffer.from(await data.arrayBuffer())
+      }, retry)
       const result = await encode(original, file.mimetype)
       Object.assign(row, { after: result.buffer.length, width: result.width, height: result.height })
       if (!worthIt(original.length, result.buffer.length)) row.status = 'skip_little_gain'
@@ -79,9 +98,12 @@ export async function optimizeFiles(candidates, { storage, apply, backup, log = 
         // Nunca se sobrescribe una copia ya existente: si el script se repite,
         // la copia sigue siendo la del original de verdad.
         await backup.save(file.path, original, file.mimetype)
-        const { error: uploadError } = await storage.from(BUCKET)
-          .upload(file.path, result.buffer, { contentType: file.mimetype, upsert: true })
-        if (uploadError) throw new Error(uploadError.message)
+        // upsert en la misma ruta: repetir la subida es seguro.
+        await withRetry(async () => {
+          const { error: uploadError } = await storage.from(BUCKET)
+            .upload(file.path, result.buffer, { contentType: file.mimetype, upsert: true })
+          if (uploadError) throw new Error(uploadError.message)
+        }, retry)
         row.status = 'optimized'
       }
     } catch (error) {

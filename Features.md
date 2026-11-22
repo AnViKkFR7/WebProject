@@ -1,5 +1,19 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-22 · RLS y permisos de anon alineados con el repositorio (hallazgo H)
+
+- Producción tenía RLS desactivada en cinco tablas y anon con permisos de escritura. `RLS_PRODUCTION_DRIFT_FIX.sql` recrea las políticas del repositorio, activa RLS, deja a anon solo lectura del contenido publicado y le retira dos funciones. Prueba que reproduce la fuga y comprueba que el panel y las webs siguen funcionando. Aplicada en producción el 22/11/2026 con la verificación esperada; panel revisado en el navegador.
+
+## 2026-11-22 · Ficha de cliente: importes por mes y enlace a sus facturas
+
+- El gráfico «Facturación de los últimos 12 meses» muestra el importe de cada mes sobre su barra (formato corto, «1,2k €»; «–» si no hubo facturas). En pantallas de 560 px o menos pasa a barras horizontales, una por mes, con el importe completo, porque doce columnas no dejan sitio a las cifras.
+- Nuevo enlace «Ver sus facturas» que abre Facturación con la búsqueda ya rellena (`/invoicing?q=`), con el mismo criterio que el resumen: NIF/CIF si la ficha lo tiene, si no el nombre. La búsqueda del listado compara texto, así que una factura con el NIF escrito con otro formato (guiones, espacios) puede no aparecer aunque sí cuente en el resumen.
+- Comprobado: pruebas de la ficha (importes, enlace por NIF y por nombre), suite completa, lint y build. En el navegador con datos reales de WatchEcommerceDemo (Lucía Ribas): 363 € en octubre y «–» en el resto; «Ver sus facturas» abre Facturación filtrada por su NIF con su única factura; en móvil (375 px) barras horizontales sin desbordamiento.
+
+## 2026-11-21 · Storage de `items-media` cerrado al navegador (hallazgo G)
+
+- Producción tenía políticas de Storage creadas en el Dashboard sin filtro de bucket. `ITEM_MEDIA_STORAGE_POLICY_FIX.sql` las borra y añade guardas restrictivas; el catálogo sigue subiendo y borrando por las Edge Functions. Aplicada por el usuario; la comprobación devolvió 0 filas.
+
 ## 2026-11-21 · Analítica en pestañas y vinculaciones previstas
 
 - «Analítica» pasa a tener pestañas como «Ajustes de empresa»: «Webs» (`/analytics/web`, la analítica de siempre, sin cambios de datos) y «Vinculaciones» (`/analytics/integrations`). `/analytics` abre la primera.
@@ -55,7 +69,7 @@
 - Diagnóstico de cuotas Supabase (ciclo 18 oct–18 nov): Cached Egress 36 % y Egress 23 % a día 23/31, sin riesgo este ciclo. Log Query no se factura ni lo genera la app. items-media: 102 JPG (227 MB, media 2,3 MB) y 13 PNG subidos antes del optimizador; las 116 WebP ya están optimizadas.
 - Decisión: recomprimir en la misma ruta y formato en vez de convertir a WebP con URL nueva, para no tocar URLs (item_media, blog, Open Graph) ni la cola de limpieza de Storage. Copia local obligatoria antes de subir y modo restaurar.
 - Nuevo `scripts/optimize-legacy-media.mjs` (`npm run media:optimize`, informe por defecto) y guía en `database/maintenance/OPTIMIZE_LEGACY_MEDIA.md`. Dependencias de desarrollo en la raíz: sharp y supabase-js.
-- Verificación: 8 pruebas (`npm run test:scripts`) con Storage simulado e imágenes generadas: selección, EXIF, transparencia, sin cambios en modo informe, copia antes de subir, fallos aislados, sin reemplazo si ahorra poco y restauración. Pendiente ejecución real.
+- Verificación: 8 pruebas (`npm run test:scripts`) con Storage simulado e imágenes generadas: selección, EXIF, transparencia, sin cambios en modo informe, copia antes de subir, fallos aislados, sin reemplazo si ahorra poco y restauración. Ejecución real el 22/11/2026: el primer informe se cortó por la red tras 32 fotos (127,6 MB → 10,7 MB, −92 %), se añadieron reintentos (2 s, 5 s, 15 s; 10 pruebas) y el usuario aplicó la optimización a todas las fotos.
 - Pendiente de decidir: miniaturas para tarjetas y galería de las webs de clientes y caché más larga del bucket.
 
 
