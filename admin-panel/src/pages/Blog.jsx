@@ -323,7 +323,10 @@ const Blog = () => {
                     {post.seo_og_image_url && <img className={styles.postCover} src={post.seo_og_image_url} alt="" loading="lazy" />}
                     <span className={styles.postText}>
                       <span className={styles.postHead}><strong>{post.title}</strong><span className={`${styles.status} ${styles[`status_${post.status}`]}`}>{t(`blog.status_${post.status}`)}</span></span>
-                      <span className={styles.postSlug}>/{post.slug || post.id}</span>
+                      {/* Sin slug el artículo no tiene dirección y las webs no lo muestran: se avisa en vez de enseñar el id interno. */}
+                      {post.slug
+                        ? <span className={styles.postSlug}>/{post.slug}</span>
+                        : <span className={`${styles.postSlug} ${styles.noSlug}`}><Icon name="alert" size={12} />{t(post.status === 'published' ? 'blog.noSlugPublished' : 'blog.noSlug')}</span>}
                       <span className={styles.postIntro}>{post.intro || post.heading || markdownToText(post.body)}</span>
                       <span className={styles.postDate}>{post.published_at ? t('blog.publishedOn').replace('{date}', new Date(post.published_at).toLocaleDateString()) : t('blog.updatedOn').replace('{date}', new Date(post.updated_at || post.created_at).toLocaleDateString())}</span>
                     </span>

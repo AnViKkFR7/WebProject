@@ -705,6 +705,8 @@ export const en = {
     loadError: 'Could not load articles.',
     saveError: 'Could not save the article. Your text is still here so you can retry.',
     slugDuplicate: 'That slug is already used by this company. Choose another one before saving.',
+    noSlug: 'No address yet: it will be created when you save',
+    noSlugPublished: 'No address: not shown on the website. Open and save it to create one',
     titleRequired: 'Title is required.',
     slugRequired: 'Enter a title to generate the slug.',
     saved: 'Article saved.',

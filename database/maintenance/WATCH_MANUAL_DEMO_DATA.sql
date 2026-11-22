@@ -300,15 +300,17 @@ begin
 
   -- Artículos editoriales propios de una boutique de relojería.
   for r in select * from (values
-    (1,'Cómo elegir tu primer reloj automático','Guía para elegir con criterio','Movimiento, tamaño y uso diario: las claves para encontrar un reloj que encaje contigo.',
+    (1,'como-elegir-tu-primer-reloj-automatico','Cómo elegir tu primer reloj automático','Guía para elegir con criterio','Movimiento, tamaño y uso diario: las claves para encontrar un reloj que encaje contigo.',
       '## Empieza por cómo lo vas a usar' || chr(10) || 'Un reloj de diario debe resultar cómodo y legible. Prueba distintos diámetros y comprueba el ajuste de la correa.' || chr(10) || '## Revisa la documentación' || chr(10) || 'Conserva la factura, la garantía y las revisiones. En boutique te ayudamos a comparar opciones.','published'),
-    (2,'Cuidar un reloj vintage: cinco hábitos sencillos','Conservar una pieza con historia','Pequeños gestos que ayudan a mantener tu reloj vintage en buenas condiciones.',
+    (2,'cuidar-un-reloj-vintage-cinco-habitos-sencillos','Cuidar un reloj vintage: cinco hábitos sencillos','Conservar una pieza con historia','Pequeños gestos que ayudan a mantener tu reloj vintage en buenas condiciones.',
       '## Guarda el reloj en un lugar seco' || chr(10) || 'Evita golpes y cambios bruscos de temperatura. Consulta las condiciones de hermeticidad antes de exponerlo al agua.' || chr(10) || '## Planifica la revisión' || chr(10) || 'Anota la última revisión y pregunta al taller por el mantenimiento adecuado.','draft')
-  ) as v(i,title,heading,intro,body,status) loop
+  ) as v(i,slug,title,heading,intro,body,status) loop
     object_id:=md5(tenant::text||seed||':post:'||r.i)::uuid;
     if exists(select 1 from public.blog_posts where id=object_id and company_id<>tenant) then raise exception 'Colisión de artículo entre empresas'; end if;
-    insert into public.blog_posts(id,company_id,title,heading,intro,body,status,created_by,last_edited_by)
-    values(object_id,tenant,r.title,r.heading,r.intro,r.body,r.status,actor,actor) on conflict(id) do nothing;
+    -- Con slug: sin él las webs no muestran el artículo. Si ya existía sin slug, se completa.
+    insert into public.blog_posts(id,company_id,slug,title,heading,intro,body,status,created_by,last_edited_by)
+    values(object_id,tenant,r.slug,r.title,r.heading,r.intro,r.body,r.status,actor,actor)
+    on conflict(id) do update set slug=coalesce(public.blog_posts.slug,excluded.slug);
   end loop;
 
   -- 30 días de tráfico sintético. Se conservan también los eventos crudos

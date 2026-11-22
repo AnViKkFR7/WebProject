@@ -705,6 +705,8 @@ export const es = {
     loadError: 'No se pudieron cargar los artículos.',
     saveError: 'No se pudo guardar el artículo. Conservamos el texto para que puedas reintentarlo.',
     slugDuplicate: 'Ese slug ya se usa en esta empresa. Elige otro antes de guardar.',
+    noSlug: 'Sin dirección: se creará al guardar',
+    noSlugPublished: 'Sin dirección: no aparece en la web. Ábrelo y guarda para crearla',
     titleRequired: 'El título es obligatorio.',
     slugRequired: 'Escribe un título para generar el slug.',
     saved: 'Artículo guardado.',

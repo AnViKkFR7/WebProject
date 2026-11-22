@@ -36,6 +36,8 @@ beforeAll(async()=>{
   const schema=await sqlFile('schema/BDD_REFERENCIA.sql')
   const blog=schema.slice(schema.indexOf('CREATE TABLE public.blog_posts ('),schema.indexOf('CREATE TABLE public.blog_media ('))
   await db.exec(blog)
+  // En producción la columna la añade CONTENT_SEO_FIELDS.sql; el esquema de referencia es anterior.
+  await db.exec('alter table public.blog_posts add column slug text')
   for(const f of ['BILLING_SECURITY_HARDENING','BILLING_DOCUMENT_PRESENTATION','BILLING_APPEARANCE',
     'BILLING_DIRECTORY_CATALOG','BILLING_CHAPTER_TEMPLATES','BILLING_PAYMENTS_HISTORY',
     'BILLING_ISSUED_INVOICE_LOCK','BILLING_RECTIFYING_INVOICES'])await db.exec(await sqlFile(`migrations/${f}.sql`))
@@ -100,6 +102,8 @@ it('requires an active administrator and enabled modules',async()=>{
 it('creates consistent demo workflows and analytics using real migrations/RPCs',async()=>{
   await db.exec(seed)
   expect(await counts()).toMatchObject({leads:12,contacts:8,invoices:5,quotes:4,tasks:10,posts:2,payments:2})
+  // Con slug: sin él una web no mostraría el artículo y el panel lo marca como «Sin dirección».
+  expect((await db.query('select slug from public.blog_posts order by slug')).rows.map(r=>r.slug)).toEqual(['como-elegir-tu-primer-reloj-automatico','cuidar-un-reloj-vintage-cinco-habitos-sencillos'])
   expect((await db.query("select count(*)::int n from public.lead where crm_match_state='linked'")).rows[0].n).toBe(12)
   const status=(await db.query('select status from public.quotes order by created_at')).rows.map(r=>r.status)
   expect(status).toEqual(expect.arrayContaining(['draft','sent','accepted','rejected']))

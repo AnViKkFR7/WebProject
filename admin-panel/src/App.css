@@ -3675,7 +3675,13 @@ button.user-chip-mobile {
    ========================================= */
 
 /* --- Sidebar agrupada --- */
-.sidebar-nav { gap: 1rem; }
+/* overflow-y:auto activa también el scroll horizontal: se bloquea y las etiquetas
+   largas («Clientes y colaboradores») pasan a dos líneas en vez de desbordar. */
+.sidebar-nav { gap: 1rem; overflow-x: hidden; }
+.sidebar-nav .nav-label { min-width: 0; white-space: normal; line-height: 1.25; overflow-wrap: break-word; }
+/* 12 px de relleno y separación (antes 16): «Contactos y pipeline» y «Ajustes de empresa»
+   caben en una línea. Plegada, .sidebar.collapsed .nav-link tiene más prioridad. */
+.sidebar .nav-link { gap: 0.75rem; padding: 0.75rem; }
 
 .nav-group {
   display: flex;
@@ -3684,7 +3690,7 @@ button.user-chip-mobile {
 }
 
 .nav-group-title {
-  padding: 0 1rem 0.25rem;
+  padding: 0 0.75rem 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-tertiary);

@@ -10,6 +10,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import { loadInvoicing, saveInvoice, saveProfile, convertQuote, rectifyInvoice } from '../services/invoicingService'
 import { emptyProfile, invoiceTotals, newLine, validInvoice, validBillingProfile, hasBillingProfile, usesCompanyIssuer, documentStatuses, createRectificationDocument } from '../lib/invoicing'
 import { toLocalInputValue } from '../lib/dates'
+import { matchesBillingSearch } from '../lib/billingSearch'
 import BillingDocumentForm from '../components/BillingDocumentForm'
 import { downloadInvoice } from '../lib/invoicingPdf'
 import BillingField from '../components/BillingField'
@@ -365,7 +366,7 @@ function InvoiceWorkspace({ company, userId, t, language, kind }) {
   const financialById=new Map(finance.items.map(item=>[item.invoice_id,item]))
   const changeInvoiceReminderPreference=async suppressed=>{if(!editor?.invoice?.id)return;setReminderPreference(previous=>({...previous,saving:true,error:false}));try{const value=await setInvoiceDueReminders(company.id,editor.invoice.id,suppressed);setReminderPreference({suppressed:value.suppressed,loading:false,saving:false,error:false})}catch{setReminderPreference(previous=>({...previous,saving:false,error:true}))}}
   const visible = invoices.filter(i => (status === 'all' || i.status === status) && (isQuote || paymentFilter==='all' || financialById.get(i.id)?.payment_state===paymentFilter) &&
-    [i.number, i.document.customer.name, i.document.customer.taxId, ...i.document.lines.map(l => l.description)].join(' ').toLocaleLowerCase(language).includes(query.trim().toLocaleLowerCase(language)))
+    matchesBillingSearch(i, query))
   const totals = editor ? invoiceTotals(editor.doc.lines, editor.doc.withholding) : null
   const hasUnsavedChanges = Boolean(editor?.invoice && dirty)
   const locked = !canEdit || (!editor?.rectificationSource && ['issued', 'paid', 'cancelled', 'invoiced'].includes(editor?.invoice?.status || editor?.status))

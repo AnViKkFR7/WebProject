@@ -1,5 +1,12 @@
 # Funcionalidades y decisiones de evolución
 
+## 2026-11-22 · Menú lateral, búsqueda de facturas por NIF y artículos sin dirección
+
+- Menú lateral: «Clientes y colaboradores» era 19 px más ancha que el menú y aparecía una barra de desplazamiento horizontal. Se bloquea el desplazamiento horizontal, las etiquetas largas pasan a dos líneas y el relleno de los enlaces baja de 16 a 12 px para que «Contactos y pipeline» y «Ajustes de empresa» quepan en una (ya invadían el relleno). Plegado sin cambios. Prueba de estilos.
+- Facturación: la búsqueda ignora tildes y mayúsculas y compara el NIF/CIF sin espacios, guiones ni puntos (`lib/billingSearch.js`), como el directorio y el resumen de la ficha. «Ver sus facturas» ya encuentra las facturas con el NIF escrito de otra forma. 5 pruebas.
+- Blog: un artículo sin slug mostraba su id interno en el listado. Ahora avisa «Sin dirección»; si está publicado, indica que no aparecerá en la web (las webs descartan los artículos sin slug). Hoy sin impacto: ninguna web de clientes muestra todavía el blog. El panel siempre genera el slug al guardar; los dos casos venían de `WATCH_MANUAL_DEMO_DATA.sql`, que ahora inserta slugs y completa los que falten.
+- Comprobado en el navegador con WatchEcommerceDemo: menú sin scroll horizontal (desplegado y plegado), búsqueda `47680312-P` encuentra la factura guardada como `47680312P` y aviso en los dos artículos de demostración.
+
 ## 2026-11-22 · RLS y permisos de anon alineados con el repositorio (hallazgo H)
 
 - Producción tenía RLS desactivada en cinco tablas y anon con permisos de escritura. `RLS_PRODUCTION_DRIFT_FIX.sql` recrea las políticas del repositorio, activa RLS, deja a anon solo lectura del contenido publicado y le retira dos funciones. Prueba que reproduce la fuga y comprueba que el panel y las webs siguen funcionando. Aplicada en producción el 22/11/2026 con la verificación esperada; panel revisado en el navegador.

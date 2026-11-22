@@ -109,3 +109,20 @@ it('retries a failed image upload on the same article instead of creating a dupl
   expect(mocks.service.syncImages).toHaveBeenCalledTimes(2)
   expect(mocks.service.updatePost).toHaveBeenLastCalledWith('post-1', { status: 'published', seo_og_image_url: COVER })
 })
+
+it('avisa de los artículos sin dirección en vez de enseñar su id interno', async () => {
+  mocks.service.getPosts.mockResolvedValue([
+    { id: '2ce79b99-67cc-93bb-65aa-d6732e8365c0', slug: null, title: 'Publicado sin slug', status: 'published', created_at: '2026-01-01' },
+    { id: '54dac409-3dc5-4717-f3e2-339c47620d4f', slug: null, title: 'Borrador sin slug', status: 'draft', created_at: '2026-01-01' },
+    { id: 'p3', slug: 'con-direccion', title: 'Con dirección', status: 'published', created_at: '2026-01-01' },
+  ])
+  await act(async () => root.unmount())
+  root = createRoot(host)
+  await act(async () => root.render(<Blog />))
+  const text = host.textContent
+  expect(text).not.toContain('2ce79b99')
+  expect(text).not.toContain('54dac409')
+  expect(text).toContain('blog.noSlugPublished')
+  expect(text).toContain('blog.noSlug')
+  expect(text).toContain('/con-direccion')
+})

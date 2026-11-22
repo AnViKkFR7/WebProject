@@ -15,4 +15,10 @@ describe('collapsed sidebar layout', () => {
     expect(declarationsFor('.sidebar.collapsed')).toMatch(/overflow-x:\s*hidden/)
     expect(declarationsFor('.sidebar.collapsed .sidebar-nav')).toMatch(/overflow-x:\s*hidden/)
   })
+
+  it('never scrolls the expanded menu sideways: long labels wrap', () => {
+    expect(appCss).toMatch(/\.sidebar-nav \{ gap: 1rem; overflow-x: hidden; \}/)
+    expect(declarationsFor('.sidebar-nav .nav-label')).toMatch(/white-space:\s*normal/)
+    expect(declarationsFor('.sidebar-nav .nav-label')).toMatch(/min-width:\s*0/)
+  })
 })
